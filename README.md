@@ -2,6 +2,10 @@
 
 Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
 
+## Capabilities
+
+- Session Capability via `persistence` and `persistence_name` options.
+
 ## Maintainers Guide
 
 This section is indented only for package maintainers.
@@ -11,7 +15,7 @@ This section is indented only for package maintainers.
  * _**ATTENTION**_: Use `yarn` for everything except publishing
  * To spin off a local development server run `yarn devserver`, then open [http://localhost:8081](http://localhost:8081)
    * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
-     jitsu in action
+     usermaven in action
      * http://localhost:8081/test-case/embed.html - embedded Usermaven
      * http://localhost:8081/test-case/embed-no-init.html - Usermaven without automatic initialization
      * http://localhost:8081/test-case/segment-intercept.html - test segment interception
@@ -19,6 +23,13 @@ This section is indented only for package maintainers.
  * `yarn build` builds both npm package and `lib.js` browser bundle
  * `npm publish --public` to publish the package (change version in `package.json` manually). You need to run `npm login` with your personal
 npmjs account beforehand (make sure you have access to Usermaven team)
+ * In order to check usermaven sdk locally. 
+    * `cd dist/npm` --- navigate to npm directory
+    * `npm link` --- creates a symbolic link to be accessed globally
+    * `cd ../../__tests__/sdk/` --- navigate to sdk test project
+    * `npm i` --- install npm dependencies
+    * `npm link @usermaven/sdk-js` --- use npm package locally whose symlink is just published
+    * `npm start` --- start the application and monitor events
 
 ### Publishing new version
 

@@ -89,6 +89,11 @@ export type Policy = 'strict' | 'keep' | 'comply'
 export type UsermavenOptions = {
 
   /**
+   * If auto-capturing is enabled on all sort of events | for future work
+   */
+  autocapture?: boolean,
+
+  /**
    * If Usermaven should work in compatibility mode. If set to true:
    *  - event_type will be set to 'eventn' instead of 'usermaven'
    *  - EventCtx should be written in eventn_ctx node as opposed to to event root
@@ -182,6 +187,18 @@ export type UsermavenOptions = {
    */
   log_level?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
 
+  /**
+   * Type of persistence required
+   * Possible values: cookie | localStorage | localStorage+cookie | memory
+   * Default value: cookie
+   */
+   persistence?: PersistenceType;
+
+  /**
+   * Persistent connection name
+   */
+   persistence_name?: string;
+
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
 };
 
@@ -228,7 +245,7 @@ export type EventCtx = {
   referer: string                  //document referer
   url: string                      //current url
   page_title: string               //page title
-                                   //see UTM_TYPES for all supported utm tags
+  //see UTM_TYPES for all supported utm tags
   doc_path: string                 //document path
   doc_host: string                 //document host
   doc_search: string               //document search string
@@ -258,9 +275,9 @@ export type Transport = (url: string, jsonPayload: string) => Promise<void>
  * Type of event source
  */
 export type EventSrc =
-  'jitsu'    |                     //event came directly from Usermaven
-  'eventn'   |                     //same as usermaven but for 'compat' mode, see
-  'ga'       |                     //event is intercepted from GA
+  'usermaven' |                     //event came directly from Usermaven
+  'eventn' |                     //same as usermaven but for 'compat' mode, see
+  'ga' |                     //event is intercepted from GA
   '3rdparty' |                     //event is intercepted from 3rdparty source
   'ajs';                           //event is intercepted from analytics.js
 
@@ -287,3 +304,4 @@ export type EventCompat = EventBasics & {
   eventn_ctx: EventCtx
 } & EventPayload;
 
+export type PersistenceType = 'cookie' | 'localStorage' | 'localStorage+cookie' | 'memory';

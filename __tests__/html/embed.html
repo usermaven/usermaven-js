@@ -2,9 +2,11 @@
 
 <head>
     <!--
-       Jitsu tracking one-liner. By default, pageview event is sent
+       Usermaven tracking one-liner. By default, pageview event is sent
     -->
     <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug" defer></script>
+    <!-- <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug" data-persistence='localStorage+cookie'
+        data-persistence-name='custom' defer></script> -->
     <script>
         setTimeout(() => {
             console.log("Testing delayed tracking");
@@ -15,7 +17,13 @@
             usermaven('set', { persistent_prop3: 3 }, { eventType: "non_existing_event" })
 
             usermaven('track', 'additional_event', { extra: 1 });
+
+            /* setTimeout(() => {
+                console.log("Testing unset event");
+                usermaven('unset');
+            }, 2000); */
         }, 500)
+
     </script>
 </head>
 

@@ -24,6 +24,9 @@ import {
   UserProps
 } from './interface'
 import { getLogger, setRootLogLevel } from './log';
+import { UserMavenPersistence } from './session/usermaven-persistence';
+import { SessionIdManager } from './session/sessionid';
+import { _ } from "./session/utils"
 
 const VERSION_INFO = {
   env: '__buildEnv__',
@@ -90,7 +93,7 @@ class NoPersistence implements Persistence {
     return undefined;
   }
 
-  delete(){}
+  delete() { }
 }
 
 const defaultCompatMode = false;
@@ -107,12 +110,16 @@ type PermanentProperties = {
 }
 
 class UsermavenClientImpl implements UsermavenClient {
+  public config?: any;
+  public persistence?: any;
+  public sessionManager?: SessionIdManager;
+
   private userIdPersistence?: Persistence;
   private propsPersistance?: Persistence;
 
   private anonymousId: string = '';
   private userProperties: UserProps = {}
-  private permanentProperties: PermanentProperties = { globalProps: {}, propsPerEvent: {}}
+  private permanentProperties: PermanentProperties = { globalProps: {}, propsPerEvent: {} }
   private cookieDomain: string = '';
   private trackingHost: string = '';
   private idCookieName: string = '';
@@ -228,11 +235,11 @@ class UsermavenClientImpl implements UsermavenClient {
     });
   }
 
-  postHandle(status: number, response: any): any{
+  postHandle(status: number, response: any): any {
     if (this.cookiePolicy === 'strict' || this.cookiePolicy === 'comply') {
       if (status === 200) {
         let data = response;
-        if (typeof response === 'string'){
+        if (typeof response === 'string') {
           data = JSON.parse(response);
         }
         if (!data['delete_cookie']) {
@@ -247,8 +254,11 @@ class UsermavenClientImpl implements UsermavenClient {
 
   getCtx(): EventCtx {
     let now = new Date();
+    const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
     return {
       event_id: '', //generate id on the backend side
+      session_id: sessionId,
+      window_id: windowId,
       user: {
         anonymous_id: this.anonymousId,
         ...this.userProperties
@@ -289,27 +299,27 @@ class UsermavenClientImpl implements UsermavenClient {
     getLogger().debug('track event of type', type, data)
     const e = this.makeEvent(type, this.compatMode ?
       'eventn' :
-      'jitsu', payload || {});
+      'usermaven', payload || {});
     return this.sendJson(e);
   }
 
   init(options: UsermavenOptions) {
-    if (options.ip_policy){
+    if (options.ip_policy) {
       this.ipPolicy = options.ip_policy
     }
-    if (options.cookie_policy){
+    if (options.cookie_policy) {
       this.cookiePolicy = options.cookie_policy
     }
     if (options.privacy_policy === 'strict') {
       this.ipPolicy = 'strict'
       this.cookiePolicy = 'strict'
     }
-    if (options.use_beacon_api && navigator.sendBeacon){
+    if (options.use_beacon_api && navigator.sendBeacon) {
       this.beaconApi = true
     }
 
     //can't handle delete cookie response when beacon api
-    if (this.cookiePolicy === 'comply' && this.beaconApi){
+    if (this.cookiePolicy === 'comply' && this.beaconApi) {
       this.cookiePolicy = 'strict'
     }
     if (options.log_level) {
@@ -330,15 +340,15 @@ class UsermavenClientImpl implements UsermavenClient {
     this.idCookieName = options.cookie_name || '__eventn_id';
     this.apiKey = options.key;
 
-    if (this.cookiePolicy === 'strict'){
+    if (this.cookiePolicy === 'strict') {
       this.propsPersistance = new NoPersistence();
-    }else{
+    } else {
       this.propsPersistance = new CookiePersistence(this.cookieDomain, this.idCookieName + '_props');
     }
 
-    if (this.cookiePolicy === 'strict'){
+    if (this.cookiePolicy === 'strict') {
       this.userIdPersistence = new NoPersistence();
-    }else{
+    } else {
       this.userIdPersistence = new CookiePersistence(this.cookieDomain, this.idCookieName + '_usr');
     }
 
@@ -351,6 +361,8 @@ class UsermavenClientImpl implements UsermavenClient {
       }
       getLogger().debug('Restored persistent properties', this.permanentProperties);
     }
+
+    this.manageSession(options);
 
     if (options.capture_3rd_party_cookies === false) {
       this._3pCookies = {}
@@ -365,7 +377,7 @@ class UsermavenClientImpl implements UsermavenClient {
     if (options.segment_hook) {
       interceptSegmentCalls(this);
     }
-    if (this.cookiePolicy !== 'strict'){
+    if (this.cookiePolicy !== 'strict') {
       this.anonymousId = this.getAnonymousId();
     }
     this.initialized = true;
@@ -425,9 +437,9 @@ class UsermavenClientImpl implements UsermavenClient {
     const persist = opts?.persist === undefined || opts?.persist
     if (eventType !== undefined) {
       let current = this.permanentProperties.propsPerEvent[eventType] ?? {};
-      this.permanentProperties.propsPerEvent[eventType] = {...current, ...properties};
+      this.permanentProperties.propsPerEvent[eventType] = { ...current, ...properties };
     } else {
-      this.permanentProperties.globalProps = {...this.permanentProperties.globalProps, ...properties};
+      this.permanentProperties.globalProps = { ...this.permanentProperties.globalProps, ...properties };
     }
 
     if (this.propsPersistance && persist) {
@@ -447,6 +459,30 @@ class UsermavenClientImpl implements UsermavenClient {
     if (this.propsPersistance && persist) {
       this.propsPersistance.save(this.permanentProperties);
     }
+    if (this.sessionManager) {
+      this.sessionManager.resetSessionId();
+    }
+  }
+
+  /**
+   * Manage session capability
+   * @param options 
+   */
+  manageSession(options: UsermavenOptions) {
+    getLogger().debug('Options', options);
+    const defaultConfig = {
+      persistence: options ? options.persistence || 'cookie' : 'cookie',
+      persistence_name: options ? options.persistence_name || 'session' : 'session',
+    }
+    // TODO: Default session name would be session_
+    this.config = _.extend(defaultConfig, this.config || {}, {
+      token: this.apiKey,
+    })
+    getLogger().debug('Default Configuration', this.config);
+    this.persistence = new UserMavenPersistence(this.config)
+    getLogger().debug('Persistence Configuration', this.persistence);
+    this.sessionManager = new SessionIdManager(this.config, this.persistence)
+    getLogger().debug('Session Configuration', this.sessionManager);
   }
 }
 
