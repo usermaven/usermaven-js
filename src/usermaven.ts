@@ -257,8 +257,8 @@ class UsermavenClientImpl implements UsermavenClient {
     const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
     return {
       event_id: '', //generate id on the backend side
-      sessionId,
-      windowId,
+      session_id: sessionId,
+      window_id: windowId,
       user: {
         anonymous_id: this.anonymousId,
         ...this.userProperties
@@ -472,8 +472,9 @@ class UsermavenClientImpl implements UsermavenClient {
     getLogger().debug('Options', options);
     const defaultConfig = {
       persistence: options ? options.persistence || 'cookie' : 'cookie',
-      persistence_name: options ? options.persistence_name || '' : '',
+      persistence_name: options ? options.persistence_name || 'session' : 'session',
     }
+    // TODO: Default session name would be session_
     this.config = _.extend(defaultConfig, this.config || {}, {
       token: this.apiKey,
     })

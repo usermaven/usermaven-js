@@ -3,8 +3,8 @@ import { SESSION_ID } from './usermaven-persistence'
 import { sessionStore } from './storage'
 import { _ } from './utils'
 
-const SESSION_CHANGE_THRESHOLD = 30 * 60 * 1000 // 30 mins
-/* const SESSION_CHANGE_THRESHOLD = 1 * 60 * 1000 // 1 min */
+/* const SESSION_CHANGE_THRESHOLD = 30 * 60 * 1000 // 30 mins */
+const SESSION_CHANGE_THRESHOLD = 1 * 60 * 1000 // 1 min
 
 export class SessionIdManager {
     constructor(config, persistence) {
