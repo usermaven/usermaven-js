@@ -7,7 +7,8 @@ const jsFileName = "lib.js"
 const usermavenProps = [
   'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
-  'id_method', 'log_level', 'compat_mode','privacy_policy', 'cookie_policy', 'ip_policy'
+  'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
+  'persistence', 'persistence_name'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -59,7 +60,7 @@ function getTracker(window): UsermavenClient {
     getLogger().warn(hookWarnMsg("ga"))
   }
 
-  const usermaven: UsermavenFunction = function() {
+  const usermaven: UsermavenFunction = function () {
     let queue = window.usermavenQ = window.usermavenQ || [];
     queue.push(arguments)
     processQueue(queue, window.usermavenClient);
@@ -89,7 +90,7 @@ if (window) {
   let tracker = getTracker(win);
   if (tracker) {
     getLogger().debug("Usermaven in-browser tracker has been initialized")
-    win.usermaven = function() {
+    win.usermaven = function () {
       let queue = win.usermavenQ = win.usermavenQ || [];
       queue.push(arguments)
       processQueue(queue, tracker);

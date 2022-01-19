@@ -2,6 +2,10 @@
 
 Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
 
+## Capabilities
+
+- Session Capability via `persistence` and `persistence_name` options.
+
 ## Maintainers Guide
 
 This section is indented only for package maintainers.
@@ -11,7 +15,7 @@ This section is indented only for package maintainers.
  * _**ATTENTION**_: Use `yarn` for everything except publishing
  * To spin off a local development server run `yarn devserver`, then open [http://localhost:8081](http://localhost:8081)
    * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
-     jitsu in action
+     usermaven in action
      * http://localhost:8081/test-case/embed.html - embedded Usermaven
      * http://localhost:8081/test-case/embed-no-init.html - Usermaven without automatic initialization
      * http://localhost:8081/test-case/segment-intercept.html - test segment interception
