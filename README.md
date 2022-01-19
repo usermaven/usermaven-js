@@ -23,6 +23,13 @@ This section is indented only for package maintainers.
  * `yarn build` builds both npm package and `lib.js` browser bundle
  * `npm publish --public` to publish the package (change version in `package.json` manually). You need to run `npm login` with your personal
 npmjs account beforehand (make sure you have access to Usermaven team)
+ * In order to check usermaven sdk locally. 
+    * `cd dist/npm` --- navigate to npm directory
+    * `npm link` --- creates a symbolic link to be accessed globally
+    * `cd ../../__tests__/sdk/` --- navigate to sdk test project
+    * `npm i` --- install npm dependencies
+    * `npm link @usermaven/sdk-js` --- use npm package locally whose symlink is just published
+    * `npm start` --- start the application and monitor events
 
 ### Publishing new version
 
