@@ -26,7 +26,8 @@ import {
 import { getLogger, setRootLogLevel } from './log';
 import { UserMavenPersistence } from './session/usermaven-persistence';
 import { SessionIdManager } from './session/sessionid';
-import { _ } from "./session/utils"
+import { autocapture } from './autocapture/autocapture';
+import { _, userAgent } from "./utils"
 
 const VERSION_INFO = {
   env: '__buildEnv__',
@@ -111,7 +112,7 @@ type PermanentProperties = {
 
 class UsermavenClientImpl implements UsermavenClient {
   public config?: any;
-  public persistence?: any;
+  public persistence?: UserMavenPersistence;
   public sessionManager?: SessionIdManager;
 
   private userIdPersistence?: Persistence;
@@ -133,6 +134,11 @@ class UsermavenClientImpl implements UsermavenClient {
   private cookiePolicy: Policy = 'keep';
   private ipPolicy: Policy = 'keep';
   private beaconApi: boolean = false;
+  public __autocapture_enabled = true;
+
+  get_config(prop_name) {
+    return this.config ? this.config[prop_name] : null
+  }
 
   id(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
     this.userProperties = { ...this.userProperties, ...props }
@@ -254,11 +260,9 @@ class UsermavenClientImpl implements UsermavenClient {
 
   getCtx(): EventCtx {
     let now = new Date();
-    const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
     return {
       event_id: '', //generate id on the backend side
-      session_id: sessionId,
-      window_id: windowId,
+      ...this.sessionManager.getSessionAndWindowId(),
       user: {
         anonymous_id: this.anonymousId,
         ...this.userProperties
@@ -362,7 +366,23 @@ class UsermavenClientImpl implements UsermavenClient {
       getLogger().debug('Restored persistent properties', this.permanentProperties);
     }
 
+    const defaultConfig = {
+      persistence: 'cookie',
+      persistence_name: 'session',
+      autocapture: true,
+      capture_pageview: true,
+      store_google: true,
+      save_referrer: true,
+      properties_string_max_length: null, // 65535
+      property_blacklist: [],
+      sanitize_properties: null
+    }
+    this.config = _.extend({}, defaultConfig, options || {}, this.config || {}, { token: this.apiKey })
+
+    getLogger().debug('Default Configuration', this.config);
     this.manageSession(options);
+
+    this.manageAutoCapture(options);
 
     if (options.capture_3rd_party_cookies === false) {
       this._3pCookies = {}
@@ -381,6 +401,9 @@ class UsermavenClientImpl implements UsermavenClient {
       this.anonymousId = this.getAnonymousId();
     }
     this.initialized = true;
+
+    // Set up the window close event handler "unload"
+    window.addEventListener && window.addEventListener('unload', this._handle_unload.bind(this))
   }
 
   interceptAnalytics(analytics: any) {
@@ -469,20 +492,128 @@ class UsermavenClientImpl implements UsermavenClient {
    * @param options 
    */
   manageSession(options: UsermavenOptions) {
-    getLogger().debug('Options', options);
-    const defaultConfig = {
-      persistence: options ? options.persistence || 'cookie' : 'cookie',
-      persistence_name: options ? options.persistence_name || 'session' : 'session',
-    }
-    // TODO: Default session name would be session_
-    this.config = _.extend(defaultConfig, this.config || {}, {
-      token: this.apiKey,
-    })
-    getLogger().debug('Default Configuration', this.config);
     this.persistence = new UserMavenPersistence(this.config)
     getLogger().debug('Persistence Configuration', this.persistence);
     this.sessionManager = new SessionIdManager(this.config, this.persistence)
     getLogger().debug('Session Configuration', this.sessionManager);
+  }
+
+  /**
+   * Manage auto-capturing
+   * @param options 
+   */
+  manageAutoCapture(options: UsermavenOptions) {
+    getLogger().debug("Auto Capture Status: ", this.config['autocapture']);
+    this.__autocapture_enabled = this.config['autocapture'];
+    if (!this.__autocapture_enabled) { return }
+
+    var num_buckets = 100
+    var num_enabled_buckets = 100
+    if (!autocapture.enabledForProject(this.apiKey, num_buckets, num_enabled_buckets)) {
+      this.config['autocapture'] = false
+      console.log('Not in active bucket: disabling Automatic Event Collection.')
+    } else if (!autocapture.isBrowserSupported()) {
+      this.config['autocapture'] = false
+      console.log('Disabling Automatic Event Collection because this browser is not supported')
+    } else {
+      autocapture.init(this)
+    }
+  }
+
+  /**
+ * Capture an event. This is the most important and
+ * frequently used PostHog function.
+ *
+ * ### Usage:
+ *
+ *     // capture an event named 'Registered'
+ *     posthog.capture('Registered', {'Gender': 'Male', 'Age': 21});
+ *
+ *     // capture an event using navigator.sendBeacon
+ *     posthog.capture('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
+ *
+ * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
+ * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
+ * @param {Object} [options] Optional configuration for this capture request.
+ * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
+ */
+  capture(event_name, properties = {}) {
+    if (!this.initialized) {
+      console.error('Trying to capture event before initialization')
+      return;
+    }
+    if (_.isUndefined(event_name) || typeof event_name !== 'string') {
+      console.error('No event name provided to posthog.capture')
+      return
+    }
+
+    if (_.isBlockedUA(userAgent)) {
+      return
+    }
+
+    const start_timestamp = this['persistence'].remove_event_timer(event_name)
+
+    // update persistence
+    this['persistence'].update_search_keyword(document.referrer)
+
+    if (this.get_config('store_google')) {
+      this['persistence'].update_campaign_params()
+    }
+    if (this.get_config('save_referrer')) {
+      this['persistence'].update_referrer_info(document.referrer)
+    }
+
+    var data = {
+      event: event_name,
+      properties: this._calculate_event_properties(event_name, properties, start_timestamp),
+    }
+
+    data = _.copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
+    this.track(data.event, data.properties)
+  }
+
+  _calculate_event_properties(event_name, event_properties, start_timestamp) {
+    // set defaults
+    let properties = event_properties || {}
+
+    if (event_name === '$snapshot') {
+      return properties
+    }
+
+    // set $duration if time_event was previously called for this event
+    if (!_.isUndefined(start_timestamp)) {
+      var duration_in_ms = new Date().getTime() - start_timestamp
+      properties['$duration'] = parseFloat((duration_in_ms / 1000).toFixed(3))
+    }
+
+    // note: extend writes to the first object, so lets make sure we
+    // don't write to the persistence properties object and info
+    // properties object by passing in a new object
+
+    // update properties with pageview info and super-properties
+    properties = _.extend({}, _.info.properties(), this['persistence'].properties(), properties)
+
+    var property_blacklist = this.get_config('property_blacklist')
+    if (_.isArray(property_blacklist)) {
+      _.each(property_blacklist, function (blacklisted_prop) {
+        delete properties[blacklisted_prop]
+      })
+    } else {
+      console.error('Invalid value for property_blacklist config: ' + property_blacklist)
+    }
+
+    var sanitize_properties = this.get_config('sanitize_properties')
+    if (sanitize_properties) {
+      properties = sanitize_properties(properties, event_name)
+    }
+
+    return properties
+  }
+
+  _handle_unload() {
+    if (this.get_config('capture_pageview')) {
+      this.capture('$pageleave')
+    }
   }
 }
 

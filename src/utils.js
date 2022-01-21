@@ -1,5 +1,5 @@
 /* eslint camelcase: "off", eqeqeq: "off" */
-import Config from './config'
+import Config from './session/config'
 
 /*
  * Saved references to long variable names, so that closure compiler can
@@ -665,7 +665,7 @@ _.info = {
 
             var keyword = _.getQueryParam(referrer, param)
             if (keyword.length) {
-                ret['ph_keyword'] = keyword
+                ret['um_keyword'] = keyword
             }
         }
 

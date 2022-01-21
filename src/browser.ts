@@ -8,7 +8,8 @@ const usermavenProps = [
   'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
   'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
-  'persistence', 'persistence_name'
+  'persistence', 'persistence_name', 'persistence_time', 'disable_persistence',
+  'autocapture', 'capture_pageview', 'properties_string_max_length', 'property_blacklist'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -68,7 +69,9 @@ function getTracker(window): UsermavenClient {
   window.usermaven = usermaven;
 
   if ("true" !== script.getAttribute("data-init-only") && "yes" !== script.getAttribute("data-init-only")) {
-    usermaven('track', 'pageview');
+    if (!Object.keys(opts).includes('capture_pageview') || opts['capture_pageview']) {
+      usermaven('track', 'pageview');
+    }
   }
   return window.usermavenClient;
 }

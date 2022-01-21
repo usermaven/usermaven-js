@@ -87,12 +87,6 @@ export type Policy = 'strict' | 'keep' | 'comply'
  * Configuration options of Usermaven
  */
 export type UsermavenOptions = {
-
-  /**
-   * If auto-capturing is enabled on all sort of events | for future work
-   */
-  autocapture?: boolean,
-
   /**
    * If Usermaven should work in compatibility mode. If set to true:
    *  - event_type will be set to 'eventn' instead of 'usermaven'
@@ -190,14 +184,58 @@ export type UsermavenOptions = {
   /**
    * Type of persistence required
    * Possible values: cookie | localStorage | localStorage+cookie | memory
-   * Default value: cookie
+   * 
+   * @default cookie
    */
-   persistence?: PersistenceType;
+  persistence?: PersistenceType;
 
   /**
    * Persistent connection name
    */
-   persistence_name?: string;
+  persistence_name?: string;
+
+  /**
+   * Session tracking time in seconds (x)
+   * After x seconds of inactivity, new session will be created. Default time is 30 minutes i.e 1800 seconds
+   * 
+   * @default 1800
+   */
+  persistence_time?: number;
+
+  /**
+   * Disable session tracking here
+   * 
+   * @default false
+   */
+  disable_persistence?: boolean;
+
+  /**
+   * Auto-capturing is enabled on all sort of events
+   * 
+   * @default true
+   */
+  autocapture?: boolean,
+
+  /**
+   * Should a page_view event be triggered on page load
+   * 
+   * @default true
+   */
+  capture_pageview?: boolean,
+
+  /**
+   * To control the payload properties character limit. Defaults to null that means there is no limit. i.e 65535
+   * 
+   * @default null
+   */
+  properties_string_max_length?: number | null,
+
+  /**
+  * Property names that must be exempted from the payload of capture call
+  * 
+  * @default []
+  */
+  property_blacklist?: string[],
 
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
 };
