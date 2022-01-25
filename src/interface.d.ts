@@ -210,9 +210,9 @@ export type UsermavenOptions = {
   disable_persistence?: boolean;
 
   /**
-   * Auto-capturing is enabled on all sort of events
+   * Auto-capturing is disabled by default
    * 
-   * @default true
+   * @default false
    */
   autocapture?: boolean,
 

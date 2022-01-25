@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 const usermavenOpts = {
   key: "js.ww3ozarcdmmpvg0gbxk3.z08avb6a1epld7b67j4czs",
   tracking_host: "https://eventcollectors.usermaven.com",
+  autocapture: true
 };
 
 const App = () => {

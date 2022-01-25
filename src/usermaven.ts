@@ -134,7 +134,7 @@ class UsermavenClientImpl implements UsermavenClient {
   private cookiePolicy: Policy = 'keep';
   private ipPolicy: Policy = 'keep';
   private beaconApi: boolean = false;
-  public __autocapture_enabled = true;
+  public __autocapture_enabled = false;
 
   get_config(prop_name) {
     return this.config ? this.config[prop_name] : null
@@ -369,7 +369,7 @@ class UsermavenClientImpl implements UsermavenClient {
     const defaultConfig = {
       persistence: 'cookie',
       persistence_name: 'session',
-      autocapture: true,
+      autocapture: false,
       capture_pageview: true,
       store_google: true,
       save_referrer: true,
@@ -522,15 +522,15 @@ class UsermavenClientImpl implements UsermavenClient {
 
   /**
  * Capture an event. This is the most important and
- * frequently used PostHog function.
+ * frequently used usermaven function.
  *
  * ### Usage:
  *
  *     // capture an event named 'Registered'
- *     posthog.capture('Registered', {'Gender': 'Male', 'Age': 21});
+ *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21});
  *
  *     // capture an event using navigator.sendBeacon
- *     posthog.capture('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
+ *     usermaven.capture('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
  *
  * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
  * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
@@ -564,7 +564,7 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     var data = {
-      event: event_name,
+      event: event_name + (properties['$event_type'] ? '_' + properties['$event_type'] : ''),
       properties: this._calculate_event_properties(event_name, properties, start_timestamp),
     }
 
@@ -591,7 +591,8 @@ class UsermavenClientImpl implements UsermavenClient {
     // properties object by passing in a new object
 
     // update properties with pageview info and super-properties
-    properties = _.extend({}, _.info.properties(), this['persistence'].properties(), properties)
+    // exlude , _.info.properties()
+    properties = _.extend({}, this['persistence'].properties(), properties)
 
     var property_blacklist = this.get_config('property_blacklist')
     if (_.isArray(property_blacklist)) {
@@ -606,6 +607,22 @@ class UsermavenClientImpl implements UsermavenClient {
     if (sanitize_properties) {
       properties = sanitize_properties(properties, event_name)
     }
+
+    // assign first element from $elements only
+    let attributes = {};
+    const elements = properties['$elements'] || []
+    if (elements.length) {
+      attributes = elements[0];
+    }
+
+    properties['attributes'] = attributes;
+    delete properties['$ce_version'];
+    delete properties['$event_type'];
+    delete properties['$initial_referrer'];
+    delete properties['$initial_referring_domain'];
+    delete properties['$referrer'];
+    delete properties['$referring_domain'];
+    delete properties['$elements'];
 
     return properties
   }
