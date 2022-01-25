@@ -5,6 +5,7 @@ Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
 ## Capabilities
 
 - Session Capability via `persistence` and `persistence_name` options.
+- Autocapturing via `autocapture`, `capture_pageview`, `properties_string_max_length` and `property_blacklist` options.
 
 ## Maintainers Guide
 
@@ -17,8 +18,7 @@ This section is indented only for package maintainers.
    * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
      usermaven in action
      * http://localhost:8081/test-case/embed.html - embedded Usermaven
-     * http://localhost:8081/test-case/embed-no-init.html - Usermaven without automatic initialization
-     * http://localhost:8081/test-case/segment-intercept.html - test segment interception
+     * http://localhost:8081/test-case/autocapture.html - embedded Usermaven with autocapturing events
  * `yarn test` runs [Playwright](https://playwright.dev/) test
  * `yarn build` builds both npm package and `lib.js` browser bundle
  * `npm publish --public` to publish the package (change version in `package.json` manually). You need to run `npm login` with your personal
