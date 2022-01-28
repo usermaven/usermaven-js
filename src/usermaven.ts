@@ -255,14 +255,17 @@ class UsermavenClientImpl implements UsermavenClient {
   getCtx(): EventCtx {
     let now = new Date();
     const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
-    return {
+
+    // extract account details from identity payload
+    const user = { anonymous_id: this.anonymousId, ...this.userProperties }
+    const account = user['account'] || {}
+    delete user['account']
+
+    const payload = {
       event_id: '', //generate id on the backend side
       session_id: sessionId,
       window_id: windowId,
-      user: {
-        anonymous_id: this.anonymousId,
-        ...this.userProperties
-      },
+      user,
       ids: this._getIds(),
       user_agent: navigator.userAgent,
       utc_time: reformatDate(now.toISOString()),
@@ -279,6 +282,13 @@ class UsermavenClientImpl implements UsermavenClient {
       doc_encoding: document.characterSet,
       ...getDataFromParams(parseQuery())
     };
+
+    // id and name attributes will be checked on backend
+    if (Object.keys(account).length) {
+      payload['account'] = account
+    }
+
+    return payload
   }
 
   private _getIds(): Record<string, string> {
@@ -462,22 +472,6 @@ class UsermavenClientImpl implements UsermavenClient {
     if (this.sessionManager) {
       this.sessionManager.resetSessionId();
     }
-  }
-
-  account(account_id: string, payload?: EventPayload): Promise<void> {
-    if (!account_id) {
-      getLogger().error('Account ID is mandotory here');
-    }
-
-    let data = payload || {};
-    data['account_id'] = account_id;
-
-    const type = 'account'
-    getLogger().debug('track event of type', type, data)
-    const e = this.makeEvent(type, this.compatMode ?
-      'eventn' :
-      'usermaven', data);
-    return this.sendJson(e);
   }
 
   /**
