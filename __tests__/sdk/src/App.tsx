@@ -1,5 +1,5 @@
 import { useUsermaven, usePageView } from "./hooks/useUsermaven.tsx";
-import React from "react";
+import React, { useEffect } from "react";
 import './App.css';
 
 const usermavenOpts = {
@@ -10,6 +10,8 @@ const usermavenOpts = {
 const App = () => {
   const { usermaven } = useUsermaven(usermavenOpts);
   usePageView(usermaven);
+
+  useEffect(() => usermaven.account('some-account-id', { properties: 'random-ones-optional' }), [])
 
   return (
     <div className="App">

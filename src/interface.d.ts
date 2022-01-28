@@ -60,12 +60,20 @@ export type UsermavenClient = {
    */
   unset(propertyName: string, opts: { eventType?: string, persist?: boolean });
 
+   /**
+   * Identifies an organizations/accounts.
+   * @param account_id unique account ID
+   * @param payload event payload
+   * @return Promise, see _send3p documentation
+   */
+    account: (account_id: string, payload?: EventPayload) => Promise<void>
+
 }
 
 /**
  * Type of usermaven function which is exported to window.usermaven when tracker is embedded from server
  */
-export type UsermavenFunction = (action: 'track' | 'id' | 'set', eventType: string, payload?: EventPayload) => void;
+export type UsermavenFunction = (action: 'track' | 'id' | 'set' | 'account', eventType: string, payload?: EventPayload) => void;
 
 /**
  * User identification method:

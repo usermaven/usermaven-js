@@ -464,6 +464,22 @@ class UsermavenClientImpl implements UsermavenClient {
     }
   }
 
+  account(account_id: string, payload?: EventPayload): Promise<void> {
+    if (!account_id) {
+      getLogger().error('Account ID is mandotory here');
+    }
+
+    let data = payload || {};
+    data['account_id'] = account_id;
+
+    const type = 'account'
+    getLogger().debug('track event of type', type, data)
+    const e = this.makeEvent(type, this.compatMode ?
+      'eventn' :
+      'usermaven', data);
+    return this.sendJson(e);
+  }
+
   /**
    * Manage session capability
    * @param options 

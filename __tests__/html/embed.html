@@ -11,10 +11,14 @@
         setTimeout(() => {
             console.log("Testing delayed tracking");
             let usermaven = window.usermaven = window.usermaven || (function () { (window.usermavenQ = window.usermavenQ || []).push(arguments); })
+            const account_id = 'random-account-id'
 
             usermaven('set', { persistent_prop1: 2 })
             usermaven('set', { persistent_prop2: 3 }, { eventType: "additional_event" })
             usermaven('set', { persistent_prop3: 3 }, { eventType: "non_existing_event" })
+
+            // account_id is mandatory, additional properties are optional
+            usermaven('account', account_id, { business: 'b2b', property: 'random' })
 
             usermaven('track', 'additional_event', { extra: 1 });
 
