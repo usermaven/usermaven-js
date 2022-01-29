@@ -27,7 +27,7 @@ export type UsermavenClient = {
   rawTrack: (payload: any) => void
 
   /**
-   * Sets a user data
+   * Sets a user data including organization/account data
    * @param userData user data (as map id_type --> value, such as "email": "a@bcd.com"
    * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
    * @return Promise, see _send3p documentation
@@ -59,7 +59,6 @@ export type UsermavenClient = {
    * User
    */
   unset(propertyName: string, opts: { eventType?: string, persist?: boolean });
-
 }
 
 /**
@@ -203,6 +202,15 @@ export type UsermavenOptions = {
 };
 
 /**
+ * Account Attributes
+ */
+export interface AccountProps {
+  id: string; // Account ID
+  name: string; // Account Name
+  custom: any; // Optional attributes such as industry, website, employee count etc.
+}
+
+/**
  * User properties (ids).
  */
 export interface UserProps {
@@ -210,6 +218,7 @@ export interface UserProps {
   id?: string                       //user id (non anonymous). If not set, first known id (from propName below) will be used
   email?: string                    //user id (non anonymous). If not set, first known id (from propName below) will be used
   [propName: string]: any           //any other forms of ids
+  account?: AccountProps
 }
 
 /**
@@ -238,6 +247,7 @@ export type Conversion = {
 export type EventCtx = {
   event_id: string                 //unique event id or empty string for generating id on the backend side
   user: UserProps                  //user properties
+  account?: AccountProps           //account properties
   ids?: ThirdpartyIds              //user ids from external systems
   user_agent: string               //user
   utc_time: string                 //current UTC time in ISO 8601
