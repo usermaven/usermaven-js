@@ -198,7 +198,13 @@ export type UsermavenOptions = {
    */
    persistence_name?: string;
 
+  /**
+   * Persistent connection version
+   */
+  project_id?: string;
+
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
+  
 };
 
 /**
