@@ -8,7 +8,7 @@ const usermavenProps = [
   'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
   'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
-  'persistence', 'persistence_name'
+  'persistence', 'persistence_name', "project_id"
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -66,6 +66,11 @@ function getTracker(window): UsermavenClient {
     processQueue(queue, window.usermavenClient);
   }
   window.usermaven = usermaven;
+  console.log(opts)
+  if(opts.project_id){
+    // @ts-ignore
+    usermaven('set', { "project_id": opts.project_id })
+  }
 
   if ("true" !== script.getAttribute("data-init-only") && "yes" !== script.getAttribute("data-init-only")) {
     usermaven('track', 'pageview');
