@@ -256,10 +256,10 @@ class UsermavenClientImpl implements UsermavenClient {
     let now = new Date();
     const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
 
-    // extract account details from identity payload
+    // extract company details from identity payload
     const user = { anonymous_id: this.anonymousId, ...this.userProperties }
-    const account = user['account'] || {}
-    delete user['account']
+    const company = user['company'] || {}
+    delete user['company']
 
     const payload = {
       event_id: '', //generate id on the backend side
@@ -284,8 +284,8 @@ class UsermavenClientImpl implements UsermavenClient {
     };
 
     // id and name attributes will be checked on backend
-    if (Object.keys(account).length) {
-      payload['account'] = account
+    if (Object.keys(company).length) {
+      payload['company'] = company
     }
 
     return payload

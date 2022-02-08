@@ -27,18 +27,18 @@ const App = () => {
       current_plan: "replug-agency-lifetime",
       subscription_id: "5afa74ea9bca157d4121b1d4"
     },
-    // Account Attributes
-    account: {
+    // Company Attributes
+    company: {
       // Required Attributes
-      id: "61caea525265a849dd7c2722", // Account ID
-      name: "Muhammad Zaryaab Shahbaz", // Account Name.
+      id: "61caea525265a849dd7c2722", // Company ID
+      name: "Muhammad Zaryaab Shahbaz", // Company Name.
 
       // Optional attributes such as industry, website, employee count etc.
       custom: {
-        industry: "Technology", // Account Industry.
-        website: "https://usermaven.com", // Account Website.
+        industry: "Technology", // Company Industry.
+        website: "https://usermaven.com", // Company Website.
         employees: 20, // Number of employees.
-        plan: "enterprise", // Account Plan.
+        plan: "enterprise", // Company Plan.
       }
     }
   }), [])
