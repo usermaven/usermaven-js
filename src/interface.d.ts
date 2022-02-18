@@ -213,6 +213,7 @@ export type UsermavenOptions = {
 export interface CompanyProps {
   id: string; // Company ID
   name: string; // Company Name
+  created_at: string; // Company creation date
   custom: any; // Optional attributes such as industry, website, employee count etc.
 }
 
