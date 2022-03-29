@@ -481,6 +481,8 @@ class UsermavenClientImpl implements UsermavenClient {
   manageSession(options: UsermavenOptions) {
     options = options || {} as UsermavenOptions
     getLogger().debug('Options', options);
+
+    // cross_subdomain_cookie: whether to keep cookie across domains and subdomains
     const defaultConfig = {
       persistence: options.persistence || 'cookie',
       persistence_name: options.persistence_name || 'session',

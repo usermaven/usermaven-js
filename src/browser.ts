@@ -8,7 +8,7 @@ const usermavenProps = [
   'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
   'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
-  'persistence', 'persistence_name', "project_id"
+  'persistence', 'persistence_name', "project_id", "cross_subdomain_cookie"
 ];
 
 function getTrackingHost(scriptSrc: string): string {
