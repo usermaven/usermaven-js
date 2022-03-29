@@ -5,6 +5,7 @@ Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
 ## Capabilities
 
 - Session Capability via `persistence` and `persistence_name` options.
+- Cross sub-domain compatibility added 
 
 ## Maintainers Guide
 
@@ -30,6 +31,20 @@ npmjs account beforehand (make sure you have access to Usermaven team)
     * `npm i` --- install npm dependencies
     * `npm link @usermaven/sdk-js` --- use npm package locally whose symlink is just published
     * `npm start` --- start the application and monitor events
+
+### Checking Cross Domain Session locally
+Setup a custom domain and sub-domain locally to test cross domain session persistence.
+
+```bash
+sudo nano /etc/hosts
+```
+Add the following lines in the hosts file
+```bash
+127.0.0.1       localhost.com
+127.0.0.1       app.localhost.com
+```
+
+You will be able to access the domains at [localhost domain](http://localhost.com:8081/test-case/embed.html) and [localhost sub-domain](http://app.localhost.com:8081/test-case/embed.html)
 
 ### Publishing new version
 

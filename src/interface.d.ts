@@ -202,6 +202,7 @@ export type UsermavenOptions = {
    * Persistent connection version
    */
   project_id?: string;
+  cross_subdomain_cookie?: boolean;
 
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
   
