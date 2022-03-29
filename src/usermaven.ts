@@ -479,10 +479,14 @@ class UsermavenClientImpl implements UsermavenClient {
    * @param options 
    */
   manageSession(options: UsermavenOptions) {
+    options = options || {} as UsermavenOptions
     getLogger().debug('Options', options);
+
+    // cross_subdomain_cookie: whether to keep cookie across domains and subdomains
     const defaultConfig = {
-      persistence: options ? options.persistence || 'cookie' : 'cookie',
-      persistence_name: options ? options.persistence_name || 'session' : 'session',
+      persistence: options.persistence || 'cookie',
+      persistence_name: options.persistence_name || 'session',
+      cross_subdomain_cookie: options.cross_subdomain_cookie || true
     }
     // TODO: Default session name would be session_
     this.config = _.extend(defaultConfig, this.config || {}, {

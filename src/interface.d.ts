@@ -203,6 +203,12 @@ export type UsermavenOptions = {
    */
   project_id?: string;
 
+  /**
+   * Enable cookie across subdomain
+   * Default value: true
+   */
+  cross_subdomain_cookie?: boolean;
+
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
   
 };
