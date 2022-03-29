@@ -615,7 +615,7 @@ class UsermavenClientImpl implements UsermavenClient {
       attributes = elements[0];
     }
 
-    properties['attributes'] = attributes;
+    properties['autocapture_attributes'] = attributes;
     delete properties['$ce_version'];
     delete properties['$event_type'];
     delete properties['$initial_referrer'];
