@@ -1,9 +1,9 @@
-import { useUsermaven, usePageView } from "./hooks/useUsermaven.tsx";
+import { useUsermaven, usePageView } from "./hooks/useUsermaven";
 import { Route, Routes } from "react-router-dom";
 import React, { useEffect } from "react";
 import "./App.css";
-import Embed from "./components/Embed.tsx";
-import AutoCapture from "./components/AutoCapture.tsx";
+import Embed from "./components/Embed";
+import AutoCapture from "./components/AutoCapture";
 import { useNavigate } from "react-router";
 
 const usermavenOpts = {

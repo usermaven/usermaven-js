@@ -1,7 +1,7 @@
 import { TestServer } from './common';
 
 const rollup = require('rollup');
-import loadConfigFile from 'rollup/dist/loadConfigFile';
+import loadAndParseConfigFile from "rollup/dist/loadConfigFile.js";
 import path from 'path';
 import bodyParser from 'body-parser';
 
@@ -10,7 +10,10 @@ import bodyParser from 'body-parser';
 
   let rollupFile = `${__dirname}/../../rollup.config.js`;
   console.log(`Loading rollup file ${rollupFile}`);
-  const { options, warnings } = await loadConfigFile(path.resolve(rollupFile), { format: 'es' });
+  const { options, warnings } = await loadAndParseConfigFile(
+    path.resolve(rollupFile),
+    { format: "es" }
+  );
 
   // This prints all deferred warnings
   warnings.flush();
