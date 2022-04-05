@@ -260,13 +260,18 @@ class UsermavenClientImpl implements UsermavenClient {
 
   getCtx(): EventCtx {
     let now = new Date();
-    return {
+    const { sessionId, windowId } = this.sessionManager.getSessionAndWindowId()
+
+    // extract company details from identity payload
+    const user = { anonymous_id: this.anonymousId, ...this.userProperties }
+    const company = user['company'] || {}
+    delete user['company']
+
+    const payload = {
       event_id: '', //generate id on the backend side
-      ...this.sessionManager.getSessionAndWindowId(),
-      user: {
-        anonymous_id: this.anonymousId,
-        ...this.userProperties
-      },
+      session_id: sessionId,
+      window_id: windowId,
+      user,
       ids: this._getIds(),
       user_agent: navigator.userAgent,
       utc_time: reformatDate(now.toISOString()),
@@ -283,6 +288,13 @@ class UsermavenClientImpl implements UsermavenClient {
       doc_encoding: document.characterSet,
       ...getDataFromParams(parseQuery())
     };
+
+    // id and name attributes will be checked on backend
+    if (Object.keys(company).length) {
+      payload['company'] = company
+    }
+
+    return payload
   }
 
   private _getIds(): Record<string, string> {
@@ -492,6 +504,20 @@ class UsermavenClientImpl implements UsermavenClient {
    * @param options 
    */
   manageSession(options: UsermavenOptions) {
+    options = options || {} as UsermavenOptions
+    getLogger().debug('Options', options);
+
+    // cross_subdomain_cookie: whether to keep cookie across domains and subdomains
+    const defaultConfig = {
+      persistence: options.persistence || 'cookie',
+      persistence_name: options.persistence_name || 'session',
+      cross_subdomain_cookie: options.cross_subdomain_cookie || true
+    }
+    // TODO: Default session name would be session_
+    this.config = _.extend(defaultConfig, this.config || {}, {
+      token: this.apiKey,
+    })
+    getLogger().debug('Default Configuration', this.config);
     this.persistence = new UserMavenPersistence(this.config)
     getLogger().debug('Persistence Configuration', this.persistence);
     this.sessionManager = new SessionIdManager(this.config, this.persistence)
