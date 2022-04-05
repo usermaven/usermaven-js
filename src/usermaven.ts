@@ -1104,6 +1104,9 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     properties['autocapture_attributes'] = attributes;
+    properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
+    properties['autocapture_attributes']["event_type"] = properties["$event_type"] ?? "";
+    
     delete properties['$ce_version'];
     delete properties['$event_type'];
     delete properties['$initial_referrer'];
@@ -1112,8 +1115,12 @@ class UsermavenClientImpl implements UsermavenClient {
     delete properties['$referring_domain'];
     delete properties['$elements'];
 
-    // properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
-    // delete properties['autocapture_attributes']["$el_text"];
+    // TODO: later remove this from the autotrack code.
+     
+    delete properties['autocapture_attributes']["$el_text"];
+    delete properties['autocapture_attributes']["nth_child"];
+    delete properties['autocapture_attributes']["nth_of_type"];
+
     
     return properties
   }
