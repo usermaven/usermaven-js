@@ -1,5 +1,4 @@
-import { console } from './utils'
-import { _ } from './utils'
+import { _, console } from '../utils'
 
 var DOMAIN_MATCH_REGEX = /[a-z0-9][a-z0-9-]+\.[a-z.]{2,6}$/i
 

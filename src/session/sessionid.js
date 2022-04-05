@@ -1,14 +1,13 @@
-// import { INCREMENTAL_SNAPSHOT_EVENT_TYPE, MUTATION_SOURCE_TYPE } from './extensions/sessionrecording'
 import { SESSION_ID } from './usermaven-persistence'
 import { sessionStore } from './storage'
-import { _ } from './utils'
-
-const SESSION_CHANGE_THRESHOLD = 30 * 60 * 1000 // 30 mins
-/* const SESSION_CHANGE_THRESHOLD = 1 * 60 * 1000 // 1 min */
+import { _ } from '../utils'
 
 export class SessionIdManager {
     constructor(config, persistence) {
         this.persistence = persistence
+        this.session_change_threshold = config['persistence_time'] || 1800 // 30 mins
+        // this.session_change_threshold = config['persistence_time'] || 60 // 1 min
+        this.session_change_threshold *= 1000
 
         if (config['persistence_name']) {
             this.window_id_storage_key = 'um_' + config['persistence_name'] + '_window_id'
@@ -67,6 +66,9 @@ export class SessionIdManager {
         // Some recording events are triggered by non-user events (e.g. "X minutes ago" text updating on the screen).
         // We don't want to update the session and window ids in these cases. These events are designated by event
         // type -> incremental update, and source -> mutation.
+        if (this.persistence.disabled) {
+            return {}
+        }
         /* const isUserInteraction = !(
             recordingEvent &&
             recordingEvent.type === INCREMENTAL_SNAPSHOT_EVENT_TYPE &&
@@ -80,7 +82,7 @@ export class SessionIdManager {
         let [lastTimestamp, sessionId] = this._getSessionId()
         let windowId = this._getWindowId()
 
-        if (!sessionId || (isUserInteraction && Math.abs(timestamp - lastTimestamp) > SESSION_CHANGE_THRESHOLD)) {
+        if (!sessionId || (isUserInteraction && Math.abs(timestamp - lastTimestamp) > this.session_change_threshold)) {
             sessionId = _.UUID()
             windowId = _.UUID()
         } else if (!windowId) {
@@ -91,10 +93,9 @@ export class SessionIdManager {
 
         this._setWindowId(windowId)
         this._setSessionId(sessionId, newTimestamp)
-
         return {
-            sessionId: sessionId,
-            windowId: windowId,
+            session_id: sessionId,
+            window_id: windowId,
         }
     }
 }

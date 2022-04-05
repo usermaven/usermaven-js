@@ -1,6 +1,6 @@
 /* eslint camelcase: "off" */
 
-import { _, console } from './utils'
+import { _, console } from '../utils'
 import { cookieStore, localStore, localPlusCookieStore, memoryStore } from './storage'
 
 /*

@@ -2,7 +2,19 @@
 
 <head>
     <!-- Usermaven tracking one-liner. By default, pageview event is sent -->
-    <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug" defer></script>
+    <script type="text/javascript">
+        (function () {
+            window.usermaven = window.usermaven || (function () { (window.usermavenQ = window.usermavenQ || []).push(arguments); })
+            var t = document.createElement('script'),
+                s = document.getElementsByTagName('script')[0];
+            t.defer = true;
+            t.id = 'um-tracker';
+            t.setAttribute('data-tracking-host', "%%SERVER%%")
+            t.setAttribute('data-key', 'Test');
+            t.src = '%%SERVER%%/s/lib.js';
+            s.parentNode.insertBefore(t, s);
+        })();
+    </script>
     <script>
         setTimeout(() => {
             console.log("Testing delayed tracking");
@@ -61,7 +73,7 @@
     <h2>Capabilities</h2>
     <ul>
         <li>Session Persistence</li>
-        <li><a href="autocapture.html">Auto-capturing</a></li>
+        <li><a href="autocapture-gtm.html">Auto-capturing GTM</a></li>
     </ul>
     <h3>Track custom events</h3>
     <button id="button-test" name="button-test" onclick="usermaven('track', 'button_test', {
