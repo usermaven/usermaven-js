@@ -1110,7 +1110,7 @@ class UsermavenClientImpl implements UsermavenClient {
     delete properties['$initial_referring_domain'];
     delete properties['$referrer'];
     delete properties['$referring_domain'];
-    // delete properties['$elements'];
+    delete properties['$elements'];
 
     // properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
     // delete properties['autocapture_attributes']["$el_text"];

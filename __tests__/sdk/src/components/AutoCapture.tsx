@@ -44,7 +44,11 @@ const AutoCapture = () => {
       </select>
 
       <h3>Textarea Tag</h3>
-      <textarea id="textarea-test" name="textarea-test"></textarea>
+      <textarea
+        data-usermaven-ac="yes"
+        id="textarea-test"
+        name="textarea-test"
+      ></textarea>
 
       <h3>
         No Capture Button Tag
