@@ -66,7 +66,6 @@ export class SessionIdManager {
         // Some recording events are triggered by non-user events (e.g. "X minutes ago" text updating on the screen).
         // We don't want to update the session and window ids in these cases. These events are designated by event
         // type -> incremental update, and source -> mutation.
-
         if (this.persistence.disabled) {
             return {}
         }
@@ -94,7 +93,6 @@ export class SessionIdManager {
 
         this._setWindowId(windowId)
         this._setSessionId(sessionId, newTimestamp)
-
         return {
             session_id: sessionId,
             window_id: windowId,

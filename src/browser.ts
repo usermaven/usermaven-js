@@ -8,9 +8,9 @@ const usermavenProps = [
   'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
   'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
-  'persistence', 'persistence_name', "project_id", "cross_subdomain_cookie",
-  'persistence_time', 'disable_persistence', 'autocapture', 'capture_pageview',
-  'properties_string_max_length', 'property_blacklist'
+  'custom_headers', 'force_use_fetch', 'persistence', 'persistence_name', "project_id",
+  "cross_subdomain_cookie", 'persistence_time', 'disable_persistence', 'autocapture',
+  'capture_pageview', 'properties_string_max_length', 'property_blacklist'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -43,7 +43,7 @@ function getTracker(window): UsermavenClient {
   };
 
   usermavenProps.forEach(prop => {
-    let attr = "data-" + prop.replace("_", "-");
+    let attr = "data-" + prop.replace(new RegExp("_", "g"), "-");
     if (script.getAttribute(attr) !== undefined && script.getAttribute(attr) !== null) {
       let val: any = script.getAttribute(attr);
       if ("true" === val) {
@@ -69,6 +69,9 @@ function getTracker(window): UsermavenClient {
   }
   window.usermaven = usermaven;
   console.log(opts)
+
+  // Below usermaven project id set is deprecated.
+  // TODO: remove soon.
   if(opts.project_id){
     // @ts-ignore
     usermaven('set', { "project_id": opts.project_id })

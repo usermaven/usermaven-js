@@ -61,8 +61,13 @@
     <h2>Capabilities</h2>
     <ul>
         <li>Session Persistence</li>
-        <li><a href="autocapture.html">Autocapturing</a></li>
+        <li><a href="autocapture.html">Auto-capturing</a></li>
     </ul>
+    <h3>Track custom events</h3>
+    <button id="button-test" name="button-test" onclick="usermaven('track', 'button_test', {
+        'price': 400
+    })">Simple button</button>
+
 </body>
 
 </html>

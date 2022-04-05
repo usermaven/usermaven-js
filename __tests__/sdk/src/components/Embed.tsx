@@ -1,7 +1,7 @@
 import React from "react";
 
 const Embed = () => {
-    return (<></>)
-}
+  return <></>;
+};
 
 export default Embed;
