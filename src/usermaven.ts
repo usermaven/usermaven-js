@@ -826,8 +826,8 @@ class UsermavenClientImpl implements UsermavenClient {
       persistence_name: 'session',
       autocapture: false,
       capture_pageview: true,
-      store_google: true,
-      save_referrer: true,
+      store_google: false,
+      save_referrer: false,
       properties_string_max_length: null, // 65535
       property_blacklist: [],
       sanitize_properties: null
@@ -1056,8 +1056,13 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     data = _.copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
-    // this.track(data.event, data.properties)
-    this.track("$autocapture", data.properties)
+    
+    // send evnet if there is a tagname available
+    if(data.properties?.autocapture_attributes?.tag_name){
+      this.track("$autocapture", data.properties)
+      // this.track(data.event, data.properties)
+    }
+    
   }
 
   _calculate_event_properties(event_name, event_properties, start_timestamp) {
