@@ -1,6 +1,6 @@
 {
   "name": "@usermaven/sdk-js",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Usermaven JavaScript SDK.",
   "main": "dist/npm/usermaven.cjs.js",
   "module": "dist/npm/dist/usermaven.es.js",
