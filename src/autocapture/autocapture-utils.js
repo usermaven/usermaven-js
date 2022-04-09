@@ -253,6 +253,14 @@ export function isAngularStyleAttr(attributeName) {
     return false
 }
 
+export function isDataAttribute(attributeName)
+{
+    if (typeof attributeName === 'string') {
+        return attributeName.startsWith('data-')
+    }
+    return false
+}
+
 export function loadScript(scriptUrlToLoad, callback) {
     var scriptTag = document.createElement('script')
     scriptTag.type = 'text/javascript'
