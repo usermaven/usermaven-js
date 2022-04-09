@@ -48,7 +48,11 @@ var autocapture = {
             if (isSensitiveElement(elem) && ['name', 'id', 'class'].indexOf(attr.name) === -1) return
 
             if (!maskInputs && shouldCaptureValue(attr.value) && !isAngularStyleAttr(attr.name)) {
-                props['attr__' + attr.name] = attr.value
+                // exclude data atttributes for now.
+                if(!attr.name.startsWith('data-')) {
+                    props['attr__' + attr.name] = attr.value
+                }
+                
             }
         })
 
