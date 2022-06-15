@@ -19,6 +19,7 @@ This section is indented only for package maintainers.
    * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
      usermaven in action
      * http://localhost:8081/test-case/embed.html - embedded Usermaven
+      - * <http://localhost:8081/test-case/embed_strict_mode.html> - embedded strict mode for Usermaven
      * http://localhost:8081/test-case/autocapture.html - embedded Usermaven with autocapturing events
  * `yarn test` runs [Playwright](https://playwright.dev/) test
  * `yarn build` builds both npm package and `lib.js` browser bundle
