@@ -733,7 +733,7 @@ class UsermavenClientImpl implements UsermavenClient {
   getCtx(env: TrackingEnvironment): EventCtx {
     let now = new Date();
     let props = env.describeClient() || {};
-    const { session_id, window_id } =  (this.cookiePolicy === "strict") ? {"session_id": "", "window_id":""}: this.sessionManager.getSessionAndWindowId();
+    const { session_id, window_id } =  (this.cookiePolicy !== "keep") ? {"session_id": "", "window_id":""}: this.sessionManager.getSessionAndWindowId();
     const company = this.userProperties['company'] || {}
     delete this.userProperties['company']
 
