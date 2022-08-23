@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: usermaven-js
+  labels:
+    app: usermaven-js
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: usermaven-js
+  template:
+    metadata:
+      labels:
+        app: usermaven-js
+    spec:
+      containers:
+      - name: usermaven-js
+        image: eu.gcr.io/usermaven/usermaven-js-stage:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: usermaven-js
+  name: usermaven-js-svc
+spec:
+  ports:
+  - name: usermaven-js-port
+    port: 8080
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: usermaven-js
+  type: ClusterIP
+status:
+  loadBalancer: {}
