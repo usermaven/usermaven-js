@@ -1901,7 +1901,7 @@
 
 "@usermaven/sdk-js@file:../..":
   "resolved" "file:../.."
-  "version" "1.0.8"
+  "version" "1.1.0"
 
 "@webassemblyjs/ast@1.11.1":
   "integrity" "sha512-ukBh14qFLjxTQNTXocdyksN5QdM28S1CxHt2rdskFyL+xFV7VremuBLVbmCePj+URalXBENx/9Lm7lnhihtCSw=="
