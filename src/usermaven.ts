@@ -1106,7 +1106,7 @@ class UsermavenClientImpl implements UsermavenClient {
 
     data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
     
-    // send evnet if there is a tagname available
+    // send event if there is a tagname available
     if(data.properties?.autocapture_attributes?.tag_name){
       this.track("$autocapture", data.properties)
       // this.track(data.event, data.properties)
