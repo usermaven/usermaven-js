@@ -1,16 +1,17 @@
-import { _ } from '../utils'
-
 /*
  * Get the className of an element, accounting for edge cases where element.className is an object
  * @param {Element} el - element to get the className of
  * @returns {string} the element's class
  */
-export function getClassName(el) {
+import { _each, _includes, _isUndefined, _trim } from './utils'
+
+export function getClassName(el: Element): string {
     switch (typeof el.className) {
         case 'string':
             return el.className
+        // TODO: when is this ever used?
         case 'object': // handle cases where className might be SVGAnimatedString or some other type
-            return el.className.baseVal || el.getAttribute('class') || ''
+            return ('baseVal' in el.className ? (el.className as any).baseVal : null) || el.getAttribute('class') || ''
         default:
             // future proof
             return ''
@@ -26,13 +27,13 @@ export function getClassName(el) {
  * @param {Element} el - element to get the text of
  * @returns {string} the element's direct text content
  */
-export function getSafeText(el) {
-    var elText = ''
+export function getSafeText(el: Element): string {
+    let elText = ''
 
     if (shouldCaptureElement(el) && !isSensitiveElement(el) && el.childNodes && el.childNodes.length) {
-        _.each(el.childNodes, function (child) {
+        _each(el.childNodes, function (child) {
             if (isTextNode(child) && child.textContent) {
-                elText += _.trim(child.textContent)
+                elText += _trim(child.textContent)
                     // scrub potentially sensitive values
                     .split(/(\s+)/)
                     .filter(shouldCaptureValue)
@@ -46,7 +47,7 @@ export function getSafeText(el) {
         })
     }
 
-    return _.trim(elText)
+    return _trim(elText)
 }
 
 /*
@@ -54,8 +55,8 @@ export function getSafeText(el) {
  * @param {Element} el - element to check
  * @returns {boolean} whether el is of the correct nodeType
  */
-export function isElementNode(el) {
-    return el && el.nodeType === 1 // Node.ELEMENT_NODE - use integer constant for browser portability
+export function isElementNode(el: Element | undefined | null): el is HTMLElement {
+    return !!el && el.nodeType === 1 // Node.ELEMENT_NODE - use integer constant for browser portability
 }
 
 /*
@@ -68,8 +69,8 @@ export function isElementNode(el) {
  * @param {string} tag - tag name (e.g., "div")
  * @returns {boolean} whether el is of the given tag type
  */
-export function isTag(el, tag) {
-    return el && el.tagName && el.tagName.toLowerCase() === tag.toLowerCase()
+export function isTag(el: Element | undefined | null, tag: string): el is HTMLElement {
+    return !!el && !!el.tagName && el.tagName.toLowerCase() === tag.toLowerCase()
 }
 
 /*
@@ -77,11 +78,20 @@ export function isTag(el, tag) {
  * @param {Element} el - element to check
  * @returns {boolean} whether el is of the correct nodeType
  */
-export function isTextNode(el) {
-    return el && el.nodeType === 3 // Node.TEXT_NODE - use integer constant for browser portability
+export function isTextNode(el: Element | undefined | null): el is HTMLElement {
+    return !!el && el.nodeType === 3 // Node.TEXT_NODE - use integer constant for browser portability
 }
 
-export var usefulElements = ['a', 'button', 'form', 'input', 'select', 'textarea', 'label']
+/*
+ * Check whether an element has nodeType Node.DOCUMENT_FRAGMENT_NODE
+ * @param {Element} el - element to check
+ * @returns {boolean} whether el is of the correct nodeType
+ */
+export function isDocumentFragment(el: Element | ParentNode | undefined | null): el is DocumentFragment {
+    return !!el && el.nodeType === 11 // Node.DOCUMENT_FRAGMENT_NODE - use integer constant for browser portability
+}
+
+export const usefulElements = ['a', 'button', 'form', 'input', 'select', 'textarea', 'label']
 /*
  * Check whether a DOM event should be "captured" or if it may contain sentitive data
  * using a variety of heuristics.
@@ -89,28 +99,28 @@ export var usefulElements = ['a', 'button', 'form', 'input', 'select', 'textarea
  * @param {Event} event - event to check
  * @returns {boolean} whether the event should be captured
  */
-export function shouldCaptureDomEvent(el, event) {
+export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
     if (!el || isTag(el, 'html') || !isElementNode(el)) {
         return false
     }
 
-    var parentIsUsefulElement = false
-    var targetElementList = [el]
-    var parentNode = true
-    var curEl = el
+    let parentIsUsefulElement = false
+    const targetElementList: Element[] = [el] // TODO: remove this var, it's never queried
+    let parentNode: Element | boolean = true
+    let curEl: Element = el
     while (curEl.parentNode && !isTag(curEl, 'body')) {
         // If element is a shadow root, we skip it
-        if (curEl.parentNode.nodeType === 11) {
-            targetElementList.push(curEl.parentNode.host)
-            curEl = curEl.parentNode.host
+        if (isDocumentFragment(curEl.parentNode)) {
+            targetElementList.push((curEl.parentNode as any).host)
+            curEl = (curEl.parentNode as any).host
             continue
         }
-        parentNode = curEl.parentNode
+        parentNode = (curEl.parentNode as Element) || false
         if (!parentNode) break
         if (usefulElements.indexOf(parentNode.tagName.toLowerCase()) > -1) {
             parentIsUsefulElement = true
         } else {
-            let compStyles = window.getComputedStyle(parentNode)
+            const compStyles = window.getComputedStyle(parentNode)
             if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer') {
                 parentIsUsefulElement = true
             }
@@ -120,12 +130,12 @@ export function shouldCaptureDomEvent(el, event) {
         curEl = parentNode
     }
 
-    let compStyles = window.getComputedStyle(el)
+    const compStyles = window.getComputedStyle(el)
     if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer' && event.type === 'click') {
         return true
     }
 
-    var tag = el.tagName.toLowerCase()
+    const tag = el.tagName.toLowerCase()
     switch (tag) {
         case 'html':
             return false
@@ -151,20 +161,20 @@ export function shouldCaptureDomEvent(el, event) {
  * @param {Element} el - element to check
  * @returns {boolean} whether the element should be captured
  */
-export function shouldCaptureElement(el) {
-    for (var curEl = el; curEl.parentNode && !isTag(curEl, 'body'); curEl = curEl.parentNode) {
-        var classes = getClassName(curEl).split(' ')
-        if (_.includes(classes, 'um-sensitive') || _.includes(classes, 'um-no-capture')) {
+export function shouldCaptureElement(el: Element): boolean {
+    for (let curEl = el; curEl.parentNode && !isTag(curEl, 'body'); curEl = curEl.parentNode as Element) {
+        const classes = getClassName(curEl).split(' ')
+        if (_includes(classes, 'ph-sensitive') || _includes(classes, 'ph-no-capture')) {
             return false
         }
     }
 
-    if (_.includes(getClassName(el).split(' '), 'um-include')) {
+    if (_includes(getClassName(el).split(' '), 'ph-include')) {
         return true
     }
 
     // don't include hidden or password fields
-    var type = el.type || ''
+    const type = (el as HTMLInputElement).type || ''
     if (typeof type === 'string') {
         // it's possible for el.type to be a DOM element if el is a form with a child input[name="type"]
         switch (type.toLowerCase()) {
@@ -176,10 +186,14 @@ export function shouldCaptureElement(el) {
     }
 
     // filter out data from fields that look like sensitive fields
-    var name = el.name || el.id || ''
+    const name = (el as HTMLInputElement).name || el.id || ''
+    // See https://github.com/posthog/posthog-js/issues/165
+    // Under specific circumstances a bug caused .replace to be called on a DOM element
+    // instead of a string, removing the element from the page. Ensure this issue is mitigated.
     if (typeof name === 'string') {
         // it's possible for el.name or el.id to be a DOM element if el is a form with a child input[name="name"]
-        var sensitiveNameRegex = /^cc|cardnum|ccnum|creditcard|csc|cvc|cvv|exp|pass|pwd|routing|seccode|securitycode|securitynum|socialsec|socsec|ssn/i
+        const sensitiveNameRegex =
+            /^cc|cardnum|ccnum|creditcard|csc|cvc|cvv|exp|pass|pwd|routing|seccode|securitycode|securitynum|socialsec|socsec|ssn/i
         if (sensitiveNameRegex.test(name.replace(/[^a-zA-Z0-9]/g, ''))) {
             return false
         }
@@ -193,12 +207,12 @@ export function shouldCaptureElement(el) {
  * @param {Element} el - element to check
  * @returns {boolean} whether the element should be captured
  */
-export function isSensitiveElement(el) {
+export function isSensitiveElement(el: Element): boolean {
     // don't send data from inputs or similar elements since there will always be
     // a risk of clientside javascript placing sensitive data in attributes
     const allowedInputTypes = ['button', 'checkbox', 'submit', 'reset']
     if (
-        (isTag(el, 'input') && !allowedInputTypes.includes(el.type)) ||
+        (isTag(el, 'input') && !allowedInputTypes.includes((el as HTMLInputElement).type)) ||
         isTag(el, 'select') ||
         isTag(el, 'textarea') ||
         el.getAttribute('contenteditable') === 'true'
@@ -214,23 +228,24 @@ export function isSensitiveElement(el) {
  * @param {string} value - string value to check
  * @returns {boolean} whether the element should be captured
  */
-export function shouldCaptureValue(value) {
-    if (value === null || _.isUndefined(value)) {
+export function shouldCaptureValue(value: string): boolean {
+    if (value === null || _isUndefined(value)) {
         return false
     }
 
     if (typeof value === 'string') {
-        value = _.trim(value)
+        value = _trim(value)
 
         // check to see if input value looks like a credit card number
         // see: https://www.safaribooksonline.com/library/view/regular-expressions-cookbook/9781449327453/ch04s20.html
-        var ccRegex = /^(?:(4[0-9]{12}(?:[0-9]{3})?)|(5[1-5][0-9]{14})|(6(?:011|5[0-9]{2})[0-9]{12})|(3[47][0-9]{13})|(3(?:0[0-5]|[68][0-9])[0-9]{11})|((?:2131|1800|35[0-9]{3})[0-9]{11}))$/
+        const ccRegex =
+            /^(?:(4[0-9]{12}(?:[0-9]{3})?)|(5[1-5][0-9]{14})|(6(?:011|5[0-9]{2})[0-9]{12})|(3[47][0-9]{13})|(3(?:0[0-5]|[68][0-9])[0-9]{11})|((?:2131|1800|35[0-9]{3})[0-9]{11}))$/
         if (ccRegex.test((value || '').replace(/[- ]/g, ''))) {
             return false
         }
 
         // check to see if input value looks like a social security number
-        var ssnRegex = /(^\d{3}-?\d{2}-?\d{4}$)/
+        const ssnRegex = /(^\d{3}-?\d{2}-?\d{4}$)/
         if (ssnRegex.test(value)) {
             return false
         }
@@ -246,31 +261,24 @@ export function shouldCaptureValue(value) {
  * @param {string} attributeName - string value to check
  * @returns {boolean} whether the element is an angular tag
  */
-export function isAngularStyleAttr(attributeName) {
+export function isAngularStyleAttr(attributeName: string): boolean {
     if (typeof attributeName === 'string') {
         return attributeName.substring(0, 10) === '_ngcontent' || attributeName.substring(0, 7) === '_nghost'
     }
     return false
 }
 
-export function isDataAttribute(attributeName)
-{
-    if (typeof attributeName === 'string') {
-        return attributeName.startsWith('data-')
-    }
-    return false
-}
-
-export function loadScript(scriptUrlToLoad, callback) {
-    var scriptTag = document.createElement('script')
+export function loadScript(scriptUrlToLoad: string, callback: (event: Event) => void): void {
+    const scriptTag = document.createElement('script')
     scriptTag.type = 'text/javascript'
     scriptTag.src = scriptUrlToLoad
     scriptTag.onload = callback
 
-    var scripts = document.getElementsByTagName('script')
+    const scripts = document.getElementsByTagName('script')
     if (scripts.length > 0) {
-        scripts[0].parentNode.insertBefore(scriptTag, scripts[0])
+        scripts[0].parentNode?.insertBefore(scriptTag, scripts[0])
     } else {
         document.body.appendChild(scriptTag)
     }
 }
+
