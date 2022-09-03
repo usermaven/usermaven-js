@@ -4,9 +4,7 @@ Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
 
 ## Capabilities
 
-- Session Capability via `persistence`, `persistence_name` and `persistence_time` options.
 - Autocapturing via `autocapture`, `capture_pageview`, `properties_string_max_length` and `property_blacklist` options.
-- Cross sub-domain compatibility added.
 
 ## Maintainers Guide
 

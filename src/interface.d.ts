@@ -59,6 +59,16 @@ export type UsermavenClient = {
    * User
    */
   unset(propertyName: string, opts: { eventType?: string, persist?: boolean });
+
+  /**
+   * Trigger for auto-captured event.
+   * @param name event name
+   * @param payload event payload
+   * @return Promise, see _send3p documentation
+   */
+  capture?: (name: string, properties?: EventPayload, opts?: UsermavenOptions) => void
+
+
 }
 
 /**
@@ -228,46 +238,11 @@ export type UsermavenOptions = {
   disable_event_persistence?: boolean
 
   /**
-   * Type of persistence required
-   * Possible values: cookie | localStorage | localStorage+cookie | memory
-   * 
-   * @default cookie
-   */
-  persistence?: PersistenceType;
-
-  /**
-   * Persistent connection name
-   */
-  persistence_name?: string;
-
-  /**
-   * Session tracking time in seconds (x)
-   * After x seconds of inactivity, new session will be created. Default time is 30 minutes i.e 1800 seconds
-   * 
-   * @default 1800
-   */
-  persistence_time?: number;
-
-  /**
-   * Disable session tracking here
-   * 
-   * @default false
-   */
-  disable_persistence?: boolean;
-
-  /**
    * Auto-capturing is disabled by default
    * 
    * @default false
    */
   autocapture?: boolean,
-
-  /**
-   * Should a page_view event be triggered on page load
-   * 
-   * @default true
-   */
-  capture_pageview?: boolean,
 
   /**
    * To control the payload properties character limit. Defaults to null that means there is no limit. i.e 65535
@@ -288,14 +263,21 @@ export type UsermavenOptions = {
    */
   project_id?: string;
 
-  /**
-   * Enable cookie across subdomain
-   * Default value: true
-   */
-  cross_subdomain_cookie?: boolean;
 
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
   
+  /**
+  * Mask all element attributes
+  */
+  mask_all_element_attributes?: boolean
+
+  /**
+   * Mask all text
+   */
+  mask_all_text?: boolean
+
+
+   
 };
 
 /**
@@ -491,3 +473,42 @@ export type EventCompat = EventBasics & {
 } & EventPayload;
 
 export type PersistenceType = 'cookie' | 'localStorage' | 'localStorage+cookie' | 'memory';
+
+// Autocapture
+export type Property = any
+export type Properties = Record<string, Property>
+
+export enum Compression {
+  GZipJS = 'gzip-js',
+  LZ64 = 'lz64',
+  Base64 = 'base64',
+}
+
+export interface EditorParams {
+  jsURL?: string
+  apiURL?: string
+  toolbarVersion?: 'toolbar'
+}
+
+
+export interface DecideResponse {
+  status: number
+  supportedCompression: Compression[]
+  config: {
+      enable_collect_everything: boolean
+  }
+  custom_properties: AutoCaptureCustomProperty[] // TODO: delete, not sent
+  featureFlags: Record<string, string | boolean>
+  sessionRecording?: {
+      endpoint?: string
+  }
+  editorParams: EditorParams
+  toolbarVersion: 'toolbar' /** deprecated, moved to editorParams */
+  isAuthenticated: boolean
+}
+
+export interface AutoCaptureCustomProperty {
+  name: string
+  css_selector: string
+  event_selectors: string[]
+}

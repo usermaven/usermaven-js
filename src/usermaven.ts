@@ -33,10 +33,8 @@ import { isWindowAvailable, requireWindow } from "./window";
 import { CookieOpts, serializeCookie } from "./cookie";
 import { IncomingMessage, ServerResponse } from "http";
 import { LocalStorageQueue, MemoryQueue } from "./queue";
-import { UserMavenPersistence } from './session/usermaven-persistence';
-import { SessionIdManager } from './session/sessionid';
-import { autocapture } from './autocapture/autocapture';
-import { _, userAgent } from "./utils"
+import { autocapture } from './autocapture';
+import { _copyAndTruncateStrings, _each, _extend, _isArray, _isUndefined } from "./utils";
 
 const VERSION_INFO = {
   env: '__buildEnv__',
@@ -527,9 +525,10 @@ class UsermavenClientImpl implements UsermavenClient {
   private flushing: boolean = false
   private attempt: number = 1
 
+  private propertyBlacklist: string[] = []
   public config?: any;
-  public persistence?: UserMavenPersistence;
-  public sessionManager?: SessionIdManager;
+  // public persistence?: UserMavenPersistence;
+  // public sessionManager?: SessionIdManager;
 
   public __autocapture_enabled = false;
   // private anonymousId: string = '';
@@ -733,14 +732,11 @@ class UsermavenClientImpl implements UsermavenClient {
   getCtx(env: TrackingEnvironment): EventCtx {
     let now = new Date();
     let props = env.describeClient() || {};
-    const { session_id, window_id } =  (this.cookiePolicy !== "keep") ? {"session_id": "", "window_id":""}: this.sessionManager.getSessionAndWindowId();
     const company = this.userProperties['company'] || {}
     delete this.userProperties['company']
 
     const payload = {
       event_id: "", //generate id on the backend
-      session_id: session_id,
-      window_id: window_id,
       user: {
         anonymous_id:
           this.cookiePolicy !== "strict"
@@ -897,24 +893,23 @@ class UsermavenClientImpl implements UsermavenClient {
       );
     }
 
-    // Added these configuration for session management + autocapture
+    
+    this.propertyBlacklist = options.property_blacklist && options.property_blacklist.length > 0 ? options.property_blacklist : [];
+    
+
+    // // Added these configuration for session management + autocapture
 
     const defaultConfig = {
-      persistence: 'cookie',
-      persistence_name: 'session',
       autocapture: false,
-      capture_pageview: true,
-      store_google: false,
-      save_referrer: false,
       properties_string_max_length: null, // 65535
       property_blacklist: [],
       sanitize_properties: null
     }
-    this.config = _.extend({}, defaultConfig, options || {}, this.config || {}, { token: this.apiKey })
+    this.config = _extend({}, defaultConfig, options || {}, this.config || {}, { token: this.apiKey })
 
     getLogger().debug('Default Configuration', this.config);
-    this.manageSession(this.config);
-
+    // this.manageSession(this.config);
+    
     this.manageAutoCapture(this.config);
 
     if (options.capture_3rd_party_cookies === false) {
@@ -1053,33 +1048,6 @@ class UsermavenClientImpl implements UsermavenClient {
   }
 
   /**
-   * Manage session capability
-   * @param options 
-   */
-  manageSession(options: UsermavenOptions) {
-    getLogger().debug('Options', options);
-
-    options = options || {} as UsermavenOptions
-    getLogger().debug('Options', options);
-
-    // cross_subdomain_cookie: whether to keep cookie across domains and subdomains
-    const defaultConfig = {
-      persistence: options.persistence || 'cookie',
-      persistence_name: options.persistence_name || 'session',
-      cross_subdomain_cookie: options.cross_subdomain_cookie || true
-    }
-    // TODO: Default session name would be session_
-    this.config = _.extend(defaultConfig, this.config || {}, {
-      token: this.apiKey,
-    })
-    getLogger().debug('Default Configuration', this.config);
-    this.persistence = new UserMavenPersistence(this.config)
-    getLogger().debug('Persistence Configuration', this.persistence);
-    this.sessionManager = new SessionIdManager(this.config, this.persistence)
-    getLogger().debug('Session Configuration', this.sessionManager);
-  }
-
-  /**
    * Manage auto-capturing
    * @param options 
    */
@@ -1092,12 +1060,15 @@ class UsermavenClientImpl implements UsermavenClient {
     var num_enabled_buckets = 100
     if (!autocapture.enabledForProject(this.apiKey, num_buckets, num_enabled_buckets)) {
       this.config['autocapture'] = false
+      this.__autocapture_enabled = false
       console.log('Not in active bucket: disabling Automatic Event Collection.')
     } else if (!autocapture.isBrowserSupported()) {
       this.config['autocapture'] = false
+      this.__autocapture_enabled = false
       console.log('Disabling Automatic Event Collection because this browser is not supported')
     } else {
-      autocapture.init(this)
+      console.log('Autocapture enabled...')
+      autocapture.init(this, options)
     }
   }
 
@@ -1106,12 +1077,7 @@ class UsermavenClientImpl implements UsermavenClient {
  * frequently used usermaven function.
  *
  * ### Usage:
- *
- *     // capture an event named 'Registered'
- *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21});
- *
- *     // capture an event using navigator.sendBeacon
- *     usermaven.capture('Left page', {'duration_seconds': 35}, {transport: 'sendBeacon'});
+ *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21}, {});
  *
  * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
  * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
@@ -1123,33 +1089,22 @@ class UsermavenClientImpl implements UsermavenClient {
       console.error('Trying to capture event before initialization')
       return;
     }
-    if (_.isUndefined(event_name) || typeof event_name !== 'string') {
-      console.error('No event name provided to posthog.capture')
+    console.log(properties)
+    if (_isUndefined(event_name) || typeof event_name !== 'string') {
+      console.error('No event name provided to usermaven.capture')
       return
     }
+    // if (_.isBlockedUA(userAgent)) {
+    //   return
+    // }
 
-    if (_.isBlockedUA(userAgent)) {
-      return
-    }
-
-    const start_timestamp = this['persistence'].remove_event_timer(event_name)
-
-    // update persistence
-    this['persistence'].update_search_keyword(document.referrer)
-
-    if (this.get_config('store_google')) {
-      this['persistence'].update_campaign_params()
-    }
-    if (this.get_config('save_referrer')) {
-      this['persistence'].update_referrer_info(document.referrer)
-    }
 
     var data = {
       event: event_name + (properties['$event_type'] ? '_' + properties['$event_type'] : ''),
-      properties: this._calculate_event_properties(event_name, properties, start_timestamp),
+      properties: this._calculate_event_properties(event_name, properties),
     }
 
-    data = _.copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
+    data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
     
     // send evnet if there is a tagname available
     if(data.properties?.autocapture_attributes?.tag_name){
@@ -1159,40 +1114,19 @@ class UsermavenClientImpl implements UsermavenClient {
     
   }
 
-  _calculate_event_properties(event_name, event_properties, start_timestamp) {
+  _calculate_event_properties(event_name, event_properties) {
     // set defaults
     let properties = event_properties || {}
 
     if (event_name === '$snapshot') {
       return properties
     }
-
-    // set $duration if time_event was previously called for this event
-    if (!_.isUndefined(start_timestamp)) {
-      var duration_in_ms = new Date().getTime() - start_timestamp
-      properties['$duration'] = parseFloat((duration_in_ms / 1000).toFixed(3))
-    }
-
-    // note: extend writes to the first object, so lets make sure we
-    // don't write to the persistence properties object and info
-    // properties object by passing in a new object
-
-    // update properties with pageview info and super-properties
-    // exlude , _.info.properties()
-    properties = _.extend({}, this['persistence'].properties(), properties)
-
-    var property_blacklist = this.get_config('property_blacklist')
-    if (_.isArray(property_blacklist)) {
-      _.each(property_blacklist, function (blacklisted_prop) {
+    if (_isArray(this.propertyBlacklist)) {
+      _each(this.propertyBlacklist, function (blacklisted_prop) {
         delete properties[blacklisted_prop]
       })
     } else {
-      console.error('Invalid value for property_blacklist config: ' + property_blacklist)
-    }
-
-    var sanitize_properties = this.get_config('sanitize_properties')
-    if (sanitize_properties) {
-      properties = sanitize_properties(properties, event_name)
+      console.error('Invalid value for property_blacklist config: ' + this.propertyBlacklist)
     }
 
     // assign first element from $elements only
@@ -1205,29 +1139,14 @@ class UsermavenClientImpl implements UsermavenClient {
     properties['autocapture_attributes'] = attributes;
     properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
     properties['autocapture_attributes']["event_type"] = properties["$event_type"] ?? "";
-    
-    delete properties['$ce_version'];
-    delete properties['$event_type'];
-    delete properties['$initial_referrer'];
-    delete properties['$initial_referring_domain'];
-    delete properties['$referrer'];
-    delete properties['$referring_domain'];
-    delete properties['$elements'];
-
+    ['$ce_version', "$event_type", "$initial_referrer", "$initial_referring_domain", "$referrer", "$referring_domain", "$elements"].forEach((key) => {
+      delete properties[key]
+    })
     // TODO: later remove this from the autotrack code.
-     
     delete properties['autocapture_attributes']["$el_text"];
     delete properties['autocapture_attributes']["nth_child"];
     delete properties['autocapture_attributes']["nth_of_type"];
-
-    
     return properties
-  }
-
-  _handle_unload() {
-    if (this.get_config('capture_pageview')) {
-      this.capture('$pageleave')
-    }
   }
 }
 
