@@ -1100,7 +1100,7 @@ class UsermavenClientImpl implements UsermavenClient {
       console.error('Trying to capture event before initialization')
       return;
     }
-    console.log(properties)
+    // console.log(properties)
     if (_isUndefined(event_name) || typeof event_name !== 'string') {
       console.error('No event name provided to usermaven.capture')
       return
