@@ -236,7 +236,7 @@ const autocapture = {
         this.opts = opts
 
         if (!(document && document.body)) {
-            console.log('document not ready yet, trying again in 500 milliseconds...')
+            console.debug('document not ready yet, trying again in 500 milliseconds...')
             setTimeout(() => {
                 this.readyAutocapture(instance, opts)
             }, 500)

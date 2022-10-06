@@ -54,7 +54,6 @@ function getTracker(window): UsermavenClient {
       opts[prop] = val;
     }
   })
-  console.log('OPTS', opts);
   window.usermavenClient = usermavenClient(opts)
   if (opts.segment_hook && (script.getAttribute('defer') !== null || script.getAttribute('async') !== null) && script.getAttribute(supressInterceptionWarnings) === null) {
     getLogger().warn(hookWarnMsg("segment"))
@@ -69,7 +68,6 @@ function getTracker(window): UsermavenClient {
     processQueue(queue, window.usermavenClient);
   }
   window.usermaven = usermaven;
-  console.log(opts)
 
   // Below usermaven project id set is deprecated.
   // TODO: remove soon.
