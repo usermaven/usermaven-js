@@ -9,7 +9,8 @@ const usermavenProps = [
   'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
   'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
   'custom_headers', 'force_use_fetch', 'min_send_timeout', 'max_send_timeout', 'max_send_attempts', 'disable_event_persistence',
-  'project_id', 'autocapture', 'properties_string_max_length', 'property_blacklist'
+  'project_id', 'autocapture', 'properties_string_max_length', 'property_blacklist',
+  'exclude'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -53,6 +54,7 @@ function getTracker(window): UsermavenClient {
       opts[prop] = val;
     }
   })
+  console.log('OPTS', opts);
   window.usermavenClient = usermavenClient(opts)
   if (opts.segment_hook && (script.getAttribute('defer') !== null || script.getAttribute('async') !== null) && script.getAttribute(supressInterceptionWarnings) === null) {
     getLogger().warn(hookWarnMsg("segment"))
