@@ -276,6 +276,11 @@ export type UsermavenOptions = {
    */
   mask_all_text?: boolean
 
+  /**
+   * Exclude pages
+   */
+  exclude?: string
+
 
    
 };

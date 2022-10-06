@@ -786,9 +786,28 @@ class UsermavenClientImpl implements UsermavenClient {
     return res;
   }
 
+  pathMatches(wildcardPath, docUrl) {
+    const actualPath= new URL(docUrl).pathname;
+    return actualPath.match(new RegExp('^' + wildcardPath.trim().replace(/\*\*/g, '.*').replace(/([^\.])\*/g, '$1[^\\s\/]*') + '\/?$'))
+  }
+
   track(type: string, payload?: EventPayload): Promise<void> {
     let data = payload || {};
     getLogger().debug("track event of type", type, data);
+    
+    const env = isWindowAvailable() ? envs.browser() : envs.empty();
+    const context = this.getCtx(env);
+     // Check if the page is not excluded.
+     if (this.config && this.config.exclude && this.config.exclude.length > 1 ) {
+      const excludeList = this.config.exclude.split(',');
+      // check if the current page is in the exclude list
+       
+      if(excludeList.some((excludePage) => this.pathMatches(excludePage, context?.url))){
+        getLogger().debug("Page is excluded from tracking");
+        return
+      }
+    }
+
     const e = this.makeEvent(
       type,
       this.compatMode ? "eventn" : "usermaven",
@@ -1072,13 +1091,13 @@ class UsermavenClientImpl implements UsermavenClient {
     if (!autocapture.enabledForProject(this.apiKey, num_buckets, num_enabled_buckets)) {
       this.config['autocapture'] = false
       this.__autocapture_enabled = false
-      console.log('Not in active bucket: disabling Automatic Event Collection.')
+      getLogger().debug('Not in active bucket: disabling Automatic Event Collection.')
     } else if (!autocapture.isBrowserSupported()) {
       this.config['autocapture'] = false
       this.__autocapture_enabled = false
-      console.log('Disabling Automatic Event Collection because this browser is not supported')
+      getLogger().debug('Disabling Automatic Event Collection because this browser is not supported')
     } else {
-      console.log('Autocapture enabled...')
+      getLogger().debug('Autocapture enabled...')
       autocapture.init(this, options)
     }
   }
@@ -1100,7 +1119,6 @@ class UsermavenClientImpl implements UsermavenClient {
       console.error('Trying to capture event before initialization')
       return;
     }
-    // console.log(properties)
     if (_isUndefined(event_name) || typeof event_name !== 'string') {
       console.error('No event name provided to usermaven.capture')
       return
