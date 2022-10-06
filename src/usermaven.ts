@@ -798,11 +798,11 @@ class UsermavenClientImpl implements UsermavenClient {
     const env = isWindowAvailable() ? envs.browser() : envs.empty();
     const context = this.getCtx(env);
      // Check if the page is not excluded.
-     if (this.config && this.config.exclude && this.config.exclude.length > 1 ) {
+     if (this.config && this.config.exclude && this.config.exclude.length > 1 && context?.url) {
       const excludeList = this.config.exclude.split(',');
       // check if the current page is in the exclude list
        
-      if(excludeList.some((excludePage) => this.pathMatches(excludePage, context?.url))){
+      if(excludeList.some((excludePage) => this.pathMatches(excludePage.trim(), context?.url))){
         getLogger().debug("Page is excluded from tracking");
         return
       }
