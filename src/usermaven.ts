@@ -66,7 +66,7 @@ function tryFormat(string: string): string {
 }
 
 const echoTransport: Transport = (url: string, json: string) => {
-  console.log(`Jitsu client tried to send payload to ${url}`, tryFormat(json));
+  console.debug(`Jitsu client tried to send payload to ${url}`, tryFormat(json));
   return Promise.resolve();
 };
 
