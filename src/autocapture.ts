@@ -24,6 +24,7 @@ import {
 } from './autocapture-utils'
 import RageClick from './extensions/rageclick'
 import { AutoCaptureCustomProperty, DecideResponse, Properties, UsermavenClient, UsermavenOptions } from './interface'
+import ScrollDepth from "./extensions/scroll-depth";
 
 const autocapture = {
     _initializedTokens: [] as string[],
@@ -141,6 +142,12 @@ const autocapture = {
             target = (target.parentNode || null) as Element | null
         }
 
+        // If type is scroll
+        if (e.type === 'scroll') {
+            this.scrollDepth.scroll()
+            return true
+        }
+
         if (e.type === 'click' && e instanceof MouseEvent) {
             this.rageclicks?.click(e.clientX, e.clientY, new Date().getTime())
         }
@@ -205,7 +212,6 @@ const autocapture = {
                 },
                 this._getCustomProperties(targetElementList)
             )
-            
             instance.capture('$autocapture', props)
             return true
         }
@@ -225,14 +231,17 @@ const autocapture = {
         _register_event(document, 'submit', handler, false, true)
         _register_event(document, 'change', handler, false, true)
         _register_event(document, 'click', handler, false, true)
+        _register_event(document, 'scroll', handler, false, true)
     },
 
     _customProperties: [] as AutoCaptureCustomProperty[],
     rageclicks: null as RageClick | null,
+    scrollDepth: null as ScrollDepth | null,
     opts: {} as UsermavenOptions,
 
     init: function (instance: UsermavenClient, opts: UsermavenOptions): void {
         this.rageclicks = new RageClick(instance)
+        this.scrollDepth = new ScrollDepth(instance)
         this.opts = opts
 
         if (!(document && document.body)) {
