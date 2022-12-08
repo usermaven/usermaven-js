@@ -143,8 +143,8 @@ const autocapture = {
         }
 
         // If type is scroll
-        if (e.type === 'scroll') {
-            this.scrollDepth.scroll()
+        if (e.type === 'visibilitychange' && document.visibilityState === 'hidden') {
+            this.scrollDepth.scroll('scroll')
             return true
         }
 
@@ -231,7 +231,7 @@ const autocapture = {
         _register_event(document, 'submit', handler, false, true)
         _register_event(document, 'change', handler, false, true)
         _register_event(document, 'click', handler, false, true)
-        _register_event(document, 'scroll', handler, false, true)
+        _register_event(document, 'visibilitychange', handler, false, true)
     },
 
     _customProperties: [] as AutoCaptureCustomProperty[],

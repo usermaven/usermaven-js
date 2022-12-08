@@ -1144,7 +1144,7 @@ class UsermavenClientImpl implements UsermavenClient {
     // send event if the event is scroll
     if(data.properties?.autocapture_attributes?.event_type === 'scroll'){
       console.log('scroll event captured', data.properties)
-      this.track("$autocapture", data.properties)
+      this.track("$scroll", data.properties)
     }
     
   }
