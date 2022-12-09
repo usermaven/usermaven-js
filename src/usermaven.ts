@@ -28,13 +28,13 @@ import {
   UserProps,
 } from "./interface";
 
-import { getLogger, setRootLogLevel } from "./log";
-import { isWindowAvailable, requireWindow } from "./window";
-import { CookieOpts, serializeCookie } from "./cookie";
-import { IncomingMessage, ServerResponse } from "http";
-import { LocalStorageQueue, MemoryQueue } from "./queue";
-import { autocapture } from './autocapture';
-import { _copyAndTruncateStrings, _each, _extend, _isArray, _isUndefined } from "./utils";
+import {getLogger, setRootLogLevel} from "./log";
+import {isWindowAvailable, requireWindow} from "./window";
+import {CookieOpts, serializeCookie} from "./cookie";
+import {IncomingMessage, ServerResponse} from "http";
+import {LocalStorageQueue, MemoryQueue} from "./queue";
+import {autocapture} from './autocapture';
+import {_copyAndTruncateStrings, _each, _extend, _isArray, _isUndefined} from "./utils";
 
 const VERSION_INFO = {
   env: '__buildEnv__',
@@ -50,7 +50,7 @@ const beaconTransport: Transport = (
   json: string
 ): Promise<void> => {
   getLogger().debug("Sending beacon", json);
-  const blob = new Blob([json], { type: "text/plain" });
+  const blob = new Blob([json], {type: "text/plain"});
   navigator.sendBeacon(url, blob);
   return Promise.resolve();
 };
@@ -138,13 +138,15 @@ class CookiePersistence implements Persistence {
 }
 
 class NoPersistence implements Persistence {
-  public save(props: Record<string, any>) {}
+  public save(props: Record<string, any>) {
+  }
 
   restore(): Record<string, any> | undefined {
     return undefined;
   }
 
-  delete() {}
+  delete() {
+  }
 }
 
 const defaultCompatMode = false;
@@ -185,7 +187,7 @@ const browserEnv: TrackingEnvironment = {
     doc_encoding: document.characterSet,
   }),
 
-  getAnonymousId: ({ name, domain }) => {
+  getAnonymousId: ({name, domain}) => {
     expireNonRootCookies(name)
     const idCookie = getCookie(name);
     if (idCookie) {
@@ -227,7 +229,7 @@ export function fetchApi(
   opts: { disableCookies?: boolean } = {}
 ): TrackingEnvironment {
   return {
-    getAnonymousId({ name, domain }): string {
+    getAnonymousId({name, domain}): string {
       if (opts?.disableCookies) {
         return "";
       }
@@ -314,7 +316,7 @@ export function httpApi(
   };
 
   return {
-    getAnonymousId({ name, domain }): string {
+    getAnonymousId({name, domain}): string {
       if (opts?.disableCookies) {
         return "";
       }
@@ -345,9 +347,9 @@ export function httpApi(
     describeClient(): ClientProperties {
       let url: Partial<URL> = req.url
         ? new URL(
-            req.url,
-            req.url.startsWith("http") ? undefined : "http://localhost"
-          )
+          req.url,
+          req.url.startsWith("http") ? undefined : "http://localhost"
+        )
         : {};
       const requestHost =
         header(req, "x-forwarded-host") || header(req, "host") || url.hostname;
@@ -398,7 +400,8 @@ const xmlHttpTransport: Transport = (
   url: string,
   jsonPayload: string,
   additionalHeaders: Record<string, string>,
-  handler = (code, body) => {}
+  handler = (code, body) => {
+  }
 ) => {
   let req = new window.XMLHttpRequest();
   return new Promise<void>((resolve, reject) => {
@@ -439,7 +442,8 @@ const fetchTransport: (fetch: any) => Transport = (fetch) => {
     url: string,
     jsonPayload: string,
     additionalHeaders: Record<string, string>,
-    handler = (code, body) => {}
+    handler = (code, body) => {
+    }
   ) => {
     let res: any;
     try {
@@ -467,7 +471,7 @@ const fetchTransport: (fetch: any) => Transport = (fetch) => {
     }
     let resJson = {} as any;
     let text = "";
-    const contentType = res.headers?.get('Content-Type')??""
+    const contentType = res.headers?.get('Content-Type') ?? ""
     try {
       text = await res.text();
       resJson = JSON.parse(text);
@@ -481,7 +485,7 @@ const fetchTransport: (fetch: any) => Transport = (fetch) => {
     }
   };
 };
-	
+
 type QueueStore<T> = {
   flush: () => T[]
   push: (...values: T[]) => void
@@ -529,7 +533,7 @@ class UsermavenClientImpl implements UsermavenClient {
   private beaconApi: boolean = false;
   private transport: Transport = xmlHttpTransport;
   private customHeaders: () => Record<string, string> = () => ({});
-  
+
   private queue: QueueStore<[any, number]> = new MemoryQueue()
   private maxSendAttempts: number = 4
   private retryTimeout: [number, number] = [500, 1e12]
@@ -550,7 +554,7 @@ class UsermavenClientImpl implements UsermavenClient {
   }
 
   id(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
-    this.userProperties = { ...this.userProperties, ...props }
+    this.userProperties = {...this.userProperties, ...props}
     getLogger().debug("Usermaven user identified", props)
 
     if (this.userIdPersistence) {
@@ -574,7 +578,7 @@ class UsermavenClientImpl implements UsermavenClient {
     src: EventSrc,
     payload: EventPayload
   ): Event | EventCompat {
-    let { env, ...payloadData } = payload;
+    let {env, ...payloadData} = payload;
     if (!env) {
       env = isWindowAvailable() ? envs.browser() : envs.empty();
     }
@@ -597,8 +601,8 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     return this.compatMode
-      ? { ...persistentProps, eventn_ctx: context, ...base }
-      : { ...persistentProps, ...context, ...base };
+      ? {...persistentProps, eventn_ctx: context, ...base}
+      : {...persistentProps, ...context, ...base};
   }
 
   _send3p(sourceType: EventSrc, object: any, type?: string): Promise<any> {
@@ -612,6 +616,7 @@ class UsermavenClientImpl implements UsermavenClient {
     });
     return this.sendJson(e);
   }
+
   async sendJson(json: any): Promise<void> {
     if (this.maxSendAttempts > 1) {
       this.queue.push([json, 0])
@@ -695,7 +700,6 @@ class UsermavenClientImpl implements UsermavenClient {
     }
   }
 
- 
 
   postHandle(status: number, response: any): any {
     if (this.cookiePolicy === "strict" || this.cookiePolicy === "comply") {
@@ -724,7 +728,7 @@ class UsermavenClientImpl implements UsermavenClient {
               "Tags destination supported only in browser environment"
             );
           } else {
-            for (const { type, id, value } of extras) {
+            for (const {type, id, value} of extras) {
               if (type === "tag") {
                 const tag = document.createElement("div");
                 tag.id = id;
@@ -752,9 +756,9 @@ class UsermavenClientImpl implements UsermavenClient {
         anonymous_id:
           this.cookiePolicy !== "strict"
             ? env.getAnonymousId({
-                name: this.idCookieName,
-                domain: this.cookieDomain,
-              })
+              name: this.idCookieName,
+              domain: this.cookieDomain,
+            })
             : "",
         ...this.userProperties,
       },
@@ -787,31 +791,40 @@ class UsermavenClientImpl implements UsermavenClient {
   }
 
   pathMatches(wildcardPath, docUrl) {
-    const actualPath= new URL(docUrl).pathname;
+    const actualPath = new URL(docUrl).pathname;
     return actualPath.match(new RegExp('^' + wildcardPath.trim().replace(/\*\*/g, '.*').replace(/([^\.])\*/g, '$1[^\\s\/]*') + '\/?$'))
   }
 
   track(type: string, payload?: EventPayload): Promise<void> {
     let data = payload || {};
     getLogger().debug("track event of type", type, data);
-    
+
     const env = isWindowAvailable() ? envs.browser() : envs.empty();
     const context = this.getCtx(env);
-     // Check if the page is not excluded.
-     if (this.config && this.config.exclude && this.config.exclude.length > 1 && context?.url) {
+    // Check if the page is not excluded.
+    if (this.config && this.config.exclude && this.config.exclude.length > 1 && context?.url) {
       const excludeList = this.config.exclude.split(',');
       // check if the current page is in the exclude list
-       
-      if(excludeList.some((excludePage) => this.pathMatches(excludePage.trim(), context?.url))){
+
+      if (excludeList.some((excludePage) => this.pathMatches(excludePage.trim(), context?.url))) {
         getLogger().debug("Page is excluded from tracking");
         return
+      }
+    }
+
+    let p = payload || {};
+
+    // All custom events and scroll event will have event_attributes
+    if (type !== "$autocapture" && type !== "user_identify" && type !== "pageview") {
+      p = {
+        event_attributes: payload,
       }
     }
 
     const e = this.makeEvent(
       type,
       this.compatMode ? "eventn" : "usermaven",
-      payload || {}
+      p
     );
 
     return this.sendJson(e);
@@ -829,7 +842,7 @@ class UsermavenClientImpl implements UsermavenClient {
       if (!options.fetch && !globalThis.fetch) {
         throw new Error(
           "Usermaven runs in Node environment. However, neither UsermavenOptions.fetch is provided, nor global fetch function is defined. \n" +
-            "Please, provide custom fetch implementation. You can get it via node-fetch package"
+          "Please, provide custom fetch implementation. You can get it via node-fetch package"
         );
       }
       this.transport = fetchTransport(options.fetch || globalThis.fetch);
@@ -924,9 +937,9 @@ class UsermavenClientImpl implements UsermavenClient {
       );
     }
 
-    
+
     this.propertyBlacklist = options.property_blacklist && options.property_blacklist.length > 0 ? options.property_blacklist : [];
-    
+
 
     // // Added these configuration for session management + autocapture
 
@@ -936,11 +949,11 @@ class UsermavenClientImpl implements UsermavenClient {
       property_blacklist: [],
       sanitize_properties: null
     }
-    this.config = _extend({}, defaultConfig, options || {}, this.config || {}, { token: this.apiKey })
+    this.config = _extend({}, defaultConfig, options || {}, this.config || {}, {token: this.apiKey})
 
     getLogger().debug('Default Configuration', this.config);
     // this.manageSession(this.config);
-    
+
     this.manageAutoCapture(this.config);
 
     if (options.capture_3rd_party_cookies === false) {
@@ -988,7 +1001,7 @@ class UsermavenClientImpl implements UsermavenClient {
   interceptAnalytics(analytics: any) {
     let interceptor = (chain: any) => {
       try {
-        let payload = { ...chain.payload };
+        let payload = {...chain.payload};
         getLogger().debug("Intercepted segment payload", payload.obj);
 
         let integration = chain.integrations["Segment.io"];
@@ -1037,7 +1050,7 @@ class UsermavenClientImpl implements UsermavenClient {
     if (this.userIdPersistence) {
       let props = this.userIdPersistence.restore();
       if (props) {
-        this.userProperties = { ...props, ...this.userProperties };
+        this.userProperties = {...props, ...this.userProperties};
       }
     }
   }
@@ -1080,12 +1093,14 @@ class UsermavenClientImpl implements UsermavenClient {
 
   /**
    * Manage auto-capturing
-   * @param options 
+   * @param options
    */
   manageAutoCapture(options: UsermavenOptions) {
     getLogger().debug("Auto Capture Status: ", this.config['autocapture']);
     this.__autocapture_enabled = this.config['autocapture'];
-    if (!this.__autocapture_enabled) { return }
+    if (!this.__autocapture_enabled) {
+      return
+    }
 
     var num_buckets = 100
     var num_enabled_buckets = 100
@@ -1104,17 +1119,17 @@ class UsermavenClientImpl implements UsermavenClient {
   }
 
   /**
- * Capture an event. This is the most important and
- * frequently used usermaven function.
- *
- * ### Usage:
- *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21}, {});
- *
- * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
- * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
- * @param {Object} [options] Optional configuration for this capture request.
- * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
- */
+   * Capture an event. This is the most important and
+   * frequently used usermaven function.
+   *
+   * ### Usage:
+   *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21}, {});
+   *
+   * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
+   * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
+   * @param {Object} [options] Optional configuration for this capture request.
+   * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
+   */
   capture(event_name, properties = {}) {
     if (!this.initialized) {
       console.error('Trying to capture event before initialization')
@@ -1135,18 +1150,18 @@ class UsermavenClientImpl implements UsermavenClient {
     };
 
     data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
-    
+
     // send event if there is a tagname available
-    if(data.properties?.autocapture_attributes?.tag_name){
+    if (data.properties?.autocapture_attributes?.tag_name) {
       this.track("$autocapture", data.properties)
       // this.track(data.event, data.properties)
     }
 
     // send event if the event is $scroll
-    if(event_name === '$scroll'){
+    if (event_name === '$scroll') {
       this.track(event_name, data.properties)
     }
-    
+
   }
 
   _calculate_event_properties(event_name, event_properties) {

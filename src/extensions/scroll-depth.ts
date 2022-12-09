@@ -45,12 +45,10 @@ export default class ScrollDepth {
 
     // Creating payload
     const props = {
-      "event_attributes" :{
-        percent: this.lastScrollDepth,
-        window_height: this.getWindowHeight(),
-        document_height: this.getDocumentHeight(),
-        scroll_distance: this.getScrollDistance()
-      }
+      percent: this.lastScrollDepth,
+      window_height: this.getWindowHeight(),
+      document_height: this.getDocumentHeight(),
+      scroll_distance: this.getScrollDistance()
     };
 
     // Sending event
