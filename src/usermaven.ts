@@ -813,6 +813,8 @@ class UsermavenClientImpl implements UsermavenClient {
       this.compatMode ? "eventn" : "usermaven",
       payload || {}
     );
+
+     console.log(e)
     return this.sendJson(e);
   }
 
@@ -1128,10 +1130,10 @@ class UsermavenClientImpl implements UsermavenClient {
     // }
 
 
-    var data = {
+    let data = {
       event: event_name + (properties['$event_type'] ? '_' + properties['$event_type'] : ''),
       properties: this._calculate_event_properties(event_name, properties),
-    }
+    };
 
     data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
     
@@ -1141,10 +1143,9 @@ class UsermavenClientImpl implements UsermavenClient {
       // this.track(data.event, data.properties)
     }
 
-    // send event if the event is scroll
-    if(data.properties?.autocapture_attributes?.event_type === 'scroll'){
-      console.log('scroll event captured', data.properties)
-      this.track("$scroll", data.properties)
+    // send event if the event is $scroll
+    if(event_name === '$scroll'){
+      this.track(event_name, data.properties)
     }
     
   }
@@ -1153,9 +1154,10 @@ class UsermavenClientImpl implements UsermavenClient {
     // set defaults
     let properties = event_properties || {}
 
-    if (event_name === '$snapshot') {
+    if (event_name === '$snapshot' || event_name === '$scroll') {
       return properties
     }
+
     if (_isArray(this.propertyBlacklist)) {
       _each(this.propertyBlacklist, function (blacklisted_prop) {
         delete properties[blacklisted_prop]
