@@ -66,11 +66,11 @@ export default class ScrollDepth {
   getScrollDepth() {
     try {
       // Get the height of the window and the document body
-      let winHeight = window.innerHeight;
-      let docHeight = document.body.scrollHeight;
+      let winHeight = this.getWindowHeight()
+      let docHeight = this.getDocumentHeight();
 
       // Get the current scroll position and the length of the track
-      let scrollTop = window.scrollY;
+      let scrollTop = this.getScrollDistance()
       let trackLength = docHeight - winHeight;
 
       // Calculate the scroll depth as a percentage
@@ -113,7 +113,7 @@ export default class ScrollDepth {
    */
   getScrollDistance() {
     try {
-      return window.pageYOffset || document.body.scrollTop ||
+      return window.scrollY || window.pageYOffset || document.body.scrollTop ||
         this.documentElement.scrollTop || 0;
     } catch (e) {
       return 0
