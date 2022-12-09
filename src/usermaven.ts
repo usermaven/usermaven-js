@@ -814,7 +814,6 @@ class UsermavenClientImpl implements UsermavenClient {
       payload || {}
     );
 
-     console.log(e)
     return this.sendJson(e);
   }
 

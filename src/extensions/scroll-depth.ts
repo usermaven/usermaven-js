@@ -3,18 +3,18 @@
  */
 
 import {UsermavenClient} from "../interface"
-import {_extend} from "../utils";
-
 
 export default class ScrollDepth {
   instance: UsermavenClient
   lastScrollDepth: number
   canSend: boolean
+  documentElement: HTMLElement
 
   constructor(instance: UsermavenClient) {
     this.instance = instance
     this.lastScrollDepth = 0
     this.canSend = true
+    this.documentElement = document.documentElement
   }
 
   /**
@@ -45,7 +45,12 @@ export default class ScrollDepth {
 
     // Creating payload
     const props = {
-      percent: this.lastScrollDepth,
+      "element_attributes" :{
+        percent: this.lastScrollDepth,
+        window_height: this.getWindowHeight(),
+        document_height: this.getDocumentHeight(),
+        scroll_distance: this.getScrollDistance()
+      }
     };
 
     // Sending event
@@ -74,6 +79,44 @@ export default class ScrollDepth {
     } catch (e) {
       return 0
     }
+  }
 
+  /**
+   * Core method to get window height
+   */
+  getWindowHeight() {
+    try {
+      return window.innerHeight || this.documentElement.clientHeight ||
+        document.body.clientHeight || 0;
+    } catch (e) {
+      return 0
+    }
+  }
+
+  /**
+   * Core method to get document height
+   */
+  getDocumentHeight() {
+    try {
+      return Math.max(
+        document.body.scrollHeight || 0, this.documentElement.scrollHeight || 0,
+        document.body.offsetHeight || 0, this.documentElement.offsetHeight || 0,
+        document.body.clientHeight || 0, this.documentElement.clientHeight || 0
+      );
+    } catch (e) {
+      return 0
+    }
+  }
+
+  /**
+   * Core method to get scroll distance
+   */
+  getScrollDistance() {
+    try {
+      return window.pageYOffset || document.body.scrollTop ||
+        this.documentElement.scrollTop || 0;
+    } catch (e) {
+      return 0
+    }
   }
 }
