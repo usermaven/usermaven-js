@@ -45,7 +45,7 @@ export default class ScrollDepth {
 
     // Creating payload
     const props = {
-      "element_attributes" :{
+      "scroll_attributes" :{
         percent: this.lastScrollDepth,
         window_height: this.getWindowHeight(),
         document_height: this.getDocumentHeight(),
