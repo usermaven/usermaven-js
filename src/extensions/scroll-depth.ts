@@ -39,7 +39,7 @@ export default class ScrollDepth {
    */
   send(eventType = "$scroll") {
 
-    if (!this.canSend) {
+    if (!this.canSend || !this.lastScrollDepth) {
       return;
     }
 

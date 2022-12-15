@@ -149,7 +149,7 @@ const autocapture = {
         }
 
         // If type is visibilitychange and the page is about to be hidden, send a scroll depth event
-        if (e.type === 'visibilitychange' && document.visibilityState === 'hidden') {
+        if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
             this.scrollDepth.send()
             return true
         }
@@ -239,6 +239,7 @@ const autocapture = {
         _register_event(document, 'click', handler, false, true)
         _register_event(document, 'visibilitychange', handler, false, true)
         _register_event(document, 'scroll', handler, false, true)
+        _register_event(window, 'popstate', handler, false, true)
     },
 
     _customProperties: [] as AutoCaptureCustomProperty[],
