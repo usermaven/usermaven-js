@@ -24,6 +24,7 @@ import {
 } from './autocapture-utils'
 import RageClick from './extensions/rageclick'
 import { AutoCaptureCustomProperty, DecideResponse, Properties, UsermavenClient, UsermavenOptions } from './interface'
+import ScrollDepth from "./extensions/scroll-depth";
 
 const autocapture = {
     _initializedTokens: [] as string[],
@@ -141,6 +142,18 @@ const autocapture = {
             target = (target.parentNode || null) as Element | null
         }
 
+        // If type is 'scroll', track the scroll depth
+        if (e.type === 'scroll') {
+            this.scrollDepth.track()
+            return true
+        }
+
+        // If type is visibilitychange and the page is about to be hidden, send a scroll depth event
+        if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
+            this.scrollDepth.send()
+            return true
+        }
+
         if (e.type === 'click' && e instanceof MouseEvent) {
             this.rageclicks?.click(e.clientX, e.clientY, new Date().getTime())
         }
@@ -205,7 +218,6 @@ const autocapture = {
                 },
                 this._getCustomProperties(targetElementList)
             )
-            
             instance.capture('$autocapture', props)
             return true
         }
@@ -225,14 +237,19 @@ const autocapture = {
         _register_event(document, 'submit', handler, false, true)
         _register_event(document, 'change', handler, false, true)
         _register_event(document, 'click', handler, false, true)
+        _register_event(document, 'visibilitychange', handler, false, true)
+        _register_event(document, 'scroll', handler, false, true)
+        _register_event(window, 'popstate', handler, false, true)
     },
 
     _customProperties: [] as AutoCaptureCustomProperty[],
     rageclicks: null as RageClick | null,
+    scrollDepth: null as ScrollDepth | null,
     opts: {} as UsermavenOptions,
 
     init: function (instance: UsermavenClient, opts: UsermavenOptions): void {
         this.rageclicks = new RageClick(instance)
+        this.scrollDepth = new ScrollDepth(instance)
         this.opts = opts
 
         if (!(document && document.body)) {
