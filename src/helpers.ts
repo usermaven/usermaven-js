@@ -104,22 +104,25 @@ export const getCookies = (
   return res;
 };
 
+// Methods partially borrowed from quirksmode.org/js/cookies.html
 export const getCookie = (name: string) => {
   if (!name) {
     return null;
   }
-  return (
-    decodeURIComponent(
-      requireWindow().document.cookie.replace(
-        new RegExp(
-          "(?:(?:^|.*;)\\s*" +
-            encodeURIComponent(name).replace(/[\-\.\+\*]/g, "\\$&") +
-            "\\s*\\=\\s*([^;]*).*$)|^.*$"
-        ),
-        "$1"
-      )
-    ) || null
-  );
+  try {
+    const nameEQ = name + '='
+    const ca = requireWindow().document.cookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1, c.length)
+      }
+      if (c.indexOf(nameEQ) === 0) {
+        return decodeURIComponent(c.substring(nameEQ.length, c.length))
+      }
+    }
+  } catch (err) {}
+  return null
 };
 
 export const setCookie = (
