@@ -39,7 +39,7 @@ export default class ScrollDepth {
    */
   send(eventType = "$scroll") {
 
-    if (!this.canSend || !this.lastScrollDepth) {
+    if (!this.canSend) {
       return;
     }
 
@@ -72,7 +72,7 @@ export default class ScrollDepth {
       let trackLength = docHeight - winHeight;
 
       // Calculate the scroll depth as a percentage
-      return Math.floor(scrollTop / trackLength * 100);
+      return Math.min(100, Math.floor(scrollTop / trackLength * 100));
 
     } catch (e) {
       return 0
