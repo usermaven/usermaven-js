@@ -1,6 +1,6 @@
-import { getLogger } from './log';
-import { UsermavenClient, UsermavenFunction, UsermavenOptions } from './interface';
-import { usermavenClient } from './usermaven';
+import {getLogger} from './log';
+import {UsermavenClient, UsermavenFunction, UsermavenOptions} from './interface';
+import {usermavenClient} from './usermaven';
 
 const jsFileName = "lib.js"
 //Make sure that all properties form UsermavenOptions are listed here
@@ -16,6 +16,7 @@ const usermavenProps = [
 function getTrackingHost(scriptSrc: string): string {
   return scriptSrc.replace("/s/" + jsFileName, "").replace("/" + jsFileName, "");
 }
+
 const supressInterceptionWarnings = "data-suppress-interception-warning";
 
 function hookWarnMsg(hookType: string) {
@@ -71,14 +72,28 @@ function getTracker(window): UsermavenClient {
 
   // Below usermaven project id set is deprecated.
   // TODO: remove soon.
-  if(opts.project_id){
+  if (opts.project_id) {
     // @ts-ignore
-    usermaven('set', { "project_id": opts.project_id })
+    usermaven('set', {"project_id": opts.project_id})
   }
 
   if ("true" !== script.getAttribute("data-init-only") && "yes" !== script.getAttribute("data-init-only")) {
-      usermaven('track', 'pageview');
+    usermaven('track', 'pageview');
   }
+
+
+  // bind on page leave event
+  document.addEventListener('visibilitychange', function (e) {
+    if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden')) {
+      usermaven('track', '$pageleave');
+    }
+  }, false);
+
+  window.addEventListener('popstate', function (e) {
+    usermaven('track', '$pageleave');
+  }, false);
+
+
   return window.usermavenClient;
 }
 

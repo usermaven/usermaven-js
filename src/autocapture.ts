@@ -151,9 +151,6 @@ const autocapture = {
         // If type is visibilitychange and the page is about to be hidden, send a scroll depth event
         if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
             this.scrollDepth.send()
-
-            // Note: this will only work if the autocapture is enabled on the page
-            instance.track('$pageleave')
             return true
         }
 
