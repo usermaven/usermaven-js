@@ -19,7 +19,7 @@
   "jest": {
     "testEnvironment": "node",
     "testMatch": [
-      "**/__tests__/*.spec.{ts,js}"
+      "**/__tests__/**/*.spec.{ts,js}"
     ],
     "automock": false,
     "verbose": false
