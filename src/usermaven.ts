@@ -815,7 +815,7 @@ class UsermavenClientImpl implements UsermavenClient {
     let p = payload || {};
 
     // All custom events and scroll event will have event_attributes
-    if (type !== "$autocapture" && type !== "user_identify" && type !== "pageview") {
+    if (type !== "$autocapture" && type !== "user_identify" && type !== "pageview" && type !== "$pageleave") {
       p = {
         event_attributes: payload,
       }
