@@ -89,10 +89,6 @@ function getTracker(window): UsermavenClient {
     }
   }, false);
 
-  window.addEventListener('popstate', function (e) {
-    usermaven('track', '$pageleave');
-  }, false);
-
 
   return window.usermavenClient;
 }
