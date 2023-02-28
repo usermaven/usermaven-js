@@ -548,6 +548,9 @@ class UsermavenClientImpl implements UsermavenClient {
   public __autocapture_enabled = false;
   // private anonymousId: string = '';
 
+  // Fallback tracking host
+  private trackingHostFallback: string = VERSION_INFO.env === "production" ? "https://events.usermaven.com" : "https://eventcollectors.usermaven.com";
+
   // Used for session + autocapture
   get_config(prop_name) {
     return this.config ? this.config[prop_name] : null
@@ -682,6 +685,12 @@ class UsermavenClientImpl implements UsermavenClient {
       this.attempt = 1
       getLogger().debug(`Successfully flushed ${queue.length} events from queue`)
     } catch (e) {
+      // In case of failing custom domain (trackingHost), we will replace it with default domain (trackingHostFallback)
+      if (this.trackingHost !== this.trackingHostFallback) {
+        getLogger().debug(`Using fallback tracking host ${this.trackingHostFallback} instead of ${this.trackingHost} on ${VERSION_INFO.env}`)
+        this.trackingHost = this.trackingHostFallback
+      }
+
       queue = queue.map(el => [el[0], el[1] + 1] as [any, number]).filter(el => {
         if (el[1] >= this.maxSendAttempts) {
           getLogger().error(`Dropping queued event after ${el[1]} attempts since max send attempts ${this.maxSendAttempts} reached. See logs for details`)

@@ -18,6 +18,11 @@ export default [
       MINIFY && terser({
         output: {comments: false},
       }),
+      replace({
+        __buildEnv__: process.env.NODE_ENV || 'production',
+        __buildDate__: () => new Date().toISOString(),
+        __buildVersion__:  process.env['npm_package_version'],
+      }),
     ],
     output: {
       file: `dist/web/lib.js`,
