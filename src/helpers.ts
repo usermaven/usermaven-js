@@ -215,7 +215,7 @@ export const getHostWithProtocol = (host: string) => {
   if (host.indexOf("https://") === 0 || host.indexOf("http://") === 0) {
     return host;
   } else {
-    return "//" + host;
+    return "https://" + host;
   }
 };
 
