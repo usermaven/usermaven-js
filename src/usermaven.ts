@@ -914,8 +914,9 @@ class UsermavenClientImpl implements UsermavenClient {
       options["tracking_host"] || "t.usermaven.com"
     );
     this.randomizeUrl = options.randomize_url || false;
-    this.idCookieName = options.cookie_name || "__eventn_id";
     this.apiKey = options.key;
+
+    this.idCookieName = options.cookie_name || `__eventn_id_${options.key}`;
 
     if (this.cookiePolicy === "strict") {
       this.propsPersistance = new NoPersistence();

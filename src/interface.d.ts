@@ -145,7 +145,7 @@ export type UsermavenOptions = {
   tracking_host?: string
 
   /**
-   * Name of id cookie. __eventn_id by default
+   * Name of id cookie. __eventn_id_{data-key} by default
    */
   cookie_name?: string
   /**
