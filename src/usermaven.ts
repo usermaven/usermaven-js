@@ -590,6 +590,26 @@ class UsermavenClientImpl implements UsermavenClient {
         }
     }
 
+    reset(resetAnonId?: boolean): Promise<void> {
+        if (this.userIdPersistence) {
+            this.userIdPersistence.delete();
+        }
+        if (this.propsPersistance) {
+            this.propsPersistance.delete();
+        }
+        if (resetAnonId) {
+            const idCookie = getCookie(this.idCookieName);
+            if (idCookie) {
+                getLogger().debug("Removing id cookie", idCookie);
+                setCookie(this.idCookieName, "", {
+                    domain: this.cookieDomain,
+                    expires: new Date(0),
+                });
+            }
+        }
+        return Promise.resolve();
+    }
+
     rawTrack(payload: any) {
         return this.sendJson(payload);
     }
