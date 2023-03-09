@@ -1,3 +1,5 @@
+import {getLogger} from "./log";
+
 export type CookieOpts = {
     maxAge?: number;
     domain?: string;
@@ -38,9 +40,11 @@ export function serializeCookie(name, val, opt: CookieOpts = {}) {
         if (crossSubdomain) {
             const cross_subdomain = getCrossSubdomain()
             new_cookie_val += `; domain=${cross_subdomain}`
-        } else if (domain) {
-            new_cookie_val += `; domain=${domain}`
         }
+        // Commented this out as this is causing issue with setting cookies with domain param
+        // else if (domain) {
+        //     new_cookie_val += `; domain=${domain}`
+        // }
 
         if (path) {
             new_cookie_val += `; path=${path}`
@@ -71,6 +75,8 @@ export function serializeCookie(name, val, opt: CookieOpts = {}) {
         return new_cookie_val
 
     } catch (e) {
+        getLogger().error("serializeCookie", e);
+
         return ''
     }
 }

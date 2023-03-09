@@ -104,6 +104,11 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
         return false
     }
 
+    // allow users to programmatically prevent capturing of elements by adding class 'um-no-capture'
+    if (el.classList && el.classList.contains('um-no-capture')) {
+        return false
+    }
+
     let parentIsUsefulElement = false
     const targetElementList: Element[] = [el] // TODO: remove this var, it's never queried
     let parentNode: Element | boolean = true
