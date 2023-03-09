@@ -1,5 +1,6 @@
 import { isWindowAvailable, requireWindow } from "./window";
 import { CookieOpts, serializeCookie } from "./cookie";
+import {getLogger} from "./log";
 
 // Courtesy: https://stackoverflow.com/a/23945027
 function extractHostname(url) {
@@ -121,7 +122,9 @@ export const getCookie = (name: string) => {
         return decodeURIComponent(c.substring(nameEQ.length, c.length))
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    getLogger().error("getCookies", err);
+  }
   return null
 };
 
