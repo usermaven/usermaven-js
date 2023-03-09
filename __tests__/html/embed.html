@@ -47,6 +47,22 @@
 
             usermaven('track', 'additional_event', { extra: 1 });
 
+
+            usermaven('group', {
+                // Required Attributes
+                id: "61caea525265a849dd7c2722", // Company ID
+                name: "Muhammad Seerat Awan", // Company Name.
+                created_at: "2023-01-20",   // DateTime string in your system that represents when
+
+                // Optional attributes such as industry, website, employee count etc.
+                custom: {
+                    industry: "Technology", // Company Industry.
+                    website: "https://seeratawan.me", // Company Website.
+                    employees: 20, // Number of employees.
+                    plan: "enterprise", // Company Plan.
+                }
+            })
+
             /* setTimeout(() => {
                 console.log("Testing unset event");
                 usermaven('unset');
@@ -67,6 +83,8 @@
         'price': 400
     })">Simple button</button>
 
+
+    <button id="button-test-reset" name="button-test-reset" onclick="usermaven('reset', true)">Reset</button>
 </body>
 
 </html>
