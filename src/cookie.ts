@@ -24,7 +24,7 @@ const isValidCrossDomain = (domain: string) => {
     // Check if the domain is a subdomain of the current host
     // If yes, then it is a valid domain for setting cross domain cookies
     const isValid = host_parts.length > domain_parts.length && host_parts.slice(-domain_parts.length).join('.') === domain_parts.filter(Boolean).join('.')
-
+    getLogger().debug("isValidCrossDomain", host_parts.slice(-domain_parts.length).join('.'), domain_parts.filter(Boolean).join('.'), isValid)
     return isValid
 }
 
