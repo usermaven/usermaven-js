@@ -794,8 +794,11 @@ class UsermavenClientImpl implements UsermavenClient {
     getCtx(env: TrackingEnvironment): EventCtx {
         let now = new Date();
         let props = env.describeClient() || {};
-        const company = this.userProperties['company'] || {}
-        delete this.userProperties['company']
+        const user = {...this.userProperties}
+
+        const company = user['company'] || {}
+
+        delete user['company']
 
         const payload = {
             event_id: "", //generate id on the backend
@@ -807,7 +810,7 @@ class UsermavenClientImpl implements UsermavenClient {
                             domain: this.cookieDomain,
                         })
                         : "",
-                ...this.userProperties,
+                ...user,
             },
             ids: this._getIds(),
             utc_time: reformatDate(now.toISOString()),
