@@ -24,7 +24,7 @@ function extractHostname(url) {
 // Warning: you can use this function to extract the "root" domain, but it will not be as accurate as using the psl package. 
 // https://www.npmjs.com/package/psl
 const  extractRootDomain = (url) => {
-  var domain = extractHostname(url),
+  let domain = extractHostname(url),
   splitArr = domain.split('.'),
   arrLen = splitArr.length;
 
@@ -41,11 +41,33 @@ const  extractRootDomain = (url) => {
   return domain;
 }
 
+export const extractRoot = (url) => {
+  const domainParts = url.split(".");
+  const domainLength = domainParts.length;
+
+  // Check if it's an IP address
+  if (domainLength === 4 && domainParts.every(part => !isNaN(part))) {
+    return url;
+  }
+
+  // Extract the root domain based on the last two parts of the domain
+  const rootDomain = domainParts.slice(-2).join(".");
+
+  return rootDomain;
+}
 
 export const getCookieDomain = () => {
   if (isWindowAvailable()) {
-    return `.${extractRootDomain(location.hostname)}` // .localhost
-    // return window.location.hostname.replace("www.", "");
+    // const domain = window.location.hostname.replace("www.", "")
+    //
+    // // Check if subdomain is set, if yes, we remove the subdomain from the cookie domain and return the root domain with a leading dot
+    // // This is to ensure that cookies are set correctly for cross domain tracking
+    // const subdomain = domain.split('.')[0]
+    // if (subdomain) {
+    //   return '.' + extractRootDomain(domain)
+    // }
+
+    return extractRoot(window.location.hostname);
   }
   return undefined;
 };
