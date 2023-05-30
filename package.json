@@ -3,7 +3,7 @@
   "version": "1.2.1",
   "description": "Usermaven JavaScript SDK.",
   "main": "dist/npm/usermaven.cjs.js",
-  "module": "dist/npm/dist/usermaven.es.js",
+  "module": "dist/npm/usermaven.es.js",
   "types": "dist/npm/usermaven.d.ts",
   "files": [
     "dist/npm/*",
