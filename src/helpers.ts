@@ -159,7 +159,7 @@ export const setCookie = (
 };
 
 export const deleteCookie = (name: string, path: string | undefined = "/") => {
-  document.cookie = name + "= ; expires = Thu, 01 Jan 1970 00:00:00 GMT" + (path ? ("; path = " + path) : "");
+    document.cookie = name + "= ; SameSite=Strict; expires = Thu, 01 Jan 1970 00:00:00 GMT" + (path ? ("; path = " + path) : "");
 };
 
 export const generateId = () => Math.random().toString(36).substring(2, 12);
