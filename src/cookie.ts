@@ -72,6 +72,15 @@ export function serializeCookie(name, val, opt: CookieOpts = {}) {
                     new_cookie_val += "; SameSite=None";
                     break;
             }
+        } else if (secure) {
+            /**
+             * SameSite=None - means that the browser sends the cookie with both cross-site and same-site requests.
+             * The Secure attribute must also be set when setting this value, like so SameSite=None; Secure.
+             * If Secure is missing an error will be logged.
+             *
+             * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+             */
+            new_cookie_val += "; SameSite=None";
         }
 
         return new_cookie_val
