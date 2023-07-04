@@ -42,18 +42,23 @@ const  extractRootDomain = (url) => {
 }
 
 export const extractRoot = (url) => {
-  const domainParts = url.split(".");
-  const domainLength = domainParts.length;
+    const domainParts = url.split(".");
+    const domainLength = domainParts.length;
 
-  // Check if it's an IP address
-  if (domainLength === 4 && domainParts.every(part => !isNaN(part))) {
-    return url;
-  }
+    // Check if it's an IP address
+    if (domainLength === 4 && domainParts.every(part => !isNaN(part))) {
+        return url;
+    }
 
-  // Extract the root domain based on the last two parts of the domain
-  const rootDomain = domainParts.slice(-2).join(".");
+    let rootDomain;
+    // Check if TLD is a country code (2 letters)
+    if (domainParts[domainLength - 1].length === 2) {
+        rootDomain = domainParts.slice(-3).join(".");
+    } else {
+        rootDomain = domainParts.slice(-2).join(".");
+    }
 
-  return rootDomain;
+    return rootDomain;
 }
 
 export const getCookieDomain = () => {
