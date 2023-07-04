@@ -1,7 +1,6 @@
 import { isWindowAvailable, requireWindow } from "./window";
 import { CookieOpts, serializeCookie } from "./cookie";
 import {getLogger} from "./log";
-
 // Courtesy: https://stackoverflow.com/a/23945027
 function extractHostname(url) {
   var hostname;
@@ -28,20 +27,34 @@ const  extractRootDomain = (url) => {
   splitArr = domain.split('.'),
   arrLen = splitArr.length;
 
-  //extracting the root domain here
-  //if there is a subdomain
+  // extracting the root domain here
+  // if there is a subdomain
   if (arrLen > 2) {
-    domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
-    //check to see if it's using a Country Code Top Level Domain (ccTLD) (i.e. ".me.uk")
-    if (splitArr[arrLen - 2].length == 2 && splitArr[arrLen - 1].length == 2) {
-      //this is using a ccTLD
-      domain = splitArr[arrLen - 3] + '.' + domain;
+    if (splitArr[arrLen - 1].length == 2) {
+      // likely a ccTLD
+      domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
+      // if the second level domain is also two letters (like co.uk), include the next part up
+      if (splitArr[arrLen - 2].length == 2) {
+        domain = splitArr[arrLen - 3] + '.' + domain;
+      }
+    } else {
+      // likely a gTLD
+      domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
     }
   }
   return domain;
 }
 
+const extractTopLevelDomain = (url) => {
+  const DOMAIN_MATCH_REGEX = /[a-z0-9][a-z0-9-]+\.[a-z.]{2,6}$/i
+    const matches = url.match(DOMAIN_MATCH_REGEX),
+        domain = matches ? matches[0] : ''
+
+    return domain
+}
+
 export const extractRoot = (url) => {
+
     const domainParts = url.split(".");
     const domainLength = domainParts.length;
 
@@ -50,12 +63,9 @@ export const extractRoot = (url) => {
         return url;
     }
 
-    let rootDomain;
-    // Check if TLD is a country code (2 letters)
-    if (domainParts[domainLength - 1].length === 2) {
-        rootDomain = domainParts.slice(-3).join(".");
-    } else {
-        rootDomain = domainParts.slice(-2).join(".");
+    let rootDomain = extractTopLevelDomain(url);
+    if (!rootDomain) { // If it's not a top level domain, use a fallback method
+      rootDomain = extractRootDomain(url);
     }
 
     return rootDomain;
