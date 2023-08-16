@@ -7,6 +7,7 @@ import {
     getCookies,
     getDataFromParams,
     getHostWithProtocol,
+    getUmExclusionState,
     insertAndExecute,
     parseCookieString,
     parseQuery,
@@ -659,15 +660,19 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     async sendJson(json: any): Promise<void> {
-        if (this.maxSendAttempts > 1) {
-            this.queue.push([json, 0])
-            this.scheduleFlush(0)
-        } else {
-            await this.doSendJson(json)
+        let umExclusionState = getUmExclusionState()        
+        if(!umExclusionState){
+            if (this.maxSendAttempts > 1) {
+                this.queue.push([json, 0])
+                this.scheduleFlush(0)
+            } else {
+                await this.doSendJson(json)
+            }
         }
     }
 
     private doSendJson(json: any): Promise<void> {
+        getLogger().debug("🚀 ~ file: usermaven.ts:677 ~ UsermavenClientImpl ~ doSendJson ~ doSendJson:")
         let cookiePolicy =
             this.cookiePolicy !== "keep" ? `&cookie_policy=${this.cookiePolicy}` : "";
         let ipPolicy =
