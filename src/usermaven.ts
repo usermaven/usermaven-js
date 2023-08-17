@@ -672,7 +672,6 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     private doSendJson(json: any): Promise<void> {
-        getLogger().debug("🚀 ~ file: usermaven.ts:677 ~ UsermavenClientImpl ~ doSendJson ~ doSendJson:")
         let cookiePolicy =
             this.cookiePolicy !== "keep" ? `&cookie_policy=${this.cookiePolicy}` : "";
         let ipPolicy =
