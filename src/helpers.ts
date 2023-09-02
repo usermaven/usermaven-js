@@ -179,6 +179,16 @@ export const deleteCookie = (name: string, path: string | undefined = "/") => {
 
 export const generateId = () => Math.random().toString(36).substring(2, 12);
 
+export const getUmExclusionState = () => {
+  let state = "false";
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    state = localStorage.getItem("um_exclusion");
+  }
+
+  return state === undefined || state === null || state === "false" ? false : true;
+};
+
 export const generateRandom = () => Math.random().toString(36).substring(2, 7);
 
 export const parseQuery = (qs: string) => {
