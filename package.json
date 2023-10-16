@@ -4,7 +4,8 @@
   "scripts": {
     "build:javascript": "yarn workspace @usermaven/sdk-js build",
     "build:nextjs": "yarn workspace @usermaven/nextjs build",
-    "build": "yarn build:javascript && yarn build:nextjs",
+    "build:react": "yarn workspace @usermaven/react build",
+    "build": "yarn build:javascript && yarn build:nextjs && yarn build:react",
     "dev:javascript": "yarn workspace javascript-sdk dev",
     "dev": "yarn dev:javascript"
   },
