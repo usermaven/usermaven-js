@@ -28,11 +28,3 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
-package-lock.json
-yarn.lock
-
-# Local Netlify folder
-.netlify
-.env
-
-.idea

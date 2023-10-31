@@ -1,51 +1,21 @@
-# Usermaven JavaScript SDK (usermaven.js)
+# Usermaven JavaScript SDK
 
-Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
+Usermaven SDK is a JavaScript SDK for [Usermaven](https://usermaven.com).
 
-## Capabilities
+Please, see [Usermaven JavaScript integration docs](https://usermaven.com/docs/integrations/javascript) on the website.
 
-- Autocapturing via `autocapture`, `capture_pageview`, `properties_string_max_length` and `property_blacklist` options.
+## Supported Platforms
 
-## Maintainers Guide
+For each major JavaScript platform, there is a specific high-level SDK that provides all the tools you need in a single package.<br/>Please refer to the README and instructions of those SDKs for more detailed information:
 
-This section is indented only for package maintainers.
+* [@usermaven/sdk-js](https://github.com/usermavencom/usermaven-js/tree/master/packages/javascript-sdk) - SDK for Browsers and Node. Works with any JS framework
+* [@usermaven/nextjs](https://github.com/usermavencom/usermaven-js/tree/master/packages/nextjs) - SDK for NextJS applications
 
-### Building and local debug
+## Example apps
 
- * _**ATTENTION**_: Use `yarn` for everything except publishing
- * To spin off a local development server run `yarn devserver`, then open [http://localhost:8081](http://localhost:8081)
-   * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
-     usermaven in action
-     * http://localhost:8081/test-case/embed.html - embedded Usermaven
-      - * <http://localhost:8081/test-case/embed_strict_mode.html> - embedded strict mode for Usermaven
-     * http://localhost:8081/test-case/autocapture.html - embedded Usermaven with autocapturing events
- * `yarn test` runs [Playwright](https://playwright.dev/) test
- * `yarn build` builds both npm package and `lib.js` browser bundle
- * `npm publish --public` to publish the package (change version in `package.json` manually). You need to run `npm login` with your personal
-npmjs account beforehand (make sure you have access to Usermaven team)
- * In order to check usermaven sdk locally. 
-    * `cd dist/npm` --- navigate to npm directory
-    * `npm link` --- creates a symbolic link to be accessed globally
-    * `cd ../../__tests__/sdk/` --- navigate to sdk test project
-    * `npm i` --- install npm dependencies
-    * `npm link @usermaven/sdk-js` --- use npm package locally whose symlink is just published
-    * `npm start` --- start the application and monitor events
+* [react](https://github.com/usermaven/usermaven-react-example)
+* [nextjs](https://github.com/usermaven/usermaven-next-example)
 
-### Checking Cross Domain Session locally
-Setup a custom domain and sub-domain locally to test cross domain session persistence.
+## Contributing
 
-```bash
-sudo nano /etc/hosts
-```
-Add the following lines in the hosts file
-```bash
-127.0.0.1       localhost.com
-127.0.0.1       app.localhost.com
-```
-
-You will be able to access the domains at [localhost domain](http://localhost.com:8081/test-case/embed.html) and [localhost sub-domain](http://app.localhost.com:8081/test-case/embed.html)
-
-### Publishing new version
-
- * Login with your *personal* credentials with `npm login`
- * Run `yarn install && yarn build && yarn test && npm publish --access public`
+Please see [CONTRIBUTING.md](CONTRIBUTING.md)
