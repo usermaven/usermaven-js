@@ -245,6 +245,13 @@ export type UsermavenOptions = {
   autocapture?: boolean,
 
   /**
+   * Auto pageview is disabled by default
+   *
+   * @default false
+   */
+    auto_pageview?: boolean,
+
+  /**
    * To control the payload properties character limit. Defaults to null that means there is no limit. i.e 65535
    * 
    * @default null

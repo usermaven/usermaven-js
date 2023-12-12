@@ -548,6 +548,7 @@ class UsermavenClientImpl implements UsermavenClient {
     // public sessionManager?: SessionIdManager;
 
     public __autocapture_enabled = false;
+    public __auto_pageview_enabled = false;
     // private anonymousId: string = '';
 
     // Fallback tracking host
@@ -960,6 +961,7 @@ class UsermavenClientImpl implements UsermavenClient {
         );
         this.randomizeUrl = options.randomize_url || false;
         this.apiKey = options.key;
+        this.__auto_pageview_enabled = options.auto_pageview || false;
 
         this.idCookieName = options.cookie_name || `__eventn_id_${options.key}`;
 
@@ -1002,7 +1004,8 @@ class UsermavenClientImpl implements UsermavenClient {
             autocapture: false,
             properties_string_max_length: null, // 65535
             property_blacklist: [],
-            sanitize_properties: null
+            sanitize_properties: null,
+            auto_pageview: false
         }
         this.config = _extend({}, defaultConfig, options || {}, this.config || {}, {token: this.apiKey})
 
@@ -1039,6 +1042,10 @@ class UsermavenClientImpl implements UsermavenClient {
             }
 
             window.addEventListener("beforeunload", () => this.flush())
+        }
+
+        if (this.__auto_pageview_enabled) {
+            enableAutoPageviews(this)
         }
 
         this.retryTimeout = [
@@ -1254,6 +1261,22 @@ class UsermavenClientImpl implements UsermavenClient {
         delete properties['autocapture_attributes']["nth_of_type"];
         return properties
     }
+}
+
+function enableAutoPageviews (t: UsermavenClient) {
+    const page = () => t.track("pageview");
+    // Attach pushState and popState listeners
+    const originalPushState = history.pushState;
+    if (originalPushState) {
+        // eslint-disable-next-line functional/immutable-data
+        history.pushState = function (data, title, url) {
+            originalPushState.apply(this, [data, title, url]);
+            page();
+        };
+        addEventListener('popstate', page);
+    }
+
+    addEventListener('hashchange', page);
 }
 
 function interceptSegmentCalls(t: UsermavenClient) {
