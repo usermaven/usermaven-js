@@ -524,6 +524,7 @@ class UsermavenClientImpl implements UsermavenClient {
     private trackingHost: string = "";
     private idCookieName: string = "";
     private randomizeUrl: boolean = false;
+    private namespace: string = "usermaven";
 
     private apiKey: string = "";
     private initialized: boolean = false;
@@ -621,6 +622,7 @@ class UsermavenClientImpl implements UsermavenClient {
         src: EventSrc,
         payload: EventPayload
     ): Event | EventCompat {
+
         let {env, ...payloadData} = payload;
         if (!env) {
             env = isWindowAvailable() ? envs.browser() : envs.empty();
@@ -661,7 +663,8 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     async sendJson(json: any): Promise<void> {
-        let umExclusionState = getUmExclusionState()        
+        let umExclusionState = getUmExclusionState()
+
         if(!umExclusionState){
             if (this.maxSendAttempts > 1) {
                 this.queue.push([json, 0])
@@ -687,7 +690,7 @@ class UsermavenClientImpl implements UsermavenClient {
             }${cookiePolicy}${ipPolicy}`;
         }
         let jsonString = JSON.stringify(json);
-        getLogger().debug(`Sending payload to ${url}`, jsonString);
+        getLogger().debug(`Sending payload to ${url}`, json.length);
         return this.transport(url, jsonString, this.customHeaders(), (code, body) =>
             this.postHandle(code, body)
         );
@@ -956,6 +959,7 @@ class UsermavenClientImpl implements UsermavenClient {
                 ? defaultCompatMode
                 : !!options.compat_mode;
         this.cookieDomain = options.cookie_domain || getCookieDomain();
+        this.namespace = options.namespace || "usermaven";
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
         );
@@ -1037,7 +1041,7 @@ class UsermavenClientImpl implements UsermavenClient {
 
         if (isWindowAvailable()) {
             if (!options.disable_event_persistence) {
-                this.queue = new LocalStorageQueue("jitsu-event-queue")
+                this.queue = new LocalStorageQueue(`${this.namespace}-event-queue`)
                 this.scheduleFlush(0)
             }
 

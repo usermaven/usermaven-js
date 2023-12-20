@@ -208,7 +208,7 @@ export type UsermavenOptions = {
    * Log level. 'WARN' if not set
    */
   log_level?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
-  
+
   /**
    * Headers that should be added to each request. Could be either static dict or function that returns the dict
    */
@@ -239,7 +239,7 @@ export type UsermavenOptions = {
 
   /**
    * Auto-capturing is disabled by default
-   * 
+   *
    * @default false
    */
   autocapture?: boolean,
@@ -253,14 +253,14 @@ export type UsermavenOptions = {
 
   /**
    * To control the payload properties character limit. Defaults to null that means there is no limit. i.e 65535
-   * 
+   *
    * @default null
    */
   properties_string_max_length?: number | null,
 
   /**
   * Property names that must be exempted from the payload of capture call
-  * 
+  *
   * @default []
   */
   property_blacklist?: string[],
@@ -272,7 +272,7 @@ export type UsermavenOptions = {
 
 
   //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
-  
+
   /**
   * Mask all element attributes
   */
@@ -289,7 +289,10 @@ export type UsermavenOptions = {
   exclude?: string
 
 
-   
+  /**
+   * Namespace
+   */
+    namespace?: string
 };
 
 /**
@@ -348,7 +351,7 @@ export type EventCtx = {
   utm: Record<string, string>      //utm tags (without utm prefix, e.g key will be "source", not utm_source. See
   click_id: Record<string, string> //all external click ids (passed through URL). See CLICK_IDS for supported all supported click ids
   [propName: string]: any          //context is extendable, any extra properties can be added here
-  
+
 }
 
 

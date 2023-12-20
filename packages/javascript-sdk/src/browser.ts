@@ -10,7 +10,7 @@ const usermavenProps = [
     'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
     'custom_headers', 'force_use_fetch', 'min_send_timeout', 'max_send_timeout', 'max_send_attempts', 'disable_event_persistence',
     'project_id', 'autocapture', 'properties_string_max_length', 'property_blacklist',
-    'exclude', 'auto_pageview'
+    'exclude', 'auto_pageview', 'namespace'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -31,8 +31,7 @@ function hookWarnMsg(hookType: string) {
 
 function getTracker(window): UsermavenClient {
 
-    let script = document.currentScript
-        || document.querySelector('script[src*=jsFileName][data-usermaven-api-key]');
+    let script = document.currentScript;
 
     if (!script) {
         getLogger().warn("Usermaven script is not properly initialized. The definition must contain data-usermaven-api-key as a parameter")
@@ -42,6 +41,9 @@ function getTracker(window): UsermavenClient {
         tracking_host: getTrackingHost(script.getAttribute('src')),
         key: null
     };
+
+    const NAMESPACE = script.getAttribute('data-namespace') || 'usermaven';
+
 
     usermavenProps.forEach(prop => {
         let attr = "data-" + prop.replace(new RegExp("_", "g"), "-");
@@ -55,7 +57,9 @@ function getTracker(window): UsermavenClient {
             opts[prop] = val;
         }
     })
-    window.usermavenClient = usermavenClient(opts)
+    const usermavenClientKey = `${NAMESPACE}Client`;
+
+    window[usermavenClientKey] = usermavenClient(opts)
     if (opts.segment_hook && (script.getAttribute('defer') !== null || script.getAttribute('async') !== null) && script.getAttribute(supressInterceptionWarnings) === null) {
         getLogger().warn(hookWarnMsg("segment"))
     }
@@ -63,34 +67,45 @@ function getTracker(window): UsermavenClient {
         getLogger().warn(hookWarnMsg("ga"))
     }
 
-    const usermaven: UsermavenFunction = function () {
-        let queue = window.usermavenQ = window.usermavenQ || [];
-        queue.push(arguments)
-        processQueue(queue, window.usermavenClient);
-    }
-    window.usermaven = usermaven;
+
+    // Save these variables to local scope, so they don't get overwritten
+    let currentNamespace = NAMESPACE, currentUsermavenClientKey = usermavenClientKey;
+
+    ((NAMESPACE, usermavenClientKey, script) => {
+
+        const usermaven = function () {
+            let queue = window[NAMESPACE + "Q"] = window[NAMESPACE + "Q"] || [];
+            queue.push(arguments);
+            processQueue(queue, window[usermavenClientKey]);
+        };
+
+        window[NAMESPACE] = usermaven;
+
+        // // Once our function is set, remove the script,
+        // // so we can handle the next script tag similarly
+        // script.parentNode.removeChild(script);
+
+    })(currentNamespace, currentUsermavenClientKey, script);
 
     // Below usermaven project id set is deprecated.
     // TODO: remove soon.
     if (opts.project_id) {
         // @ts-ignore
-        usermaven('set', {"project_id": opts.project_id})
+        window[NAMESPACE]('set', {"project_id": opts.project_id})
     }
 
     if ("true" !== script.getAttribute("data-init-only") && "yes" !== script.getAttribute("data-init-only")) {
-        usermaven('track', 'pageview');
+        window[NAMESPACE]('track', 'pageview');
     }
 
 
     let eventName = (typeof(window.onpagehide) === 'undefined') ? 'unload' : 'pagehide';
 
     window.addEventListener(eventName, function () {
-        usermaven('track', '$pageleave');
+        window[NAMESPACE]('track', '$pageleave');
     });
 
-
-
-    return window.usermavenClient;
+    return window[usermavenClientKey];
 }
 
 function processQueue(queue: any[], usermavenInstance: UsermavenClient) {
@@ -105,23 +120,27 @@ function processQueue(queue: any[], usermavenInstance: UsermavenClient) {
     queue.length = 0;
 }
 
-if (window) {
-    let win = window as any;
-    let tracker = getTracker(win);
-    if (tracker) {
-        getLogger().debug("Usermaven in-browser tracker has been initialized")
-        win.usermaven = function () {
-            let queue = win.usermavenQ = win.usermavenQ || [];
-            queue.push(arguments)
-            processQueue(queue, tracker);
-        }
-        if (win.usermavenQ) {
-            getLogger().debug(`Initial queue size of ${win.usermavenQ.length} will be processed`);
-            processQueue(win.usermavenQ, tracker);
+// Encapsulate the logic of your script within a self-executing function that accepts a namespace as an argument
+((namespace) => {
+    if (window) {
+        let win = window as any;
+        const NAMESPACE = namespace;
+        let tracker = getTracker(win);
+        if (tracker) {
+            getLogger().debug("Usermaven in-browser tracker has been initialized", NAMESPACE)
+            win[NAMESPACE] = function () {
+                let queue = win[NAMESPACE + "Q"] = win[NAMESPACE + "Q"] || [];
+                queue.push(arguments)
+                processQueue(queue, tracker);
+            }
+            if (win[NAMESPACE + "Q"]) {
+                getLogger().debug(`Initial queue size of ${win[NAMESPACE + "Q"].length} will be processed`);
+                processQueue(win[NAMESPACE + "Q"], tracker);
+            }
+        } else {
+            getLogger().error("Usermaven tracker has not been initialized (reason unknown)")
         }
     } else {
-        getLogger().error("Usermaven tracker has not been initialized (reason unknown)")
+        getLogger().warn("Usermaven tracker called outside browser context. It will be ignored")
     }
-} else {
-    getLogger().warn("Usermaven tracker called outside browser context. It will be ignored")
-}
+})(document.currentScript.getAttribute('data-namespace') || 'usermaven');

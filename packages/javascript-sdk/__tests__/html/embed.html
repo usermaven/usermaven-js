@@ -2,11 +2,11 @@
 
 <head>
     <!-- Usermaven tracking one-liner. By default, pageview event is sent -->
-    <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug" defer></script>
+    <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug"  data-privacy-policy="strict"></script>
+
     <script>
         setTimeout(() => {
-            console.log("Testing delayed tracking");
-            let usermaven = window.usermaven = window.usermaven || (function () { (window.usermavenQ = window.usermavenQ || []).push(arguments); })
+            console.log("Testing delayed tracking", usermaven.toString());
 
             usermaven('id', {
                 // Required attributes
@@ -82,9 +82,15 @@
     <button id="button-test" name="button-test" onclick="usermaven('track', 'button_test', {
         'price': 400
     })">Simple button</button>
-
+    <button id="button-test-1" name="button-test" onclick="usermaven_clone('track', 'button_test', {
+        'price': 400
+    })">Simple button 1</button>
 
     <button id="button-test-reset" name="button-test-reset" onclick="usermaven('reset', true)">Reset</button>
+
+    <script src="%%SERVER%%/s/lib.js" data-key="Test1" data-log-level="debug" defer data-namespace="usermaven_clone" ></script>
+
+<!--    <script defer>window.seerat = window.seerat || (function(){(window.seeratQ = window.seeratQ || []).push(arguments);})</script>-->
 </body>
 
 </html>
