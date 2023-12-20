@@ -81,9 +81,9 @@ function getTracker(window): UsermavenClient {
 
         window[NAMESPACE] = usermaven;
 
-        // Once our function is set, remove the script,
-        // so we can handle the next script tag similarly
-        script.parentNode.removeChild(script);
+        // // Once our function is set, remove the script,
+        // // so we can handle the next script tag similarly
+        // script.parentNode.removeChild(script);
 
     })(currentNamespace, currentUsermavenClientKey, script);
 
