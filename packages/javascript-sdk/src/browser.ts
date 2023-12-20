@@ -67,13 +67,8 @@ function getTracker(window): UsermavenClient {
         getLogger().warn(hookWarnMsg("ga"))
     }
 
-    // const usermaven: UsermavenFunction = function () {
-    //     let queue = window[NAMESPACE + "Q"] = window[NAMESPACE + "Q"] || [];
-    //     queue.push(arguments)
-    //     processQueue(queue, window[usermavenClientKey]);
-    // }
-    // window[NAMESPACE] = usermaven;
-// Save these variables to local scope, so they don't get overwritten
+
+    // Save these variables to local scope, so they don't get overwritten
     let currentNamespace = NAMESPACE, currentUsermavenClientKey = usermavenClientKey;
 
     ((NAMESPACE, usermavenClientKey, script) => {
@@ -109,8 +104,6 @@ function getTracker(window): UsermavenClient {
     window.addEventListener(eventName, function () {
         window[NAMESPACE]('track', '$pageleave');
     });
-
-
 
     return window[usermavenClientKey];
 }
