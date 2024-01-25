@@ -13,8 +13,8 @@ For each major JavaScript platform, there is a specific high-level SDK that prov
 
 ## Example apps
 
-* [react](https://github.com/usermaven/usermaven-react-example)
-* [nextjs](https://github.com/usermaven/usermaven-next-example)
+* [react](https://github.com/usermavencom/usermaven-js/usermaven-react-example)
+* [nextjs](https://github.com/usermavencom/usermaven-js/usermaven-next-example)
 
 ## Contributing
 

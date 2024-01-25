@@ -188,8 +188,41 @@ const browserEnv: TrackingEnvironment = {
         doc_encoding: document.characterSet,
     }),
 
-    getAnonymousId: ({name, domain}) => {
+    getAnonymousId: ({name, domain, crossDomainLinking = true}) => {
         expireNonRootCookies(name)
+
+        // Check if cross domain linking is enabled
+        if (crossDomainLinking) {
+            // Try to extract the '_um' parameter from query string and hash fragment (https://example.com#_um=1~abcde5~)
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryId = urlParams.get('_um');
+
+
+            const urlHash = window.location.hash.substring(1);
+            const hashedValues = urlHash.split("~");
+            const fragmentId = hashedValues.length > 1 ? hashedValues[1] : undefined;
+
+            // If the '_um' parameter is set in both the query string and hash fragment,
+            // prioritize the one in query string
+            let crossDomainAnonymousId = queryId || fragmentId;
+
+            // If coming from another domain, use the ID from URL parameter
+            if (crossDomainAnonymousId) {
+                getLogger().debug("Existing user id from other domain", crossDomainAnonymousId);
+                // Check if the ID needs to be set as cookie
+                const currentCookie = getCookie(name);
+                if (!currentCookie || currentCookie !== crossDomainAnonymousId) {
+                    setCookie(name, crossDomainAnonymousId, {
+                        domain,
+                        secure: document.location.protocol !== "http:",
+                        maxAge: MAX_AGE_TEN_YEARS,
+                    });
+                }
+                return crossDomainAnonymousId;
+            }
+        }
+
+
         const idCookie = getCookie(name);
         if (idCookie) {
             getLogger().debug("Existing user id", idCookie);
@@ -525,6 +558,7 @@ class UsermavenClientImpl implements UsermavenClient {
     private idCookieName: string = "";
     private randomizeUrl: boolean = false;
     private namespace: string = "usermaven";
+    private crossDomainLinking: boolean = true;
 
     private apiKey: string = "";
     private initialized: boolean = false;
@@ -960,6 +994,7 @@ class UsermavenClientImpl implements UsermavenClient {
                 : !!options.compat_mode;
         this.cookieDomain = options.cookie_domain || getCookieDomain();
         this.namespace = options.namespace || "usermaven";
+        this.crossDomainLinking = options.cross_domain_linking ?? true;
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
         );

@@ -293,6 +293,11 @@ export type UsermavenOptions = {
    * Namespace
    */
     namespace?: string
+
+  /**
+   * Cross domain linking (if true, Usermaven will try to extract query params or hash from URL)
+   */
+  cross_domain_linking?: boolean
 };
 
 /**
@@ -372,7 +377,7 @@ export type TrackingEnvironment = {
    * Gets (and persists) anonymous id. Example implementation: id can be persisted in cookies or in other way.
    *
    */
-  getAnonymousId(cookieOpts: { name: string, domain?: string }): string;
+  getAnonymousId(cookieOpts: { name: string, domain?: string, crossDomainLinking?: boolean }): string;
 };
 /**
  * List of environments where Jitsu tracker can work. See TrackingEnvironment above
