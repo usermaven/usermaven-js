@@ -298,6 +298,12 @@ export type UsermavenOptions = {
    * Cross domain linking (if true, Usermaven will try to extract query params or hash from URL)
    */
   cross_domain_linking?: boolean
+
+  /**
+   * Domains that should be used for cross domain linking
+   * @example "*.mydomain.com,*mydomain2.com"
+   */
+  domains?: string
 };
 
 /**

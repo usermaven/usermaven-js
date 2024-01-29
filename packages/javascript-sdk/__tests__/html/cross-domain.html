@@ -2,7 +2,13 @@
 
 <head>
     <!-- Usermaven tracking one-liner. By default, pageview event is sent -->
-    <script src="%%SERVER%%/s/lib.js" data-key="Test" data-log-level="debug"  data-privacy-policy="strict"></script>
+    <script
+            src="%%SERVER%%/s/lib.js"
+            data-key="asdsadasd"
+            data-log-level="debug"
+            data-cross-domain-linking="true"
+            data-domains="localhost.io:8081,localhost.com:8081"
+    ></script>
 
     <script>
 
@@ -13,10 +19,10 @@
     <h1>Testing %%SERVER%%</h1>
     <h2>Capabilities</h2>
     <ul>
-        <li><a href="http://localhost.io:8081/test-case/cross-domain.html?_um=46bzb6x9la" target="_blank">Cross-domain</a></li>
+<!--        <li><a href="http://localhost.io:8081/test-case/cross-domain.html?_um=46bzb6x9la" target="_blank">Cross-domain</a></li>-->
+        <li><a href="http://localhost.io:8081/test-case/cross-domain.html" target="_blank">Cross-domain</a></li>
     </ul>
 
-    <script src="%%SERVER%%/s/lib.js" data-key="Test1" data-log-level="debug" defer data-namespace="usermaven_clone" ></script>
 
 <!--    <script defer>window.seerat = window.seerat || (function(){(window.seeratQ = window.seeratQ || []).push(arguments);})</script>-->
 </body>

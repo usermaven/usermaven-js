@@ -239,6 +239,7 @@ const browserEnv: TrackingEnvironment = {
     },
 };
 
+
 function ensurePrefix(prefix: string, str?: string) {
     if (!str) {
         return str;
@@ -559,6 +560,7 @@ class UsermavenClientImpl implements UsermavenClient {
     private randomizeUrl: boolean = false;
     private namespace: string = "usermaven";
     private crossDomainLinking: boolean = true;
+    private domains: string[] = [];
 
     private apiKey: string = "";
     private initialized: boolean = false;
@@ -995,6 +997,7 @@ class UsermavenClientImpl implements UsermavenClient {
         this.cookieDomain = options.cookie_domain || getCookieDomain();
         this.namespace = options.namespace || "usermaven";
         this.crossDomainLinking = options.cross_domain_linking ?? true;
+        this.domains = options.domains ? (options.domains).split(',').map((domain) => domain.trim()) : [];
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
         );
@@ -1052,6 +1055,8 @@ class UsermavenClientImpl implements UsermavenClient {
         // this.manageSession(this.config);
 
         this.manageAutoCapture(this.config);
+
+        this.manageCrossDomainLinking(this.config);
 
         if (options.capture_3rd_party_cookies === false) {
             this._3pCookies = {};
@@ -1191,6 +1196,44 @@ class UsermavenClientImpl implements UsermavenClient {
             this.propsPersistance.save(this.permanentProperties);
         }
     }
+
+    manageCrossDomainLinking(options: UsermavenOptions): boolean {
+        if (!isWindowAvailable() || !options.cross_domain_linking || options.domains.length === 0) {
+            return false;
+        }
+        const cookieName = this.idCookieName;
+
+        const domains = options.domains || [];
+
+        // Listen for all clicks on the page
+        document.addEventListener('click', function (event) {
+
+            // Check if the clicked element is a link
+            const target = event.target as HTMLElement;
+            if (target.tagName.toLowerCase() === 'a') {
+                // Check if the link is pointing to a different domain
+                const href = target.getAttribute('href');
+                if (href && href.startsWith('http')) {
+                    const url = new URL(href);
+
+                    const cookie = getCookie(cookieName);
+
+
+                    if (domains.includes(url.hostname)) {
+
+                        // Add the '_um' parameter to the URL
+                        url.searchParams.append('_um', cookie);
+                        target.setAttribute('href', url.toString());
+
+
+                        // Add with _um prefix
+                        // url.searchParams.set("_um", cookie);
+                    }
+                }
+            }
+        }, false);
+    }
+
 
     /**
      * Manage auto-capturing
