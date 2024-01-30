@@ -1057,7 +1057,11 @@ class UsermavenClientImpl implements UsermavenClient {
 
         this.manageAutoCapture(this.config);
 
-        this.manageCrossDomainLinking(this.config);
+        this.manageCrossDomainLinking({
+            cross_domain_linking: this.crossDomainLinking,
+            domains: this.domains,
+            cookiePolicy: this.cookiePolicy
+        });
 
         if (options.capture_3rd_party_cookies === false) {
             this._3pCookies = {};
@@ -1198,8 +1202,12 @@ class UsermavenClientImpl implements UsermavenClient {
         }
     }
 
-    manageCrossDomainLinking(options: UsermavenOptions): boolean {
-        if (!isWindowAvailable() || !options.cross_domain_linking || options.domains.length === 0) {
+    manageCrossDomainLinking(options: {
+        cross_domain_linking?: boolean;
+        domains?: string[];
+        cookiePolicy?: Policy;
+    }): boolean {
+        if (!isWindowAvailable() || !options.cross_domain_linking || options.domains.length === 0 || options.cookiePolicy === "strict") {
             return false;
         }
         const cookieName = this.idCookieName;
@@ -1219,8 +1227,7 @@ class UsermavenClientImpl implements UsermavenClient {
 
                     const cookie = getCookie(cookieName);
 
-
-                    if (domains.includes(url.hostname)) {
+                    if (domains.includes(url.hostname) && cookie) {
 
                         // Add the '_um' parameter to the URL
                         url.searchParams.append('_um', cookie);
