@@ -188,8 +188,41 @@ const browserEnv: TrackingEnvironment = {
         doc_encoding: document.characterSet,
     }),
 
-    getAnonymousId: ({name, domain}) => {
+    getAnonymousId: ({name, domain, crossDomainLinking = true}) => {
         expireNonRootCookies(name)
+
+        // Check if cross domain linking is enabled
+        if (crossDomainLinking) {
+            // Try to extract the '_um' parameter from query string and hash fragment (https://example.com#_um=1~abcde5~)
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryId = urlParams.get('_um');
+
+
+            const urlHash = window.location.hash.substring(1);
+            const hashedValues = urlHash.split("~");
+            const fragmentId = hashedValues.length > 1 ? hashedValues[1] : undefined;
+
+            // If the '_um' parameter is set in both the query string and hash fragment,
+            // prioritize the one in query string
+            let crossDomainAnonymousId = queryId || fragmentId;
+
+            // If coming from another domain, use the ID from URL parameter
+            if (crossDomainAnonymousId) {
+                getLogger().debug("Existing user id from other domain", crossDomainAnonymousId);
+                // Check if the ID needs to be set as cookie
+                const currentCookie = getCookie(name);
+                if (!currentCookie || currentCookie !== crossDomainAnonymousId) {
+                    setCookie(name, crossDomainAnonymousId, {
+                        domain,
+                        secure: document.location.protocol !== "http:",
+                        maxAge: MAX_AGE_TEN_YEARS,
+                    });
+                }
+                return crossDomainAnonymousId;
+            }
+        }
+
+
         const idCookie = getCookie(name);
         if (idCookie) {
             getLogger().debug("Existing user id", idCookie);
@@ -205,6 +238,7 @@ const browserEnv: TrackingEnvironment = {
         return newId;
     },
 };
+
 
 function ensurePrefix(prefix: string, str?: string) {
     if (!str) {
@@ -525,6 +559,8 @@ class UsermavenClientImpl implements UsermavenClient {
     private idCookieName: string = "";
     private randomizeUrl: boolean = false;
     private namespace: string = "usermaven";
+    private crossDomainLinking: boolean = true;
+    private domains: string[] = [];
 
     private apiKey: string = "";
     private initialized: boolean = false;
@@ -816,6 +852,7 @@ class UsermavenClientImpl implements UsermavenClient {
                         ? env.getAnonymousId({
                             name: this.idCookieName,
                             domain: this.cookieDomain,
+                            crossDomainLinking: this.crossDomainLinking,
                         })
                         : "",
                 ...user,
@@ -960,6 +997,8 @@ class UsermavenClientImpl implements UsermavenClient {
                 : !!options.compat_mode;
         this.cookieDomain = options.cookie_domain || getCookieDomain();
         this.namespace = options.namespace || "usermaven";
+        this.crossDomainLinking = options.cross_domain_linking ?? true;
+        this.domains = options.domains ? (options.domains).split(',').map((domain) => domain.trim()) : [];
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
         );
@@ -1017,6 +1056,12 @@ class UsermavenClientImpl implements UsermavenClient {
         // this.manageSession(this.config);
 
         this.manageAutoCapture(this.config);
+
+        this.manageCrossDomainLinking({
+            cross_domain_linking: this.crossDomainLinking,
+            domains: this.domains,
+            cookiePolicy: this.cookiePolicy
+        });
 
         if (options.capture_3rd_party_cookies === false) {
             this._3pCookies = {};
@@ -1156,6 +1201,43 @@ class UsermavenClientImpl implements UsermavenClient {
             this.propsPersistance.save(this.permanentProperties);
         }
     }
+
+    manageCrossDomainLinking(options: {
+        cross_domain_linking?: boolean;
+        domains?: string[];
+        cookiePolicy?: Policy;
+    }): boolean {
+        if (!isWindowAvailable() || !options.cross_domain_linking || options.domains.length === 0 || options.cookiePolicy === "strict") {
+            return false;
+        }
+        const cookieName = this.idCookieName;
+
+        const domains = options.domains || [];
+
+        // Listen for all clicks on the page
+        document.addEventListener('click', function (event) {
+
+            // Check if the clicked element is a link
+            const target = event.target as HTMLElement;
+            if (target.tagName.toLowerCase() === 'a') {
+                // Check if the link is pointing to a different domain
+                const href = target.getAttribute('href');
+                if (href && href.startsWith('http')) {
+                    const url = new URL(href);
+
+                    const cookie = getCookie(cookieName);
+
+                    if (domains.includes(url.hostname) && cookie) {
+
+                        // Add the '_um' parameter to the URL
+                        url.searchParams.append('_um', cookie);
+                        target.setAttribute('href', url.toString());
+                    }
+                }
+            }
+        }, false);
+    }
+
 
     /**
      * Manage auto-capturing
