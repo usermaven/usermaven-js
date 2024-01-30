@@ -1163,7 +1163,9 @@ class UsermavenClientImpl implements UsermavenClient {
      */
     manageAutoCapture(options: UsermavenOptions) {
         getLogger().debug("Auto Capture Status: ", this.config['autocapture']);
-        this.__autocapture_enabled = this.config['autocapture'];
+
+        this.__autocapture_enabled = this.config['autocapture'] && isWindowAvailable();
+
         if (!this.__autocapture_enabled) {
             return
         }
