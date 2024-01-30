@@ -852,6 +852,7 @@ class UsermavenClientImpl implements UsermavenClient {
                         ? env.getAnonymousId({
                             name: this.idCookieName,
                             domain: this.cookieDomain,
+                            crossDomainLinking: this.crossDomainLinking,
                         })
                         : "",
                 ...user,
@@ -1224,10 +1225,6 @@ class UsermavenClientImpl implements UsermavenClient {
                         // Add the '_um' parameter to the URL
                         url.searchParams.append('_um', cookie);
                         target.setAttribute('href', url.toString());
-
-
-                        // Add with _um prefix
-                        // url.searchParams.set("_um", cookie);
                     }
                 }
             }
