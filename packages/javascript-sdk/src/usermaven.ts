@@ -35,7 +35,7 @@ import {CookieOpts, serializeCookie} from "./cookie";
 import {IncomingMessage, ServerResponse} from "http";
 import {LocalStorageQueue, MemoryQueue} from "./queue";
 import {autocapture} from './autocapture';
-import {_copyAndTruncateStrings, _each, _extend, _isArray, _isUndefined} from "./utils";
+import {_copyAndTruncateStrings, _each, _extend, _findClosestLink, _isArray, _isUndefined} from "./utils";
 
 const VERSION_INFO = {
     env: '__buildEnv__',
@@ -1217,15 +1217,20 @@ class UsermavenClientImpl implements UsermavenClient {
         // Listen for all clicks on the page
         document.addEventListener('click', function (event) {
 
-            // Check if the clicked element is a link
-            const target = event.target as HTMLElement;
-            if (target.tagName.toLowerCase() === 'a') {
+            // Find the closest link
+            const target = _findClosestLink(event.target as HTMLElement | null);
+            if (target) {
                 // Check if the link is pointing to a different domain
                 const href = target.getAttribute('href');
                 if (href && href.startsWith('http')) {
                     const url = new URL(href);
 
                     const cookie = getCookie(cookieName);
+
+                    // Skip the link if it's pointing to the current domain
+                    if (url.hostname === window.location.hostname) {
+                        return;
+                    }
 
                     if (domains.includes(url.hostname) && cookie) {
 
