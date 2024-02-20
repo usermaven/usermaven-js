@@ -291,7 +291,7 @@ export const _isBlockedUA = function (ua: string): boolean {
 
 // Function to find the closest link element
 export function _findClosestLink(element: HTMLElement | null): HTMLElement | null {
-    while (element && element.tagName.toLowerCase() !== 'a') {
+    while (element && element.tagName && element.tagName.toLowerCase() !== 'a') {
         element = element.parentNode as HTMLElement | null;
     }
     return element;
