@@ -1221,7 +1221,7 @@ class UsermavenClientImpl implements UsermavenClient {
             const target = _findClosestLink(event.target as HTMLElement | null);
             if (target) {
                 // Check if the link is pointing to a different domain
-                const href = target.getAttribute('href');
+                const href = target?.hasAttribute('href') ? target?.getAttribute('href') : ''
                 if (href && href.startsWith('http')) {
                     const url = new URL(href);
 
