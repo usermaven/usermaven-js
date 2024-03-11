@@ -36,6 +36,7 @@ import {IncomingMessage, ServerResponse} from "http";
 import {LocalStorageQueue, MemoryQueue} from "./queue";
 import {autocapture} from './autocapture';
 import {_copyAndTruncateStrings, _each, _extend, _findClosestLink, _isArray, _isUndefined} from "./utils";
+import FormTracking from "./form-tracking";
 
 const VERSION_INFO = {
     env: '__buildEnv__',
@@ -1057,6 +1058,8 @@ class UsermavenClientImpl implements UsermavenClient {
 
         this.manageAutoCapture(this.config);
 
+        this.manageFormTracking(this.config);
+
         this.manageCrossDomainLinking({
             cross_domain_linking: this.crossDomainLinking,
             domains: this.domains,
@@ -1274,6 +1277,22 @@ class UsermavenClientImpl implements UsermavenClient {
     }
 
     /**
+     * Manage form tracking
+     */
+    manageFormTracking(options: UsermavenOptions) {
+        if (!isWindowAvailable()) {
+            return
+        }
+
+        // if (options['capture_forms']) {
+        //     getLogger().debug('Form tracking enabled...')
+        //     formCapture.init(this, options)
+        // }
+
+        FormTracking.getInstance(this).track()
+    }
+
+    /**
      * Capture an event. This is the most important and
      * frequently used usermaven function.
      *
@@ -1286,6 +1305,7 @@ class UsermavenClientImpl implements UsermavenClient {
      * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
      */
     capture(event_name, properties = {}) {
+        console.log('$capture', event_name, properties)
         if (!this.initialized) {
             console.error('Trying to capture event before initialization')
             return;
@@ -1306,6 +1326,9 @@ class UsermavenClientImpl implements UsermavenClient {
 
         data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
 
+        console.log('$capture data', data)
+
+
         // send event if there is a tagname available
         if (data.properties?.autocapture_attributes?.tag_name) {
             this.track("$autocapture", data.properties)
@@ -1317,13 +1340,18 @@ class UsermavenClientImpl implements UsermavenClient {
             this.track(event_name, data.properties)
         }
 
+        // send event if the event is $form
+        if (event_name === '$form') {
+            this.track(event_name, data.properties)
+        }
+
     }
 
     _calculate_event_properties(event_name, event_properties) {
         // set defaults
         let properties = event_properties || {}
 
-        if (event_name === '$snapshot' || event_name === '$scroll') {
+        if (event_name === '$snapshot' || event_name === '$scroll' || event_name === '$form') {
             return properties
         }
 
@@ -1342,9 +1370,6 @@ class UsermavenClientImpl implements UsermavenClient {
             attributes = elements[0];
         }
 
-        properties['autocapture_attributes'] = attributes;
-        properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
-        properties['autocapture_attributes']["event_type"] = properties["$event_type"] ?? "";
         ['$ce_version', "$event_type", "$initial_referrer", "$initial_referring_domain", "$referrer", "$referring_domain", "$elements"].forEach((key) => {
             delete properties[key]
         })
