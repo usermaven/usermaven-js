@@ -304,6 +304,11 @@ export type UsermavenOptions = {
    * @example "*.mydomain.com,*mydomain2.com"
    */
   domains?: string
+
+  /**
+   * Form tracking
+   */
+  capture_forms?: boolean
 };
 
 /**

@@ -561,6 +561,7 @@ class UsermavenClientImpl implements UsermavenClient {
     private randomizeUrl: boolean = false;
     private namespace: string = "usermaven";
     private crossDomainLinking: boolean = true;
+    private formTracking: boolean = false;
     private domains: string[] = [];
 
     private apiKey: string = "";
@@ -999,6 +1000,7 @@ class UsermavenClientImpl implements UsermavenClient {
         this.cookieDomain = options.cookie_domain || getCookieDomain();
         this.namespace = options.namespace || "usermaven";
         this.crossDomainLinking = options.cross_domain_linking ?? true;
+        this.formTracking = options.capture_forms ?? false;
         this.domains = options.domains ? (options.domains).split(',').map((domain) => domain.trim()) : [];
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
@@ -1280,7 +1282,7 @@ class UsermavenClientImpl implements UsermavenClient {
      * Manage form tracking
      */
     manageFormTracking(options: UsermavenOptions) {
-        if (!isWindowAvailable()) {
+        if (!isWindowAvailable() || !options['capture_forms']) {
             return
         }
 
@@ -1305,7 +1307,6 @@ class UsermavenClientImpl implements UsermavenClient {
      * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
      */
     capture(event_name, properties = {}) {
-        console.log('$capture', event_name, properties)
         if (!this.initialized) {
             console.error('Trying to capture event before initialization')
             return;
@@ -1325,9 +1326,6 @@ class UsermavenClientImpl implements UsermavenClient {
         };
 
         data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
-
-        console.log('$capture data', data)
-
 
         // send event if there is a tagname available
         if (data.properties?.autocapture_attributes?.tag_name) {
