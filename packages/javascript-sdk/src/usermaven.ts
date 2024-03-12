@@ -1286,10 +1286,7 @@ class UsermavenClientImpl implements UsermavenClient {
             return
         }
 
-        // if (options['capture_forms']) {
-        //     getLogger().debug('Form tracking enabled...')
-        //     formCapture.init(this, options)
-        // }
+        getLogger().debug('Form tracking enabled...')
 
         FormTracking.getInstance(this).track()
     }
@@ -1368,6 +1365,9 @@ class UsermavenClientImpl implements UsermavenClient {
             attributes = elements[0];
         }
 
+        properties['autocapture_attributes'] = attributes;
+        properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
+        properties['autocapture_attributes']["event_type"] = properties["$event_type"] ?? "";
         ['$ce_version', "$event_type", "$initial_referrer", "$initial_referring_domain", "$referrer", "$referring_domain", "$elements"].forEach((key) => {
             delete properties[key]
         })
