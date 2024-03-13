@@ -7,7 +7,7 @@
             data-key="asdsadasd"
             data-log-level="debug"
             data-autocapture="true"
-            data-capture-forms="true"
+            data-form-tracking="tagged"
     ></script>
 
     <script>
@@ -17,12 +17,23 @@
 
 <body>
     <h1>Testing %%SERVER%%</h1>
+
+    <h3>Normal</h3>
     <form id="form">
         <input type="text" name="name" value="seerat awan">
         <input type="email" name="email" data-hidden="false">
         <input type="password" name="pass" value="seeratawan" data-hidden="false">
         <textarea name="credit-card" data-hidden="false">6011-1111-1111-1117</textarea>
         <input type="submit" value="Submit">
+    </form>
+
+    <h3>Tagged</h3>
+    <form id="form1" data-um-form>
+        <input type="text" name="name" value="seerat awan">
+        <input type="email" name="email" data-hidden="false" class="um-no-capture">
+        <input type="password" name="pass" value="seeratawan" data-hidden="false">
+        <textarea name="credit-card" data-hidden="false">6011-1111-1111-1117</textarea>
+        <input type="submit" value="Submit" class="um-no-capture">
     </form>
 
 <!--    <script defer>window.seerat = window.seerat || (function(){(window.seeratQ = window.seeratQ || []).push(arguments);})</script>-->

@@ -308,7 +308,7 @@ export type UsermavenOptions = {
   /**
    * Form tracking
    */
-  capture_forms?: boolean
+  form_tracking?: 'all' | 'tagged' | 'none' | boolean
 };
 
 /**

@@ -561,7 +561,7 @@ class UsermavenClientImpl implements UsermavenClient {
     private randomizeUrl: boolean = false;
     private namespace: string = "usermaven";
     private crossDomainLinking: boolean = true;
-    private formTracking: boolean = false;
+    private formTracking: 'all' | 'tagged' | 'none' | boolean = false;
     private domains: string[] = [];
 
     private apiKey: string = "";
@@ -1000,7 +1000,7 @@ class UsermavenClientImpl implements UsermavenClient {
         this.cookieDomain = options.cookie_domain || getCookieDomain();
         this.namespace = options.namespace || "usermaven";
         this.crossDomainLinking = options.cross_domain_linking ?? true;
-        this.formTracking = options.capture_forms ?? false;
+        this.formTracking = options.form_tracking ?? false;
         this.domains = options.domains ? (options.domains).split(',').map((domain) => domain.trim()) : [];
         this.trackingHost = getHostWithProtocol(
             options["tracking_host"] || "t.usermaven.com"
@@ -1282,13 +1282,16 @@ class UsermavenClientImpl implements UsermavenClient {
      * Manage form tracking
      */
     manageFormTracking(options: UsermavenOptions) {
-        if (!isWindowAvailable() || !options['capture_forms']) {
+        if (!isWindowAvailable() || !this.formTracking || this.formTracking === "none") {
             return
         }
 
         getLogger().debug('Form tracking enabled...')
 
-        FormTracking.getInstance(this).track()
+        // all and true are the same
+        const trackingType = this.formTracking === true ? 'all' : this.formTracking
+
+        FormTracking.getInstance(this, trackingType).track()
     }
 
     /**

@@ -4,12 +4,14 @@ import {_cleanObject} from "./utils";
 export default class FormTracking {
     instance: UsermavenClient;
     formElements: NodeListOf<HTMLFormElement>;
+    trackingType: 'all' | 'tagged'
 
     // Singleton instance
     private static instance: FormTracking;
 
-    private constructor(instance: UsermavenClient) {
+    private constructor(instance: UsermavenClient, trackingType: 'all' | 'tagged' = 'all') {
         this.instance = instance;
+        this.trackingType = trackingType;
 
         // Wait for the DOM to be ready
         if (document.readyState === 'loading') {
@@ -25,20 +27,26 @@ export default class FormTracking {
      */
     track() {
         this.formElements = document.querySelectorAll('form');
+
+        if (this.trackingType === 'tagged') {
+            this.formElements = document.querySelectorAll('form[data-um-form]');
+        }
+
         this.formElements.forEach(form => {
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
                 const form = event.target as HTMLFormElement;
                 const props = this._getFormDetails(form);
 
+                console.log('$Form submitted', props);
                 this.instance.capture('$form', _cleanObject(props));
             });
         });
     }
 
-    public static getInstance(instance: UsermavenClient): FormTracking {
+    public static getInstance(instance: UsermavenClient, trackingType: 'all' | 'tagged' = 'all'): FormTracking {
         if (!FormTracking.instance) {
-            FormTracking.instance = new FormTracking(instance);
+            FormTracking.instance = new FormTracking(instance, trackingType);
         }
         return FormTracking.instance;
     }
@@ -53,7 +61,10 @@ export default class FormTracking {
 
         const formFields = form.querySelectorAll('input, select, textarea') as NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
 
-        formFields.forEach((field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) => {
+        // ignore form fields with class um-no-capture
+        const filteredFormFields = Array.from(formFields).filter(field => !field.classList.contains('um-no-capture'));
+
+        filteredFormFields.forEach((field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) => {
             const fieldProps = this._getFieldProps(field, index);
             Object.assign(formDetails, fieldProps);
         });
