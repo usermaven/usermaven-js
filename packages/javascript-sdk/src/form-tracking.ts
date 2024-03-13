@@ -34,11 +34,9 @@ export default class FormTracking {
 
         this.formElements.forEach(form => {
             form.addEventListener('submit', (event) => {
-                event.preventDefault();
                 const form = event.target as HTMLFormElement;
                 const props = this._getFormDetails(form);
 
-                console.log('$Form submitted', props);
                 this.instance.capture('$form', _cleanObject(props));
             });
         });
