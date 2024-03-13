@@ -1,6 +1,6 @@
 {
   "name": "@usermaven/react",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "Usermaven JavaScript SDK for React",
   "author": "Usermaven <hello@usermaven.com>",
   "license": "MIT",
