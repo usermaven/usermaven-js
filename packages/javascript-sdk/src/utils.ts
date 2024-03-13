@@ -299,3 +299,13 @@ export function _findClosestLink(element: HTMLElement | null): HTMLElement | nul
     }
     return null;
 }
+
+
+export function _cleanObject(obj: Record<string, any>) {
+    for (let propName in obj) {
+        if (obj[propName] === '' || obj[propName] === null || obj[propName] === undefined || (typeof obj[propName] === 'object' && Object.keys(obj[propName]).length === 0)) {
+            delete obj[propName];
+        }
+    }
+    return obj;
+}
