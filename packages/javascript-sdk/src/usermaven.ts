@@ -26,7 +26,7 @@ import {
     UsermavenOptions,
     Policy,
     TrackingEnvironment,
-    UserProps, CompanyProps,
+    UserProps, CompanyProps, FormProps,
 } from "./interface";
 
 import {getLogger, setRootLogLevel} from "./log";
@@ -35,7 +35,16 @@ import {CookieOpts, serializeCookie} from "./cookie";
 import {IncomingMessage, ServerResponse} from "http";
 import {LocalStorageQueue, MemoryQueue} from "./queue";
 import {autocapture} from './autocapture';
-import {_copyAndTruncateStrings, _each, _extend, _findClosestLink, _isArray, _isUndefined} from "./utils";
+import {
+    _cleanObject,
+    _copyAndTruncateStrings,
+    _each,
+    _extend,
+    _findClosestLink,
+    _isArray,
+    _isUndefined,
+    _keysToSnakeCase,
+} from "./utils";
 import FormTracking from "./form-tracking";
 
 const VERSION_INFO = {
@@ -626,6 +635,46 @@ class UsermavenClientImpl implements UsermavenClient {
         }
         if (!doNotSendEvent) {
             return this.track("group", {});
+        } else {
+            return Promise.resolve();
+        }
+    }
+
+    form(formElement:FormProps, doNotSendEvent?: boolean): Promise<void> {
+        getLogger().debug("Usermaven form identified", formElement)
+
+        // Convert camelCase keys to snake_cas
+        const formProps = _keysToSnakeCase(formElement)
+
+        // Flatten the form fields
+        const formFields = formElement.formFields
+        let formFieldsFlat = {}
+
+        if (formFields) {
+            Object.keys(formFields).forEach((key, index) => {
+                const field = formFields[key]
+                const fieldProps = _keysToSnakeCase(field)
+                formFieldsFlat[`field_${index + 1}_tag`] = fieldProps.tag
+                formFieldsFlat[`field_${index + 1}_name`] = fieldProps.name
+                formFieldsFlat[`field_${index + 1}_value`] = FormTracking.scrubPotentiallySensitiveValues(fieldProps.value)
+                formFieldsFlat[`field_${index + 1}_type`] = fieldProps.type
+                formFieldsFlat[`field_${index + 1}_data_attributes`] = fieldProps.dataAttributes
+            })
+        }
+
+        formFieldsFlat = _cleanObject(formFieldsFlat)
+
+        // Remove the formFields from the formProps
+        delete formProps.formFields
+        delete formProps.form_fields
+
+        const objectToSend = {
+            ...formProps,
+            ...formFieldsFlat
+        }
+
+        if (!doNotSendEvent) {
+            return this.track("$form", objectToSend);
         } else {
             return Promise.resolve();
         }

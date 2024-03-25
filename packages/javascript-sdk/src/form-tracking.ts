@@ -1,5 +1,5 @@
 import {UsermavenClient} from "./interface";
-import {_cleanObject} from "./utils";
+import {_cleanObject, _isNullish, _isString, _trim} from "./utils";
 
 export default class FormTracking {
     instance: UsermavenClient;
@@ -100,13 +100,13 @@ export default class FormTracking {
         }
 
 
-        return this._scrubPotentiallySensitiveValues(safeText);
+        return FormTracking.scrubPotentiallySensitiveValues(safeText);
     }
 
 
-    private _scrubPotentiallySensitiveValues(text: string): string {
+    static scrubPotentiallySensitiveValues(text: string): string {
 
-        if (!this._shouldCaptureValue(text)) {
+        if (!FormTracking._shouldCaptureValue(text)) {
             return '<redacted>';
         }
 
@@ -114,13 +114,13 @@ export default class FormTracking {
     }
 
 
-    private _shouldCaptureValue(value: string): boolean {
-        if (this._isNullish(value)) {
+    static _shouldCaptureValue(value: string): boolean {
+        if (_isNullish(value)) {
             return false;
         }
 
-        if (this._isString(value)) {
-            value = this._trim(value);
+        if (_isString(value)) {
+            value = _trim(value);
 
             // check to see if input value looks like a credit card number
             // see: https://www.safaribooksonline.com/library/view/regular-expressions-cookbook/9781449327453/ch04s20.html
@@ -138,18 +138,5 @@ export default class FormTracking {
         }
 
         return true;
-    }
-
-
-    private _isNullish(value: any): boolean {
-        return value === null || value === undefined;
-    }
-
-    private _isString(value: any): boolean {
-        return typeof value === 'string' || value instanceof String;
-    }
-
-    private _trim(value: string): string {
-        return value.trim().replace(/^\s+|\s+$/g, '');
     }
 }

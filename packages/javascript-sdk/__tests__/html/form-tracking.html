@@ -6,7 +6,7 @@
             src="%%SERVER%%/s/lib.js"
             data-key="asdsadasd"
             data-log-level="debug"
-            data-autocapture="true"
+            data-autocapture="false"
             data-form-tracking="tagged"
     ></script>
 
@@ -36,7 +36,48 @@
         <input type="submit" value="Submit" class="um-no-capture">
     </form>
 
-<!--    <script defer>window.seerat = window.seerat || (function(){(window.seeratQ = window.seeratQ || []).push(arguments);})</script>-->
+    <h3>With Button</h3>
+    <form id="form2" data-um-form>
+        <input type="text" name="name" value="seerat awan">
+        <input type="email" name="email" data-hidden="false">
+        <input type="password" name="pass" value="seeratawan" data-hidden="false">
+        <textarea name="credit-card" data-hidden="false">6011-1111-1111-1117</textarea>
+        <button type="submit" class="um-no-capture">Submit</button>
+    </form>
+
+    <script>
+
+        document.getElementById('form2').addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Form2 submitted');
+            usermaven('form', {
+                formName: 'form2',
+                formId: 'form2',
+                formFields: [
+                    {
+                        name: 'name',
+                        value: 'seerat awan',
+                        type: 'text'
+                    },
+                    {
+                        name: 'email',
+                        value: '',
+                        type: 'email'
+                    },
+                    {
+                        name: 'pass',
+                        value: 'seeratawan',
+                        type: 'password'
+                    },
+                    {
+                        name: 'credit-card',
+                        value: '6011-1111-1111-1117',
+                        type: 'textarea'
+                    }
+                ]
+            });
+        });
+    </script>
 </body>
 
 </html>
