@@ -325,11 +325,11 @@ export interface CompanyProps {
  * Form properties
  */
 export interface FormProps {
-    formName: string
-    formId?: string
-    formAction?: string
-    formMethod?: string
-    formFields: {
+    name: string
+    id?: string
+    action?: string
+    method?: string
+    fields: {
         [fieldName: string]: {
             tag: string
             type: string

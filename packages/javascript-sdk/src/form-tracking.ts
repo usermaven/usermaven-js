@@ -51,10 +51,10 @@ export default class FormTracking {
 
     private _getFormDetails(form: HTMLFormElement) {
         const formDetails = {
-            form_id: form.id,
-            form_name: form.name || '',
-            form_action: form.action,
-            form_method: form.method,
+            id: form.id,
+            name: form.name || '',
+            action: form.action,
+            method: form.method,
         };
 
         const formFields = form.querySelectorAll('input, select, textarea') as NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;

@@ -647,7 +647,7 @@ class UsermavenClientImpl implements UsermavenClient {
         const formProps = _keysToSnakeCase(formElement)
 
         // Flatten the form fields
-        const formFields = formElement.formFields
+        const formFields = formElement.fields
         let formFieldsFlat = {}
 
         if (formFields) {
@@ -665,8 +665,7 @@ class UsermavenClientImpl implements UsermavenClient {
         formFieldsFlat = _cleanObject(formFieldsFlat)
 
         // Remove the formFields from the formProps
-        delete formProps.formFields
-        delete formProps.form_fields
+        delete formProps.fields
 
         const objectToSend = {
             ...formProps,
