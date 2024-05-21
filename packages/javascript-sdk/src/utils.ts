@@ -309,3 +309,28 @@ export function _cleanObject(obj: Record<string, any>) {
     }
     return obj;
 }
+
+export function _toSnakeCase(str: string): string {
+    return str.replace(/([A-Z])/g, function ($1) {
+        return '_' + $1.toLowerCase();
+    });
+}
+
+/**
+ * Convert the keys of an object to snake_case
+ */
+export function _keysToSnakeCase(obj: Record<string, any>): Record<string, any> {
+    const newObject: Record<string, any> = {};
+    for (const key in obj) {
+        newObject[_toSnakeCase(key)] = obj[key];
+    }
+    return newObject;
+}
+
+export function _isNullish(value: any): boolean {
+    return value === null || value === undefined;
+}
+
+export function _isString(value: any): boolean {
+    return typeof value === 'string' || value instanceof String;
+}
