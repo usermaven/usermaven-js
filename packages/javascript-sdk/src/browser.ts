@@ -99,7 +99,15 @@ function getTracker(window): UsermavenClient {
     }
 
 
-    let eventName = (typeof(window.onpagehide) === 'undefined') ? 'unload' : 'pagehide';
+    let eventName = 'beforeunload'
+
+    // beforeunload is not supported on iOS on Safari. Apple docs recommend using `pagehide` instead.
+    const isOnIOS = navigator.userAgent.match(/iPad/i) ||
+        navigator.userAgent.match(/iPhone/i)
+
+    if (isOnIOS) {
+        eventName = 'pagehide'
+    }
 
     window.addEventListener(eventName, function () {
         window[NAMESPACE]('track', '$pageleave');
