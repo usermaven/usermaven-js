@@ -10,7 +10,7 @@ const usermavenProps = [
     'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
     'custom_headers', 'force_use_fetch', 'min_send_timeout', 'max_send_timeout', 'max_send_attempts', 'disable_event_persistence',
     'project_id', 'autocapture', 'properties_string_max_length', 'property_blacklist',
-    'exclude', 'auto_pageview', 'namespace', 'cross_domain_linking', 'domains'
+    'exclude', 'auto_pageview', 'namespace', 'cross_domain_linking', 'domains', 'form_tracking'
 ];
 
 function getTrackingHost(scriptSrc: string): string {
@@ -99,7 +99,15 @@ function getTracker(window): UsermavenClient {
     }
 
 
-    let eventName = (typeof(window.onpagehide) === 'undefined') ? 'unload' : 'pagehide';
+    let eventName = 'beforeunload'
+
+    // beforeunload is not supported on iOS on Safari. Apple docs recommend using `pagehide` instead.
+    const isOnIOS = navigator.userAgent.match(/iPad/i) ||
+        navigator.userAgent.match(/iPhone/i)
+
+    if (isOnIOS) {
+        eventName = 'pagehide'
+    }
 
     window.addEventListener(eventName, function () {
         window[NAMESPACE]('track', '$pageleave');
