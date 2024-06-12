@@ -37,5 +37,5 @@ jobs:
       with:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        SONAR_PROJECTKEY: usermaven-js
+        SONAR_PROJECTKEY: "usermaven-js"
         GITHUB-TOKEN: ${{ secrets.GITHUB_TOKEN }}
