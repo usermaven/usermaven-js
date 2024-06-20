@@ -1,0 +1,41 @@
+name: Master CD Pipeline
+
+on:
+    release:
+      types: [published]
+
+jobs:
+    master_publish_to_nmpjs:
+        runs-on: ubuntu-latest
+        #if: github.event.pull_request.merged == true
+        #needs: [release_on_merge]
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
+    
+          - name: Setup Node.js
+            uses: actions/setup-node@v3
+            with:
+              node-version: '18'
+    
+          - name: Install dependencies
+            run: yarn install
+    
+          - name: Ignore Workspace root check
+            run: yarn global add npm-cli-login --ignore-workspace-root-check  
+    
+          - name: Build project
+            run: yarn build
+    
+          - name: Set package version to release version
+            run: |
+              VERSION="${GITHUB_REF#refs/tags/}"
+              for package in packages/*; do
+                if [ -d "$package" ]; then
+                  echo "Setting version for $package to $VERSION"
+                  cd $package
+                  echo $VERSION
+                  npm version $VERSION --no-git-tag-version
+                  cd - > /dev/null
+                fi
+              done

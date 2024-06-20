@@ -1,0 +1,17 @@
+name: Master Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+    release_on_merge:
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.merged == true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+          - uses: rymndhng/release-on-push-action@master
+            with:
+              bump_version_scheme: patch

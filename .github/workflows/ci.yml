@@ -1,11 +1,13 @@
-name: Develop CI/CD Pipeline
+name: CI Pipeline
 
 on:
   issue_comment:
     branches:
+      - master
       - develop
   pull_request:
     branches:
+      - master
       - develop
 
 jobs:
@@ -57,57 +59,4 @@ jobs:
           pr_reviewer.require_estimate_effort_to_review: false
           pr_reviewer.num_code_suggestions: 50
           pr_reviewer.remove_previous_review_comment: true
-          pr_reviewer.require_all_thresholds_for_incremental_review: true
-
-  # merge_push_develop:
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/develop' && success()
-  #   needs: [sonarqube_analysis, codium_ai_analysis]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v2
-
-  #     - name: Merge and Push to Develop
-  #       run: |
-  #         git config --global user.email "you@example.com"
-  #         git config --global user.name "Your Name"
-  #         git checkout develop
-  #         git merge master
-  #         git push origin develop
-
-  # stage_deploy_bunnycdn:
-  #   runs-on: ubuntu-latest
-  #   if: github.event.pull_request.merged == true && github.ref == 'refs/heads/develop'
-  #   needs: [sonarqube_analysis, codium_ai_analysis]
-  #   steps:
-  #     - name: Stage Deploy to BunnyCDN
-  #       run: |
-  #         # Deployment script or command for BunnyCDN
-
-  #     - name: Stage Deploy to Kubernetes
-  #       run: |
-  #         # Deployment script or command for Kubernetes
-
-  # stage_publish_to_nmpjs:
-  #   runs-on: ubuntu-latest
-  #   #if: github.event.pull_request.merged == true && github.ref == 'refs/heads/develop'
-  #   needs: [sonarqube_analysis]
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18'
-
-  #     - name: Install dependencies
-  #       run: yarn install
-
-  #     - name: Build project
-  #       run: yarn build
-
-  #     - name: Publish to npm
-  #       run: yarn publish --non-interactive --access public
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }    
+          pr_reviewer.require_all_thresholds_for_incremental_review: true 
