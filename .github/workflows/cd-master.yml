@@ -2,7 +2,7 @@ name: Master CD Pipeline
 
 on:
   release:
-    types: [published,released]
+    types: [published,released,created]
 
 jobs:
   master_publish_to_nmpjs:
