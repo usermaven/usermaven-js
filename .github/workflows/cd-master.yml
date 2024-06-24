@@ -29,7 +29,7 @@ jobs:
       run: yarn build
 
     - name: Set token
-      run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
+      run: echo \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > ~/.npmrc
 
     - name: Set package version to release version
       run: |
@@ -47,23 +47,23 @@ jobs:
     - name: Publish Javascript SDK package
       run: |
         echo "Publishing Javascript SDK package"
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
-        cd ./packages/javascript-sdk
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        cd .${{ github.workspace }}/packages/javascript-sdk
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces  
 
     - name: Publish Nextjs SDK package
       run: |
         echo "Publishing Nextjs SDK package"
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
-        cd ./packages/nextjs
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        cd .${{ github.workspace }}/packages/nextjs
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces  
 
     - name: Publish React SDK package
       run: |
         echo "Publishing React SDK package"
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
-        cd ./packages/react
-        echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc"
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        cd .${{ github.workspace }}/packages/react
+        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces          
