@@ -2,7 +2,7 @@ name: Master CD Pipeline
 
 on:
   release:
-    types: [published,released,created]
+    types: [published]
 
 jobs:
   master_publish_to_nmpjs:
@@ -39,3 +39,16 @@ jobs:
             cd - > /dev/null
         fi
         done
+
+    - name: Publish each package
+      run: |
+        for package in packages/*; do
+          if [ -d "$package" ]; then
+            echo "Publishing $package"
+            cd $package
+            yarn publish --non-interactive --access public
+            cd - > /dev/null
+          fi
+        done
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}        
