@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
       - id: release
         uses: rymndhng/release-on-push-action@master
@@ -25,36 +25,36 @@ jobs:
     outputs:
       version: ${{ steps.release.outputs.version }}
 
-  master_publish_to_nmpjs:
-    runs-on: ubuntu-latest
-    needs: [release_on_merge]
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+  # master_publish_to_nmpjs:
+  #   runs-on: ubuntu-latest
+  #   needs: [release_on_merge]
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+  #   - name: Setup Node.js
+  #     uses: actions/setup-node@v3
+  #     with:
+  #       node-version: '18'
 
-    - name: Install dependencies
-      run: yarn install
+  #   - name: Install dependencies
+  #     run: yarn install
 
-    - name: Ignore Workspace root check
-      run: yarn global add npm-cli-login --ignore-workspace-root-check  
+  #   - name: Ignore Workspace root check
+  #     run: yarn global add npm-cli-login --ignore-workspace-root-check  
 
-    - name: Build project
-      run: yarn build
+  #   - name: Build project
+  #     run: yarn build
 
-    - name: Set package version to release version
-      run: |
-        VERSION="${{ needs.release_on_merge.outputs.version }}"
-        for package in packages/*; do
-        if [ -d "$package" ]; then
-            echo "Setting version for $package to $VERSION"
-            cd $package
-            echo $VERSION
-            npm version $VERSION --no-git-tag-version
-            cd - > /dev/null
-        fi
-        done              
+  #   - name: Set package version to release version
+  #     run: |
+  #       VERSION="${{ needs.release_on_merge.outputs.version }}"
+  #       for package in packages/*; do
+  #       if [ -d "$package" ]; then
+  #           echo "Setting version for $package to $VERSION"
+  #           cd $package
+  #           echo $VERSION
+  #           npm version $VERSION --no-git-tag-version
+  #           cd - > /dev/null
+  #       fi
+  #       done              
