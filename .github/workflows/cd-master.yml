@@ -47,7 +47,7 @@ jobs:
     - name: Publish Javascript SDK package
       run: |
         echo "Publishing Javascript SDK package"
-        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        #echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         cd .${{ github.workspace }}/packages/javascript-sdk
         echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces  
@@ -55,7 +55,7 @@ jobs:
     - name: Publish Nextjs SDK package
       run: |
         echo "Publishing Nextjs SDK package"
-        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        #echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         cd .${{ github.workspace }}/packages/nextjs
         echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces  
@@ -63,7 +63,7 @@ jobs:
     - name: Publish React SDK package
       run: |
         echo "Publishing React SDK package"
-        echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
+        #echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         cd .${{ github.workspace }}/packages/react
         echo  \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > .npmrc"
         npm publish --no-workspaces          
