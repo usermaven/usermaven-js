@@ -1,0 +1,110 @@
+name: Develop CD
+
+on:
+  pull_request:
+    types: [ closed ]
+    branches:
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: usermaven-js-stage
+  DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
+
+jobs:
+  dev_publish:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        always-auth: true
+        node-version: '20'
+
+    - name: Install dependencies
+      run: yarn install
+
+    - name: Ignore Workspace root check
+      run: yarn global add npm-cli-login --ignore-workspace-root-check  
+
+    - name: Build project
+      run: yarn build
+
+
+    - name: Deploy to BunnyCDN
+      uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
+      with:
+        source: "packages/javascript-sdk/dist/web"
+        destination: ""
+        storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
+        storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
+        accessKey: "${{ secrets.BCDN_STAGE_ACCESS_KEY }}"
+        pullZoneId: "${{ secrets.BCDN_STAGE_ZONE_ID }}"
+        upload: "true"
+        remove: "true"
+        purgePullZone: "true"
+
+  dev-publish-docker:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:      
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.PAT }}
+  
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+   
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ${{ env.DOCKERFILE_PATH }}
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        labels: ${{ steps.meta.outputs.labels }}
+  
+  update-k8s-manifest:
+    needs: dev-publish-docker
+    runs-on: ubuntu-latest
+      
+    steps:
+    - name: Checkout kubernetes manifests repository
+      uses: actions/checkout@v4
+      with:
+        repository: usermaven/kubernetes-manifests-staging
+        token: ${{ secrets.PAT }}
+    
+    - name: Update Kubernetes deployment
+      run: |
+        sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-development.yaml
+    
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add usermaven-js/usermaven-js-development.yaml
+        git commit -m "Update image to ${{ github.sha }}"
+        git push
