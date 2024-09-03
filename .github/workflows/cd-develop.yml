@@ -34,6 +34,9 @@ jobs:
     - name: Ignore Workspace root check
       run: yarn global add npm-cli-login --ignore-workspace-root-check  
 
+    - name: add yarn typescript
+      run: yarn add typescript@latest
+
     - name: Build project
       run: yarn build
 
