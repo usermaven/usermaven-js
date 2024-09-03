@@ -1,7 +1,7 @@
 FROM node:20.15.0-alpine AS builder
 WORKDIR /usr/src
 COPY . .
-RUN yarn install && yarn build
+RUN yarn install &&  yarn add typescript@latest --ignore-workspace-root-check && yarn build
 
 FROM nginx:latest
 COPY --from=builder /usr/src/packages/javascript-sdk/dist/web/lib.js /usr/share/nginx/html
