@@ -102,12 +102,12 @@ jobs:
     
     - name: Update Kubernetes deployment
       run: |
-        sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-development.yaml
+        sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
     
     - name: Commit and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add usermaven-js/usermaven-js-development.yaml
+        git add usermaven-js/usermaven-js-deployment.yaml
         git commit -m "Update image to ${{ github.sha }}"
         git push
