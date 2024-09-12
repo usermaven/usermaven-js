@@ -929,14 +929,12 @@ class UsermavenClientImpl implements UsermavenClient {
 
     init(options: UsermavenOptions) {
         if (isWindowAvailable() && !options.force_use_fetch) {
-
             if (options.fetch) {
                 getLogger().warn(
                     "Custom fetch implementation is provided to Usermaven. However, it will be ignored since Usermaven runs in browser"
                 );
             }
-            this.transport = navigator?.sendBeacon ? beaconTransport : xmlHttpTransport;
-
+            this.transport = this.beaconApi ? beaconTransport : xmlHttpTransport;
         } else {
             if (!options.fetch && !globalThis.fetch) {
                 throw new Error(
@@ -974,7 +972,7 @@ class UsermavenClientImpl implements UsermavenClient {
             this.ipPolicy = "strict";
             this.cookiePolicy = "strict";
         }
-        if (navigator?.sendBeacon) {
+        if (navigator?.sendBeacon && options.use_beacon_api) {
             this.beaconApi = true;
         }
 
