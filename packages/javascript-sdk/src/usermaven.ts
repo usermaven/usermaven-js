@@ -929,12 +929,14 @@ class UsermavenClientImpl implements UsermavenClient {
 
     init(options: UsermavenOptions) {
         if (isWindowAvailable() && !options.force_use_fetch) {
+
             if (options.fetch) {
                 getLogger().warn(
                     "Custom fetch implementation is provided to Usermaven. However, it will be ignored since Usermaven runs in browser"
                 );
             }
-            this.transport = this.beaconApi ? beaconTransport : xmlHttpTransport;
+            this.transport = navigator?.sendBeacon ? beaconTransport : xmlHttpTransport;
+
         } else {
             if (!options.fetch && !globalThis.fetch) {
                 throw new Error(
