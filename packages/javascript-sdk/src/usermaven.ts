@@ -973,7 +973,7 @@ class UsermavenClientImpl implements UsermavenClient {
             this.ipPolicy = "strict";
             this.cookiePolicy = "strict";
         }
-        if (navigator?.sendBeacon) {
+        if (navigator?.sendBeacon && options.use_beacon_api) {
             this.beaconApi = true;
         }
 
