@@ -491,6 +491,7 @@ const fetchTransport: (fetch: any) => Transport = (fetch) => {
                     ...(additionalHeaders || {}),
                 },
                 body: jsonPayload,
+                keepalive: true,
             });
         } catch (e: any) {
             getLogger().error(`Failed to send data to ${url}: ${e?.message || "unknown error"}`, jsonPayload, e);
