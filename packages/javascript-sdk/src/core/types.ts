@@ -19,4 +19,4 @@ export interface UserProps {
 }
 
 
-
+export type Policy = 'strict' | 'keep' | 'comply';
