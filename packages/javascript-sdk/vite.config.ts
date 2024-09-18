@@ -9,19 +9,9 @@ export default defineConfig({
             fileName: (format) => `usermaven-js-sdk.${format}.js`,
             formats: ['es', 'umd'],
         },
-        rollupOptions: {
-            output: {
-                globals: {
-                    // Add any global variables here if needed
-                },
-            },
-        },
+        watch: {},
     },
     server: {
         open: '/examples/index.html',
-    },
-    test: {
-        globals: true,
-        environment: 'jsdom',
     },
 });

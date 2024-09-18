@@ -1,9 +1,10 @@
 import { UsermavenClient } from './core/client';
-import { Config, defaultConfig } from './core/config';
+import { defaultConfig } from './core/config';
+import type { Config } from './core/config';
 import { RageClick } from './extensions/rage-click';
 import { ScrollDepth } from './extensions/scroll-depth';
 import { LogLevel } from './utils/logger';
-import { UserProps, EventPayload } from './core/types';
+import type { UserProps, EventPayload } from './core/types';
 
 function createUsermavenClient(config: Partial<Config>): UsermavenClient {
     const mergedConfig: Config = { ...defaultConfig, ...config } as Config;
@@ -26,8 +27,18 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
 }
 
 function initFromScript() {
-    const script = document.currentScript as HTMLScriptElement;
-    if (!script) return;
+    let script: HTMLScriptElement | null = document.currentScript as HTMLScriptElement;
+
+    // If currentScript is null (which can happen in some browsers), try to find the script tag
+    if (!script) {
+        const scripts = document.getElementsByTagName('script');
+        script = scripts[scripts.length - 1];
+    }
+
+    if (!script) {
+        console.error('Unable to find Usermaven script tag');
+        return;
+    }
 
     const config: Partial<Config> = {
         apiKey: script.getAttribute('data-key') || undefined,
@@ -75,3 +86,4 @@ if (typeof window !== 'undefined') {
 }
 
 export { createUsermavenClient, Config, UserProps, EventPayload, LogLevel };
+

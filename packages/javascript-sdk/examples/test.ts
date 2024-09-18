@@ -1,25 +1,30 @@
-// This file will be compiled to test.js
+// Wait for the DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', () => {
+    const checkUsermavenLoaded = () => {
+        const usermaven = (window as any).usermaven;
 
-// Wait for the SDK to be loaded
-window.addEventListener('load', () => {
-    if (typeof (window as any).usermaven === 'undefined') {
-        console.error('Usermaven SDK not loaded');
-        return;
-    }
+        if (!usermaven) {
+            console.log('Usermaven SDK not loaded yet, retrying in 100ms');
+            setTimeout(checkUsermavenLoaded, 100);
+            return;
+        }
 
-    const usermaven = (window as any).usermaven;
+        console.log('Usermaven SDK loaded successfully');
 
-    // Test track event
-    document.getElementById('trackEvent')?.addEventListener('click', () => {
-        usermaven.track('button_click', { buttonId: 'trackEvent' });
-        console.log('Track event sent');
-    });
+        // Test track event
+        document.getElementById('trackEvent')?.addEventListener('click', () => {
+            usermaven.track('button_click', { buttonId: 'trackEvent' });
+            console.log('Track event sent');
+        });
 
-    // Test identify user
-    document.getElementById('identifyUser')?.addEventListener('click', () => {
-        usermaven.identify({ id: 'user123', email: 'test@example.com' });
-        console.log('User identified');
-    });
+        // Test identify user
+        document.getElementById('identifyUser')?.addEventListener('click', () => {
+            usermaven.identify({ id: 'user123', email: 'test@example.com' });
+            console.log('User identified');
+        });
 
-    console.log('Usermaven SDK test script loaded');
+        console.log('Usermaven SDK test script loaded');
+    };
+
+    checkUsermavenLoaded();
 });

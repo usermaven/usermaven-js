@@ -10,6 +10,16 @@
 <button id="trackEvent">Track Event</button>
 <button id="identifyUser">Identify User</button>
 
-<script type="module" src="/examples/main.ts"></script>
+<!-- Load the SDK -->
+<script src="/dist/usermaven-js-sdk.umd.js"
+        data-key="test-api-key"
+        data-tracking-host="https://example.com"
+        data-log-level="debug"
+        data-autocapture="true"
+        data-form-tracking="true"
+        data-auto-pageview="true"></script>
+
+<!-- Load the test script -->
+<script src="./test.js"></script>
 </body>
 </html>
