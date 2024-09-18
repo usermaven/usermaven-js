@@ -1,0 +1,3946 @@
+/autocapture-utils.ts
+
+/*
+ * Get the className of an element, accounting for edge cases where element.className is an object
+ * @param {Element} el - element to get the className of
+ * @returns {string} the element's class
+ */
+import { _each, _includes, _isUndefined, _trim } from './utils'
+
+export function getClassName(el: Element): string {
+    switch (typeof el.className) {
+        case 'string':
+            return el.className
+        // TODO: when is this ever used?
+        case 'object': // handle cases where className might be SVGAnimatedString or some other type
+            return ('baseVal' in el.className ? (el.className as any).baseVal : null) || el.getAttribute('class') || ''
+        default:
+            // future proof
+            return ''
+    }
+}
+
+/*
+ * Get the direct text content of an element, protecting against sensitive data collection.
+ * Concats textContent of each of the element's text node children; this avoids potential
+ * collection of sensitive data that could happen if we used element.textContent and the
+ * element had sensitive child elements, since element.textContent includes child content.
+ * Scrubs values that look like they could be sensitive (i.e. cc or ssn number).
+ * @param {Element} el - element to get the text of
+ * @returns {string} the element's direct text content
+ */
+export function getSafeText(el: Element): string {
+    let elText = ''
+
+    if (shouldCaptureElement(el) && !isSensitiveElement(el) && el.childNodes && el.childNodes.length) {
+        _each(el.childNodes, function (child) {
+            if (isTextNode(child) && child.textContent) {
+                elText += _trim(child.textContent)
+                    // scrub potentially sensitive values
+                    .split(/(\s+)/)
+                    .filter(shouldCaptureValue)
+                    .join('')
+                    // normalize whitespace
+                    .replace(/[\r\n]/g, ' ')
+                    .replace(/[ ]+/g, ' ')
+                    // truncate
+                    .substring(0, 255)
+            }
+        })
+    }
+
+    return _trim(elText)
+}
+
+/*
+ * Check whether an element has nodeType Node.ELEMENT_NODE
+ * @param {Element} el - element to check
+ * @returns {boolean} whether el is of the correct nodeType
+ */
+export function isElementNode(el: Element | undefined | null): el is HTMLElement {
+    return !!el && el.nodeType === 1 // Node.ELEMENT_NODE - use integer constant for browser portability
+}
+
+/*
+ * Check whether an element is of a given tag type.
+ * Due to potential reference discrepancies (such as the webcomponents.js polyfill),
+ * we want to match tagNames instead of specific references because something like
+ * element === document.body won't always work because element might not be a native
+ * element.
+ * @param {Element} el - element to check
+ * @param {string} tag - tag name (e.g., "div")
+ * @returns {boolean} whether el is of the given tag type
+ */
+export function isTag(el: Element | undefined | null, tag: string): el is HTMLElement {
+    return !!el && !!el.tagName && el.tagName.toLowerCase() === tag.toLowerCase()
+}
+
+/*
+ * Check whether an element has nodeType Node.TEXT_NODE
+ * @param {Element} el - element to check
+ * @returns {boolean} whether el is of the correct nodeType
+ */
+export function isTextNode(el: Element | undefined | null): el is HTMLElement {
+    return !!el && el.nodeType === 3 // Node.TEXT_NODE - use integer constant for browser portability
+}
+
+/*
+ * Check whether an element has nodeType Node.DOCUMENT_FRAGMENT_NODE
+ * @param {Element} el - element to check
+ * @returns {boolean} whether el is of the correct nodeType
+ */
+export function isDocumentFragment(el: Element | ParentNode | undefined | null): el is DocumentFragment {
+    return !!el && el.nodeType === 11 // Node.DOCUMENT_FRAGMENT_NODE - use integer constant for browser portability
+}
+
+export const usefulElements = ['a', 'button', 'form', 'input', 'select', 'textarea', 'label']
+/*
+ * Check whether a DOM event should be "captured" or if it may contain sentitive data
+ * using a variety of heuristics.
+ * @param {Element} el - element to check
+ * @param {Event} event - event to check
+ * @returns {boolean} whether the event should be captured
+ */
+export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
+    if (!el || isTag(el, 'html') || !isElementNode(el)) {
+        return false
+    }
+
+    // allow users to programmatically prevent capturing of elements by adding class 'um-no-capture'
+    if (el.classList && el.classList.contains('um-no-capture')) {
+        return false
+    }
+
+    let parentIsUsefulElement = false
+    const targetElementList: Element[] = [el] // TODO: remove this var, it's never queried
+    let parentNode: Element | boolean = true
+    let curEl: Element = el
+    while (curEl.parentNode && !isTag(curEl, 'body')) {
+        // If element is a shadow root, we skip it
+        if (isDocumentFragment(curEl.parentNode)) {
+            targetElementList.push((curEl.parentNode as any).host)
+            curEl = (curEl.parentNode as any).host
+            continue
+        }
+        parentNode = (curEl.parentNode as Element) || false
+        if (!parentNode) break
+        if (usefulElements.indexOf(parentNode.tagName.toLowerCase()) > -1) {
+            parentIsUsefulElement = true
+        } else {
+            const compStyles = window.getComputedStyle(parentNode)
+            if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer') {
+                parentIsUsefulElement = true
+            }
+        }
+
+        targetElementList.push(parentNode)
+        curEl = parentNode
+    }
+
+    const compStyles = window.getComputedStyle(el)
+    if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer' && event.type === 'click') {
+        return true
+    }
+
+    const tag = el.tagName.toLowerCase()
+    switch (tag) {
+        case 'html':
+            return false
+        case 'form':
+            return event.type === 'submit'
+        case 'input':
+            return event.type === 'change' || event.type === 'click'
+        case 'select':
+        case 'textarea':
+            return event.type === 'change' || event.type === 'click'
+        default:
+            if (parentIsUsefulElement) return event.type === 'click'
+            return (
+                event.type === 'click' &&
+                (usefulElements.indexOf(tag) > -1 || el.getAttribute('contenteditable') === 'true')
+            )
+    }
+}
+
+/*
+ * Check whether a DOM element should be "captured" or if it may contain sentitive data
+ * using a variety of heuristics.
+ * @param {Element} el - element to check
+ * @returns {boolean} whether the element should be captured
+ */
+export function shouldCaptureElement(el: Element): boolean {
+    for (let curEl = el; curEl.parentNode && !isTag(curEl, 'body'); curEl = curEl.parentNode as Element) {
+        const classes = getClassName(curEl).split(' ')
+        if (_includes(classes, 'ph-sensitive') || _includes(classes, 'ph-no-capture')) {
+            return false
+        }
+    }
+
+    if (_includes(getClassName(el).split(' '), 'ph-include')) {
+        return true
+    }
+
+    // don't include hidden or password fields
+    const type = (el as HTMLInputElement).type || ''
+    if (typeof type === 'string') {
+        // it's possible for el.type to be a DOM element if el is a form with a child input[name="type"]
+        switch (type.toLowerCase()) {
+            case 'hidden':
+                return false
+            case 'password':
+                return false
+        }
+    }
+
+    // filter out data from fields that look like sensitive fields
+    const name = (el as HTMLInputElement).name || el.id || ''
+    // See https://github.com/posthog/posthog-js/issues/165
+    // Under specific circumstances a bug caused .replace to be called on a DOM element
+    // instead of a string, removing the element from the page. Ensure this issue is mitigated.
+    if (typeof name === 'string') {
+        // it's possible for el.name or el.id to be a DOM element if el is a form with a child input[name="name"]
+        const sensitiveNameRegex =
+            /^cc|cardnum|ccnum|creditcard|csc|cvc|cvv|exp|pass|pwd|routing|seccode|securitycode|securitynum|socialsec|socsec|ssn/i
+        if (sensitiveNameRegex.test(name.replace(/[^a-zA-Z0-9]/g, ''))) {
+            return false
+        }
+    }
+
+    return true
+}
+
+/*
+ * Check whether a DOM element is 'sensitive' and we should only capture limited data
+ * @param {Element} el - element to check
+ * @returns {boolean} whether the element should be captured
+ */
+export function isSensitiveElement(el: Element): boolean {
+    // don't send data from inputs or similar elements since there will always be
+    // a risk of clientside javascript placing sensitive data in attributes
+    const allowedInputTypes = ['button', 'checkbox', 'submit', 'reset']
+    if (
+        (isTag(el, 'input') && !allowedInputTypes.includes((el as HTMLInputElement).type)) ||
+        isTag(el, 'select') ||
+        isTag(el, 'textarea') ||
+        el.getAttribute('contenteditable') === 'true'
+    ) {
+        return true
+    }
+    return false
+}
+
+/*
+ * Check whether a string value should be "captured" or if it may contain sentitive data
+ * using a variety of heuristics.
+ * @param {string} value - string value to check
+ * @returns {boolean} whether the element should be captured
+ */
+export function shouldCaptureValue(value: string): boolean {
+    if (value === null || _isUndefined(value)) {
+        return false
+    }
+
+    if (typeof value === 'string') {
+        value = _trim(value)
+
+        // check to see if input value looks like a credit card number
+        // see: https://www.safaribooksonline.com/library/view/regular-expressions-cookbook/9781449327453/ch04s20.html
+        const ccRegex =
+            /^(?:(4[0-9]{12}(?:[0-9]{3})?)|(5[1-5][0-9]{14})|(6(?:011|5[0-9]{2})[0-9]{12})|(3[47][0-9]{13})|(3(?:0[0-5]|[68][0-9])[0-9]{11})|((?:2131|1800|35[0-9]{3})[0-9]{11}))$/
+        if (ccRegex.test((value || '').replace(/[- ]/g, ''))) {
+            return false
+        }
+
+        // check to see if input value looks like a social security number
+        const ssnRegex = /(^\d{3}-?\d{2}-?\d{4}$)/
+        if (ssnRegex.test(value)) {
+            return false
+        }
+    }
+
+    return true
+}
+
+/*
+ * Check whether an attribute name is an Angular style attr (either _ngcontent or _nghost)
+ * These update on each build and lead to noise in the element chain
+ * More details on the attributes here: https://angular.io/guide/view-encapsulation
+ * @param {string} attributeName - string value to check
+ * @returns {boolean} whether the element is an angular tag
+ */
+export function isAngularStyleAttr(attributeName: string): boolean {
+    if (typeof attributeName === 'string') {
+        return attributeName.substring(0, 10) === '_ngcontent' || attributeName.substring(0, 7) === '_nghost'
+    }
+    return false
+}
+
+export function loadScript(scriptUrlToLoad: string, callback: (event: Event) => void): void {
+    const scriptTag = document.createElement('script')
+    scriptTag.type = 'text/javascript'
+    scriptTag.src = scriptUrlToLoad
+    scriptTag.onload = callback
+
+    const scripts = document.getElementsByTagName('script')
+    if (scripts.length > 0) {
+        scripts[0].parentNode?.insertBefore(scriptTag, scripts[0])
+    } else {
+        document.body.appendChild(scriptTag)
+    }
+}
+
+
+
+/autocapture.ts
+
+import {
+    _bind_instance_methods,
+    _each,
+    _extend,
+    _includes,
+    _isFunction,
+    _isUndefined,
+    _register_event,
+    _safewrap_instance_methods,
+} from './utils'
+import {
+    getClassName,
+    getSafeText,
+    isElementNode,
+    isSensitiveElement,
+    isTag,
+    isTextNode,
+    shouldCaptureDomEvent,
+    shouldCaptureElement,
+    shouldCaptureValue,
+    usefulElements,
+    isAngularStyleAttr,
+    isDocumentFragment,
+} from './autocapture-utils'
+import RageClick from './extensions/rageclick'
+import { AutoCaptureCustomProperty, DecideResponse, Properties, UsermavenClient, UsermavenOptions } from './interface'
+import ScrollDepth from "./extensions/scroll-depth";
+
+const autocapture = {
+    _initializedTokens: [] as string[],
+
+    _previousElementSibling: function (el: Element): Element | null {
+        if (el.previousElementSibling) {
+            return el.previousElementSibling
+        } else {
+            let _el: Element | null = el
+            do {
+                _el = _el.previousSibling as Element | null // resolves to ChildNode->Node, which is Element's parent class
+            } while (_el && !isElementNode(_el))
+            return _el
+        }
+    },
+
+    _getPropertiesFromElement: function (elem: Element, maskInputs: boolean, maskText: boolean): Properties {
+        const tag_name = elem.tagName.toLowerCase()
+        const props: Properties = {
+            tag_name: tag_name,
+        }
+        if (usefulElements.indexOf(tag_name) > -1 && !maskText) {
+            props['$el_text'] = getSafeText(elem)
+        }
+
+        const classes = getClassName(elem)
+        if (classes.length > 0)
+            props['classes'] = classes.split(' ').filter(function (c) {
+                return c !== ''
+            })
+
+        _each(elem.attributes, function (attr: Attr) {
+            // Only capture attributes we know are safe
+            if (isSensitiveElement(elem) && ['name', 'id', 'class'].indexOf(attr.name) === -1) return
+
+            if (!maskInputs && shouldCaptureValue(attr.value) && !isAngularStyleAttr(attr.name)) {
+                props['attr__' + attr.name] = attr.value
+            }
+        })
+
+        let nthChild = 1
+        let nthOfType = 1
+        let currentElem: Element | null = elem
+        while ((currentElem = this._previousElementSibling(currentElem))) {
+            // eslint-disable-line no-cond-assign
+            nthChild++
+            if (currentElem.tagName === elem.tagName) {
+                nthOfType++
+            }
+        }
+        props['nth_child'] = nthChild
+        props['nth_of_type'] = nthOfType
+
+        return props
+    },
+
+    _getDefaultProperties: function (eventType: string): Properties {
+        return {
+            $event_type: eventType,
+            $ce_version: 1,
+        }
+    },
+
+    _extractCustomPropertyValue: function (customProperty: AutoCaptureCustomProperty): string {
+        const propValues: string[] = []
+        _each(document.querySelectorAll(customProperty['css_selector']), function (matchedElem) {
+            let value
+
+            if (['input', 'select'].indexOf(matchedElem.tagName.toLowerCase()) > -1) {
+                value = matchedElem['value']
+            } else if (matchedElem['textContent']) {
+                value = matchedElem['textContent']
+            }
+
+            if (shouldCaptureValue(value)) {
+                propValues.push(value)
+            }
+        })
+        return propValues.join(', ')
+    },
+
+    // TODO: delete custom_properties after changeless typescript refactor
+    _getCustomProperties: function (targetElementList: Element[]): Properties {
+        const props: Properties = {} // will be deleted
+        _each(this._customProperties, (customProperty) => {
+            _each(customProperty['event_selectors'], (eventSelector) => {
+                const eventElements = document.querySelectorAll(eventSelector)
+                _each(eventElements, (eventElement) => {
+                    if (_includes(targetElementList, eventElement) && shouldCaptureElement(eventElement)) {
+                        props[customProperty['name']] = this._extractCustomPropertyValue(customProperty)
+                    }
+                })
+            })
+        })
+        return props
+    },
+
+    _getEventTarget: function (e: Event): Element | null {
+        // https://developer.mozilla.org/en-US/docs/Web/API/Event/target#Compatibility_notes
+        if (typeof e.target === 'undefined') {
+            return (e.srcElement as Element) || null
+        } else {
+            if ((e.target as HTMLElement)?.shadowRoot) {
+                return (e.composedPath()[0] as Element) || null
+            }
+            return (e.target as Element) || null
+        }
+    },
+
+    _captureEvent: function (e: Event, instance: UsermavenClient, opts: UsermavenOptions): boolean | void {
+        /*** Don't mess with this code without running IE8 tests on it ***/
+        let target = this._getEventTarget(e)
+        if (isTextNode(target)) {
+            // defeat Safari bug (see: http://www.quirksmode.org/js/events_properties.html)
+            target = (target.parentNode || null) as Element | null
+        }
+
+        // If type is 'scroll', track the scroll depth
+        if (e.type === 'scroll') {
+            this.scrollDepth.track()
+            return true
+        }
+
+        // If type is visibilitychange and the page is about to be hidden, send a scroll depth event
+        if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
+            this.scrollDepth.send()
+            return true
+        }
+
+        if (e.type === 'click' && e instanceof MouseEvent) {
+            this.rageclicks?.click(e.clientX, e.clientY, new Date().getTime())
+        }
+
+        if (target && shouldCaptureDomEvent(target, e)) {
+            const targetElementList = [target]
+            let curEl = target
+            while (curEl.parentNode && !isTag(curEl, 'body')) {
+                if (isDocumentFragment(curEl.parentNode)) {
+                    targetElementList.push((curEl.parentNode as any).host)
+                    curEl = (curEl.parentNode as any).host
+                    continue
+                }
+                targetElementList.push(curEl.parentNode as Element)
+                curEl = curEl.parentNode as Element
+            }
+
+            const elementsJson: Properties[] = []
+            let href,
+                explicitNoCapture = false
+            _each(targetElementList, (el) => {
+                const shouldCaptureEl = shouldCaptureElement(el)
+
+                // if the element or a parent element is an anchor tag
+                // include the href as a property
+                if (el.tagName.toLowerCase() === 'a') {
+                    href = el.getAttribute('href')
+                    href = shouldCaptureEl && shouldCaptureValue(href) && href
+                }
+
+                // allow users to programmatically prevent capturing of elements by adding class 'ph-no-capture'
+                const classes = getClassName(el).split(' ')
+                if (_includes(classes, 'ph-no-capture')) {
+                    explicitNoCapture = true
+                }
+
+                elementsJson.push(
+                    this._getPropertiesFromElement(
+                        el,
+                        opts?.mask_all_element_attributes,
+                        opts?.mask_all_text
+                    )
+                )
+            })
+
+            if (!opts?.mask_all_text) {
+                elementsJson[0]['$el_text'] = getSafeText(target)
+            }
+
+            if (href) {
+                elementsJson[0]['attr__href'] = href
+            }
+
+            if (explicitNoCapture) {
+                return false
+            }
+
+            const props = _extend(
+                this._getDefaultProperties(e.type),
+                {
+                    $elements: elementsJson,
+                },
+                this._getCustomProperties(targetElementList)
+            )
+            instance.capture('$autocapture', props)
+            return true
+        }
+    },
+
+    // only reason is to stub for unit tests
+    // since you can't override window.location props
+    _navigate: function (href: string): void {
+        window.location.href = href
+    },
+
+    _addDomEventHandlers: function (instance: UsermavenClient, opts: UsermavenOptions): void {
+        const handler = (e: Event) => {
+            e = e || window.event
+            this._captureEvent(e, instance, opts)
+        }
+        _register_event(document, 'submit', handler, false, true)
+        _register_event(document, 'change', handler, false, true)
+        _register_event(document, 'click', handler, false, true)
+        _register_event(document, 'visibilitychange', handler, false, true)
+        _register_event(document, 'scroll', handler, false, true)
+        _register_event(window, 'popstate', handler, false, true)
+    },
+
+    _customProperties: [] as AutoCaptureCustomProperty[],
+    rageclicks: null as RageClick | null,
+    scrollDepth: null as ScrollDepth | null,
+    opts: {} as UsermavenOptions,
+
+    init: function (instance: UsermavenClient, opts: UsermavenOptions): void {
+        this.rageclicks = new RageClick(instance)
+        this.scrollDepth = new ScrollDepth(instance)
+        this.opts = opts
+
+        if (!(document && document.body)) {
+            console.debug('document not ready yet, trying again in 500 milliseconds...')
+            setTimeout(() => {
+                this.readyAutocapture(instance, opts)
+            }, 500)
+            return
+        }
+        this.readyAutocapture(instance, opts)
+    },
+
+    readyAutocapture: function (instance: UsermavenClient, opts: UsermavenOptions): void {
+        this._addDomEventHandlers(instance, opts)
+        
+    },
+
+    // this is a mechanism to ramp up CE with no server-side interaction.
+    // when CE is active, every page load results in a decide request. we
+    // need to gently ramp this up so we don't overload decide. this decides
+    // deterministically if CE is enabled for this project by modding the char
+    // value of the project token.
+    enabledForProject: function (
+        token: string | null | undefined,
+        numBuckets: number,
+        numEnabledBuckets: number
+    ): boolean {
+        if (!token) {
+            return true
+        }
+        numBuckets = !_isUndefined(numBuckets) ? numBuckets : 10
+        numEnabledBuckets = !_isUndefined(numEnabledBuckets) ? numEnabledBuckets : 10
+        let charCodeSum = 0
+        for (let i = 0; i < token.length; i++) {
+            charCodeSum += token.charCodeAt(i)
+        }
+        return charCodeSum % numBuckets < numEnabledBuckets
+    },
+
+    isBrowserSupported: function (): boolean {
+        return _isFunction(document.querySelectorAll)
+    },
+}
+
+_bind_instance_methods(autocapture)
+_safewrap_instance_methods(autocapture)
+
+export { autocapture }
+
+
+/browser.ts
+
+import {getLogger} from './log';
+import {UsermavenClient, UsermavenFunction, UsermavenOptions} from './interface';
+import {usermavenClient} from './usermaven';
+
+const jsFileName = "lib.js"
+//Make sure that all properties form UsermavenOptions are listed here
+const usermavenProps = [
+    'use_beacon_api', 'cookie_domain', 'tracking_host', 'cookie_name',
+    'key', 'ga_hook', 'segment_hook', 'randomize_url', 'capture_3rd_party_cookies',
+    'id_method', 'log_level', 'compat_mode', 'privacy_policy', 'cookie_policy', 'ip_policy',
+    'custom_headers', 'force_use_fetch', 'min_send_timeout', 'max_send_timeout', 'max_send_attempts', 'disable_event_persistence',
+    'project_id', 'autocapture', 'properties_string_max_length', 'property_blacklist',
+    'exclude', 'auto_pageview', 'namespace', 'cross_domain_linking', 'domains', 'form_tracking'
+];
+
+function getTrackingHost(scriptSrc: string): string {
+    return scriptSrc.replace("/s/" + jsFileName, "").replace("/" + jsFileName, "");
+}
+
+const supressInterceptionWarnings = "data-suppress-interception-warning";
+
+function hookWarnMsg(hookType: string) {
+    return `
+      ATTENTION! ${hookType}-hook set to true along with defer/async attribute! If ${hookType} code is inserted right after Usermaven tag,
+      first tracking call might not be intercepted! Consider one of the following:
+       - Inject usermaven tracking code without defer/async attribute
+       - If you're sure that events won't be sent to ${hookType} before Usermaven is fully initialized, set ${supressInterceptionWarnings}="true"
+       script attribute
+    `;
+}
+
+function getTracker(window): UsermavenClient {
+
+    let script = document.currentScript;
+
+    if (!script) {
+        getLogger().warn("Usermaven script is not properly initialized. The definition must contain data-usermaven-api-key as a parameter")
+        return undefined;
+    }
+    let opts: UsermavenOptions = {
+        tracking_host: getTrackingHost(script.getAttribute('src')),
+        key: null
+    };
+
+    const NAMESPACE = script.getAttribute('data-namespace') || 'usermaven';
+
+
+    usermavenProps.forEach(prop => {
+        let attr = "data-" + prop.replace(new RegExp("_", "g"), "-");
+        if (script.getAttribute(attr) !== undefined && script.getAttribute(attr) !== null) {
+            let val: any = script.getAttribute(attr);
+            if ("true" === val) {
+                val = true;
+            } else if ("false" === val) {
+                val = false;
+            }
+            opts[prop] = val;
+        }
+    })
+    const usermavenClientKey = `${NAMESPACE}Client`;
+
+    window[usermavenClientKey] = usermavenClient(opts)
+    if (opts.segment_hook && (script.getAttribute('defer') !== null || script.getAttribute('async') !== null) && script.getAttribute(supressInterceptionWarnings) === null) {
+        getLogger().warn(hookWarnMsg("segment"))
+    }
+    if (opts.ga_hook && (script.getAttribute('defer') !== null || script.getAttribute('async') !== null) && script.getAttribute(supressInterceptionWarnings) === null) {
+        getLogger().warn(hookWarnMsg("ga"))
+    }
+
+
+    // Save these variables to local scope, so they don't get overwritten
+    let currentNamespace = NAMESPACE, currentUsermavenClientKey = usermavenClientKey;
+
+    ((NAMESPACE, usermavenClientKey, script) => {
+
+        const usermaven = function () {
+            let queue = window[NAMESPACE + "Q"] = window[NAMESPACE + "Q"] || [];
+            queue.push(arguments);
+            processQueue(queue, window[usermavenClientKey]);
+        };
+
+        window[NAMESPACE] = usermaven;
+
+        // // Once our function is set, remove the script,
+        // // so we can handle the next script tag similarly
+        // script.parentNode.removeChild(script);
+
+    })(currentNamespace, currentUsermavenClientKey, script);
+
+    // Below usermaven project id set is deprecated.
+    // TODO: remove soon.
+    if (opts.project_id) {
+        // @ts-ignore
+        window[NAMESPACE]('set', {"project_id": opts.project_id})
+    }
+
+    if ("true" !== script.getAttribute("data-init-only") && "yes" !== script.getAttribute("data-init-only")) {
+        window[NAMESPACE]('track', 'pageview');
+    }
+
+
+    let eventName = 'beforeunload'
+
+    // beforeunload is not supported on iOS on Safari. Apple docs recommend using `pagehide` instead.
+    const isOnIOS = navigator.userAgent.match(/iPad/i) ||
+        navigator.userAgent.match(/iPhone/i)
+
+    if (isOnIOS) {
+        eventName = 'pagehide'
+    }
+
+    window.addEventListener(eventName, function () {
+        window[NAMESPACE]('track', '$pageleave');
+    });
+
+    return window[usermavenClientKey];
+}
+
+function processQueue(queue: any[], usermavenInstance: UsermavenClient) {
+    getLogger().debug("Processing queue", queue);
+    for (let i = 0; i < queue.length; i += 1) {
+        const [methodName, ...args] = ([...queue[i]] || []);
+        const method = (usermavenInstance as any)[methodName];
+        if (typeof method === 'function') {
+            method.apply(usermavenInstance, args);
+        }
+    }
+    queue.length = 0;
+}
+
+// Encapsulate the logic of your script within a self-executing function that accepts a namespace as an argument
+((namespace) => {
+    if (window) {
+        let win = window as any;
+        const NAMESPACE = namespace;
+        let tracker = getTracker(win);
+        if (tracker) {
+            getLogger().debug("Usermaven in-browser tracker has been initialized", NAMESPACE)
+            win[NAMESPACE] = function () {
+                let queue = win[NAMESPACE + "Q"] = win[NAMESPACE + "Q"] || [];
+                queue.push(arguments)
+                processQueue(queue, tracker);
+            }
+            if (win[NAMESPACE + "Q"]) {
+                getLogger().debug(`Initial queue size of ${win[NAMESPACE + "Q"].length} will be processed`);
+                processQueue(win[NAMESPACE + "Q"], tracker);
+            }
+        } else {
+            getLogger().error("Usermaven tracker has not been initialized (reason unknown)")
+        }
+    } else {
+        getLogger().warn("Usermaven tracker called outside browser context. It will be ignored")
+    }
+})(document.currentScript.getAttribute('data-namespace') || 'usermaven');
+
+/cookie.ts
+
+import {getLogger} from "./log";
+
+export type CookieOpts = {
+    maxAge?: number;
+    domain?: string;
+    path?: string;
+    expires?: Date;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: "Lax" | "Strict" | "None" | true;
+    crossSubdomain?: boolean;
+};
+
+// Note: updated this method to test on staging (Ref:: https://github.com/PostHog/posthog-js/blob/master/src/storage.ts#L42)
+// Commented out some jitsu cookies setters that are not bring used in posthog-js
+export function serializeCookie(name, val, opt: CookieOpts = {}) {
+    try {
+        const {
+            maxAge,
+            domain,
+            path,
+            expires,
+            httpOnly,
+            secure,
+            sameSite,
+        } = opt
+
+        let new_cookie_val = `${name}=${encodeURIComponent(val)}`
+
+        if (domain) {
+            new_cookie_val += `; domain=${domain}`
+        }
+
+        if (path) {
+            new_cookie_val += `; path=${path}`
+        } else {
+            new_cookie_val += `; path=/`
+        }
+
+        if (expires) {
+            new_cookie_val += `; expires=${expires.toUTCString()}`
+        }
+
+        if (maxAge) {
+            new_cookie_val += `; max-age=${maxAge}`
+        }
+
+        if (httpOnly) {
+            new_cookie_val += `; httponly`
+        }
+
+        if (secure) {
+            new_cookie_val += `; secure`
+        }
+
+        if (sameSite) {
+            const sameSiteAttr = typeof sameSite === "string"
+                ? sameSite.toLowerCase()
+                : sameSite;
+
+            switch (sameSiteAttr) {
+                case true:
+                    new_cookie_val += "; SameSite=Strict";
+                    break;
+                case "lax":
+                    new_cookie_val += "; SameSite=Lax";
+                    break;
+                case "strict":
+                    new_cookie_val += "; SameSite=Strict";
+                    break;
+                case "none":
+                    new_cookie_val += "; SameSite=None";
+                    break;
+            }
+        } else if (secure) {
+            /**
+             * SameSite=None - means that the browser sends the cookie with both cross-site and same-site requests.
+             * The Secure attribute must also be set when setting this value, like so SameSite=None; Secure.
+             * If Secure is missing an error will be logged.
+             *
+             * https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+             */
+            new_cookie_val += "; SameSite=None";
+        }
+
+        return new_cookie_val
+
+    } catch (e) {
+        getLogger().error("serializeCookie", e);
+
+        return ''
+    }
+}
+
+
+/extensions/rageclick.ts
+
+// Naive rage click implementation: If mouse has not moved than RAGE_CLICK_THRESHOLD_PX
+// over RAGE_CLICK_CLICK_COUNT clicks with max RAGE_CLICK_TIMEOUT_MS between clicks, it's
+// counted as a rage click
+
+import { UsermavenClient } from "../interface"
+
+const RAGE_CLICK_THRESHOLD_PX = 30
+const RAGE_CLICK_TIMEOUT_MS = 1000
+const RAGE_CLICK_CLICK_COUNT = 3
+
+export default class RageClick {
+    instance: UsermavenClient
+    clicks: { x: number; y: number; timestamp: number }[]
+    enabled: boolean
+
+    constructor(instance: UsermavenClient, enabled = false) {
+        this.clicks = []
+        this.instance = instance
+        this.enabled = enabled
+    }
+
+    click(x: number, y: number, timestamp: number) {
+        if (!this.enabled) {
+            return
+        }
+
+        const lastClick = this.clicks[this.clicks.length - 1]
+        if (
+            lastClick &&
+            Math.abs(x - lastClick.x) + Math.abs(y - lastClick.y) < RAGE_CLICK_THRESHOLD_PX &&
+            timestamp - lastClick.timestamp < RAGE_CLICK_TIMEOUT_MS
+        ) {
+            this.clicks.push({ x, y, timestamp })
+
+            if (this.clicks.length === RAGE_CLICK_CLICK_COUNT) {
+                this.instance.capture('$rageclick')
+            }
+        } else {
+            this.clicks = [{ x, y, timestamp }]
+        }
+    }
+}
+
+
+/extensions/scroll-depth.ts
+
+/**
+ * Scroll extension to add scroll get scroll depth in percentage
+ */
+
+import {UsermavenClient} from "../interface"
+
+export default class ScrollDepth {
+  instance: UsermavenClient
+  lastScrollDepth: number
+  canSend: boolean
+  documentElement: HTMLElement
+
+  constructor(instance: UsermavenClient) {
+    this.instance = instance
+    this.lastScrollDepth = 0
+    this.canSend = true
+    this.documentElement = document.documentElement
+  }
+
+  /**
+   * Track scroll depth
+   * @description this function will be called on every scroll event to track scroll depth
+   */
+  track() {
+
+    const scrollDepth = this.getScrollDepth()
+
+    // If scroll depth is greater than last scroll depth, then update last scroll depth
+    // We are doing this to only get the maximum scroll depth
+    if (scrollDepth > this.lastScrollDepth) {
+      this.lastScrollDepth = scrollDepth
+      this.canSend = true
+    }
+  }
+
+  /**
+   * Send scroll depth event
+   * @description this function will be when we want to send scroll depth event e.g. on page visibility change
+   */
+  send(eventType = "$scroll") {
+
+    if (!this.canSend) {
+      return;
+    }
+
+    // Creating payload
+    const props = {
+      percent: this.lastScrollDepth,
+      window_height: this.getWindowHeight(),
+      document_height: this.getDocumentHeight(),
+      scroll_distance: this.getScrollDistance()
+    };
+
+    // Sending event
+    this.instance.capture(eventType, props)
+
+    // Setting canSend to false, for avoiding sending multiple events
+    this.canSend = false
+  }
+
+  /**
+   * Core method to get scroll depth
+   */
+  getScrollDepth() {
+    try {
+      // Get the height of the window and the document body
+      let winHeight = this.getWindowHeight()
+      let docHeight = this.getDocumentHeight();
+
+      // Get the current scroll position and the length of the track
+      let scrollTop = this.getScrollDistance()
+      let trackLength = docHeight - winHeight;
+
+      // Calculate the scroll depth as a percentage
+      return Math.min(100, Math.floor(scrollTop / trackLength * 100));
+
+    } catch (e) {
+      return 0
+    }
+  }
+
+  /**
+   * Core method to get window height
+   */
+  getWindowHeight() {
+    try {
+      return window.innerHeight || this.documentElement.clientHeight ||
+        document.body.clientHeight || 0;
+    } catch (e) {
+      return 0
+    }
+  }
+
+  /**
+   * Core method to get document height
+   */
+  getDocumentHeight() {
+    try {
+      return Math.max(
+        document.body.scrollHeight || 0, this.documentElement.scrollHeight || 0,
+        document.body.offsetHeight || 0, this.documentElement.offsetHeight || 0,
+        document.body.clientHeight || 0, this.documentElement.clientHeight || 0
+      );
+    } catch (e) {
+      return 0
+    }
+  }
+
+  /**
+   * Core method to get scroll distance
+   */
+  getScrollDistance() {
+    try {
+      return window.scrollY || window.pageYOffset || document.body.scrollTop ||
+        this.documentElement.scrollTop || 0;
+    } catch (e) {
+      return 0
+    }
+  }
+}
+
+
+/form-tracking.ts
+
+import {UsermavenClient} from "./interface";
+import {_cleanObject} from "./utils";
+
+export default class FormTracking {
+    instance: UsermavenClient;
+    formElements: NodeListOf<HTMLFormElement>;
+    trackingType: 'all' | 'tagged'
+
+    // Singleton instance
+    private static instance: FormTracking;
+
+    private constructor(instance: UsermavenClient, trackingType: 'all' | 'tagged' = 'all') {
+        this.instance = instance;
+        this.trackingType = trackingType;
+
+        // Wait for the DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', this.track.bind(this))
+        } else {
+            this.track()
+        }
+    }
+
+    /**
+     * Track form submit
+     * @description this function will be called on every form submit event to track form submit
+     */
+    track() {
+        this.formElements = document.querySelectorAll('form');
+
+        if (this.trackingType === 'tagged') {
+            this.formElements = document.querySelectorAll('form[data-um-form]');
+        }
+
+        this.formElements.forEach(form => {
+            form.addEventListener('submit', (event) => {
+                const form = event.target as HTMLFormElement;
+                const props = this._getFormDetails(form);
+
+                this.instance.capture('$form', _cleanObject(props));
+            });
+        });
+    }
+
+    public static getInstance(instance: UsermavenClient, trackingType: 'all' | 'tagged' = 'all'): FormTracking {
+        if (!FormTracking.instance) {
+            FormTracking.instance = new FormTracking(instance, trackingType);
+        }
+        return FormTracking.instance;
+    }
+
+    private _getFormDetails(form: HTMLFormElement) {
+        const formDetails = {
+            form_id: form.id,
+            form_name: form.name || '',
+            form_action: form.action,
+            form_method: form.method,
+        };
+
+        const formFields = form.querySelectorAll('input, select, textarea') as NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+
+        // ignore form fields with class um-no-capture
+        const filteredFormFields = Array.from(formFields).filter(field => !field.classList.contains('um-no-capture'));
+
+        filteredFormFields.forEach((field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) => {
+            const fieldProps = this._getFieldProps(field, index);
+            Object.assign(formDetails, fieldProps);
+        });
+
+        return formDetails;
+    }
+
+    private _getFieldProps(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) {
+        const fieldDataAttributes = Object.keys(field.dataset).length ? JSON.stringify(field.dataset) : undefined;
+        const safeValue = this.getSafeText(field);
+
+        return {
+            [`field_${index + 1}_tag`]: field.tagName.toLowerCase(),
+            [`field_${index + 1}_type`]: field instanceof HTMLInputElement ? field.type : undefined,
+            [`field_${index + 1}_data_attributes`]: fieldDataAttributes,
+            [`field_${index + 1}_id`]: field.id,
+            [`field_${index + 1}_value`]: safeValue,
+            [`field_${index + 1}_class`]: field.className,
+            [`field_${index + 1}_name`]: field.name,
+        };
+    }
+
+    private getSafeText(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | Node): string {
+        let safeText = '';
+
+        if ('value' in element && element.type !== "password") {
+            safeText = element.value;
+        } else if (element.hasChildNodes()) {
+            const textNodes = Array.from(element.childNodes).filter(
+                node => node.nodeType === Node.TEXT_NODE
+            );
+            safeText = textNodes.map(node => node.textContent).join('');
+        } else {
+            safeText = element.textContent || '';
+        }
+
+
+        return this._scrubPotentiallySensitiveValues(safeText);
+    }
+
+
+    private _scrubPotentiallySensitiveValues(text: string): string {
+
+        if (!this._shouldCaptureValue(text)) {
+            return '<redacted>';
+        }
+
+        return text;
+    }
+
+
+    private _shouldCaptureValue(value: string): boolean {
+        if (this._isNullish(value)) {
+            return false;
+        }
+
+        if (this._isString(value)) {
+            value = this._trim(value);
+
+            // check to see if input value looks like a credit card number
+            // see: https://www.safaribooksonline.com/library/view/regular-expressions-cookbook/9781449327453/ch04s20.html
+            const ccRegex =
+                /^(?:(4[0-9]{12}(?:[0-9]{3})?)|(5[1-5][0-9]{14})|(6(?:011|5[0-9]{2})[0-9]{12})|(3[47][0-9]{13})|(3(?:0[0-5]|[68][0-9])[0-9]{11})|((?:2131|1800|35[0-9]{3})[0-9]{11}))$/;
+            if (ccRegex.test((value || '').replace(/[- ]/g, ''))) {
+                return false;
+            }
+
+            // check to see if input value looks like a social security number
+            const ssnRegex = /(^\d{3}-?\d{2}-?\d{4}$)/;
+            if (ssnRegex.test(value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+    private _isNullish(value: any): boolean {
+        return value === null || value === undefined;
+    }
+
+    private _isString(value: any): boolean {
+        return typeof value === 'string' || value instanceof String;
+    }
+
+    private _trim(value: string): string {
+        return value.trim().replace(/^\s+|\s+$/g, '');
+    }
+}
+
+
+/helpers.ts
+
+import { isWindowAvailable, requireWindow } from "./window";
+import { CookieOpts, serializeCookie } from "./cookie";
+import {getLogger} from "./log";
+// Courtesy: https://stackoverflow.com/a/23945027
+function extractHostname(url) {
+  var hostname;
+  //find & remove protocol (http, ftp, etc.) and get hostname
+
+  if (url.indexOf("//") > -1) {
+    hostname = url.split('/')[2];
+  } else {
+    hostname = url.split('/')[0];
+  }
+
+  //find & remove port number
+  hostname = hostname.split(':')[0];
+  //find & remove "?"
+  hostname = hostname.split('?')[0];
+
+  return hostname;
+}
+
+// Warning: you can use this function to extract the "root" domain, but it will not be as accurate as using the psl package. 
+// https://www.npmjs.com/package/psl
+const  extractRootDomain = (url) => {
+  let domain = extractHostname(url),
+  splitArr = domain.split('.'),
+  arrLen = splitArr.length;
+
+  // extracting the root domain here
+  // if there is a subdomain
+  if (arrLen > 2) {
+    if (splitArr[arrLen - 1].length == 2) {
+      // likely a ccTLD
+      domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
+      // if the second level domain is also two letters (like co.uk), include the next part up
+      if (splitArr[arrLen - 2].length == 2) {
+        domain = splitArr[arrLen - 3] + '.' + domain;
+      }
+    } else {
+      // likely a gTLD
+      domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
+    }
+  }
+  return domain;
+}
+
+const extractTopLevelDomain = (url) => {
+  const DOMAIN_MATCH_REGEX = /[a-z0-9][a-z0-9-]+\.[a-z.]{2,6}$/i
+    const matches = url.match(DOMAIN_MATCH_REGEX),
+        domain = matches ? matches[0] : ''
+
+    return domain
+}
+
+export const extractRoot = (url) => {
+
+    const domainParts = url.split(".");
+    const domainLength = domainParts.length;
+
+    // Check if it's an IP address
+    if (domainLength === 4 && domainParts.every(part => !isNaN(part))) {
+        return url;
+    }
+
+    let rootDomain = extractTopLevelDomain(url);
+    if (!rootDomain) { // If it's not a top level domain, use a fallback method
+      rootDomain = extractRootDomain(url);
+    }
+
+    return rootDomain;
+}
+
+export const getCookieDomain = () => {
+  if (isWindowAvailable()) {
+    // const domain = window.location.hostname.replace("www.", "")
+    //
+    // // Check if subdomain is set, if yes, we remove the subdomain from the cookie domain and return the root domain with a leading dot
+    // // This is to ensure that cookies are set correctly for cross domain tracking
+    // const subdomain = domain.split('.')[0]
+    // if (subdomain) {
+    //   return '.' + extractRootDomain(domain)
+    // }
+
+    return extractRoot(window.location.hostname);
+  }
+  return undefined;
+};
+
+let cookieParsingCache: Record<string, string>;
+export function parseCookieString(cookieStr?: string) {
+  if (!cookieStr) {
+    return {};
+  }
+  let res: Record<string, string> = {};
+  let cookies = cookieStr.split(";");
+  for (let i = 0; i < cookies.length; i++) {
+    let cookie = cookies[i];
+    let idx = cookie.indexOf("=");
+    if (idx > 0) {
+      res[cookie.substr(i > 0 ? 1 : 0, i > 0 ? idx - 1 : idx)] = cookie.substr(
+        idx + 1
+      );
+    }
+  }
+  return res;
+}
+
+
+function copyAttributes(source: HTMLElement, target: HTMLElement) {
+  return Array.from(source.attributes).forEach((attribute) => {
+    target.setAttribute(attribute.nodeName, attribute.nodeValue);
+  });
+}
+
+export function insertAndExecute(element: HTMLElement, html: string) {
+  element.innerHTML = html;
+  let scripts = element.getElementsByTagName("script");
+  let index;
+  for (index = scripts.length - 1; index >= 0; index--) {
+    const script = scripts[index];
+    const tag = document.createElement("script");
+    copyAttributes(script, tag);
+    if (script.innerHTML) {
+      tag.innerHTML = script.innerHTML;
+    }
+    tag.setAttribute("data-usermaven-tag-id", element.id);
+    document.getElementsByTagName("head")[0].appendChild(tag);
+    scripts[index].parentNode.removeChild(scripts[index]);
+  }
+}
+
+export const getCookies = (
+  useCache: boolean = false
+): Record<string, string> => {
+  if (useCache && cookieParsingCache) {
+    return cookieParsingCache;
+  }
+
+  let res = parseCookieString(document.cookie);
+  cookieParsingCache = res;
+  return res;
+};
+
+// Methods partially borrowed from quirksmode.org/js/cookies.html
+export const getCookie = (name: string) => {
+  if (!name) {
+    return null;
+  }
+  try {
+    const nameEQ = name + '='
+    const ca = requireWindow().document.cookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) == ' ') {
+        c = c.substring(1, c.length)
+      }
+      if (c.indexOf(nameEQ) === 0) {
+        return decodeURIComponent(c.substring(nameEQ.length, c.length))
+      }
+    }
+  } catch (err) {
+    getLogger().error("getCookies", err);
+  }
+  return null
+};
+
+export const setCookie = (
+  name: string,
+  value: string,
+  opts: CookieOpts = {}
+) => {
+  requireWindow().document.cookie = serializeCookie(name, value, opts);
+};
+
+export const deleteCookie = (name: string, path: string | undefined = "/") => {
+    document.cookie = name + "= ; SameSite=Strict; expires = Thu, 01 Jan 1970 00:00:00 GMT" + (path ? ("; path = " + path) : "");
+};
+
+export const generateId = () => Math.random().toString(36).substring(2, 12);
+
+export const getUmExclusionState = () => {
+  let state = "false";
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    state = localStorage.getItem("um_exclusion");
+  }
+
+  return state === undefined || state === null || state === "false" ? false : true;
+};
+
+export const generateRandom = () => Math.random().toString(36).substring(2, 7);
+
+export const parseQuery = (qs: string) => {
+  if (!qs) {
+    return {};
+  }
+  let queryString =
+    qs.length > 0 && qs.charAt(0) === "?" ? qs.substring(1) : qs;
+  let query: Record<string, string> = {};
+  let pairs = (
+    queryString[0] === "?" ? queryString.substr(1) : queryString
+  ).split("&");
+  for (let i = 0; i < pairs.length; i++) {
+    let pair = pairs[i].split("=");
+    query[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || "");
+  }
+  return query;
+};
+
+const UTM_TYPES: Record<string, string> = {
+  utm_source: "source",
+  utm_medium: "medium",
+  utm_campaign: "campaign",
+  utm_term: "term",
+  utm_content: "content"
+};
+
+const CLICK_IDS: Record<string, boolean> = {
+  gclid: true,
+  fbclid: true,
+  dclid: true
+};
+
+export const getDataFromParams = (params: Record<string, string>) => {
+  const result = {
+    utm: {} as Record<string, string>,
+    click_id: {} as Record<string, any>,
+  };
+  for (let name in params) {
+    if (!params.hasOwnProperty(name)) {
+      continue;
+    }
+    const val = params[name];
+    const utm = UTM_TYPES[name];
+    if (utm) {
+      result.utm[utm] = val;
+    } else if (CLICK_IDS[name]) {
+      result.click_id[name] = val;
+    }
+  }
+  return result;
+};
+
+//2020-08-24T13:42:16.439Z -> 2020-08-24T13:42:16.439123Z
+export const reformatDate = (strDate: string) => {
+  const end = strDate.split(".")[1];
+  if (!end) {
+    return strDate;
+  }
+  if (end.length >= 7) {
+    return strDate;
+  }
+  return strDate.slice(0, -1) + "0".repeat(7 - end.length) + "Z";
+};
+
+function endsWith(str: string, suffix: string) {
+  return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+export const getHostWithProtocol = (host: string) => {
+  while (endsWith(host, "/")) {
+    host = host.substr(0, host.length - 1);
+  }
+  if (host.indexOf("https://") === 0 || host.indexOf("http://") === 0) {
+    return host;
+  } else {
+    return "https://" + host;
+  }
+};
+
+export function awaitCondition<T>(
+  condition: () => boolean,
+  factory: () => T,
+  timeout = 500,
+  retries = 4
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    if (condition()) {
+      resolve(factory());
+      return;
+    }
+    if (retries === 0) {
+      reject("condition rejected");
+      return;
+    }
+    setTimeout(() => {
+      awaitCondition(condition, factory, timeout, retries - 1)
+        .then(resolve)
+        .catch(reject);
+    }, timeout);
+  });
+}
+
+
+
+
+/interface.d.ts
+
+export declare function usermavenClient(opts: UsermavenOptions): UsermavenClient
+
+export type UsermavenClient = {
+  /**
+   * Sends a third-party event (event intercepted from third-party system, such as analytics.js or GA). Should
+   * not be called directly
+   * @param typeName event name of event
+   * @param _3pData third-party payload. The structure depend on
+   * @param type event-type
+   * @return promise that is resolved after executed.
+   *         However, if beacon API is used (see TrackerOption.use_beacon) promise will be resolved immediately
+   */
+  _send3p: (typeName: EventSrc, _3pPayload: any, type?: string) => Promise<void>
+  /**
+   * Sends a track event to server
+   * @param name event name
+   * @param payload event payload
+   * @return Promise, see _send3p documentation
+   */
+  track: (typeName: string, payload?: EventPayload) => Promise<void>
+
+  // /**
+  //  * Similar to track(), but send unstructured payload to EventNative processing pipeline. No
+  //  * additional detection (user-agent, url and so on will be done). No payload structure is enforced
+  //  * @param payload
+  //  */
+  rawTrack: (payload: any) => Promise<void>
+
+  /**
+   * Sets a user data including organization/company data
+   * @param userData user data (as map id_type --> value, such as "email": "a@bcd.com"
+   * @param doNotSendEvent if true (false by default), separate "id" event won't be sent to server
+   * @return Promise, see _send3p documentation
+   */
+  id: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>
+  /**
+   * Initializes tracker. Must be called
+   * @param initialization options
+   */
+  init: (opts: UsermavenOptions) => void
+
+  /**
+   * Explicit call for intercepting Segment's analytics.
+   * @param analytics window.analytics object
+   */
+  interceptAnalytics: (analytics: any) => void
+
+  /**
+   * Sets a permanent properties that will be persisted across sessions. On every track() call those properties
+   * will be merged with `payload` parameter
+   * @param properties properties
+   * @param opts options.
+   *    eventType - apply permanent properties to only certain event type (applied to all types by default)
+   *    persist - persist properties across sessions (in cookies). True by default
+   */
+  set(properties: Record<string, any>, opts?: { eventType?: string, persist?: boolean });
+
+  /**
+   * User
+   */
+  unset(propertyName: string, opts: { eventType?: string, persist?: boolean });
+
+  /**
+   * Trigger for auto-captured event.
+   * @param name event name
+   * @param payload event payload
+   * @return Promise, see _send3p documentation
+   */
+  capture?: (name: string, properties?: EventPayload, opts?: UsermavenOptions) => void
+
+
+}
+
+/**
+ * Type of usermaven function which is exported to window.usermaven when tracker is embedded from server
+ */
+export type UsermavenFunction = (action: 'track' | 'id' | 'set', eventType: string, payload?: EventPayload) => void;
+
+/**
+ * User identification method:
+ *  - cookie (based on cookie)
+ *  - ls (localstorage)
+ *  Currently only 'cookie' is supported
+ */
+export type IdMethod = 'cookie' | 'ls'
+
+/**
+ * Policy configuration affects cookies storage and IP handling.
+ *  - strict: Usermaven doesn't store cookies and replaces last octet in IP address (10.10.10.10 -> 10.10.10.1)
+ *  - keep: Usermaven uses cookies for user identification and saves full IP
+ *  - comply: Usermaven checks customer country and tries to comply with Regulation laws (such as GDPR, UK's GDPR (PECR) and California's GDPR (CCPA)
+ */
+export type Policy = 'strict' | 'keep' | 'comply'
+
+/**
+ * Configuration options of Usermaven
+ */
+export type UsermavenOptions = {
+
+   /**
+   * A custom fetch implementation. Here's how Jitsu decides what functions to use to execute HTTP requests
+   *
+   * - If Jitsu runs in browser, this parameter will be ignored. The best available API (most likely, XMLHttpRequest)
+   *   will be used for sending reqs
+   * - For node Jitsu will use this param. If it's not set, Jitsu will try to search for fetch in global environment
+   *   and will fail if it's absent
+   *
+   *
+   *
+   */
+  fetch?: any,
+
+  /**
+   * Forces Jitsu SDK to use the fetch implementation (custom or default) even in browser
+   */
+  force_use_fetch?: any,
+
+  /**
+   * If Usermaven should work in compatibility mode. If set to true:
+   *  - event_type will be set to 'eventn' instead of 'usermaven'
+   *  - EventCtx should be written in eventn_ctx node as opposed to to event root
+   */
+  compat_mode?: boolean
+
+  /**
+   * If beacon API (https://developer.mozilla.org/en-US/docs/Web/API/Beacon_API) should be used instead of
+   * XMLHttpRequest.
+   *
+   * Warning: beacon API might be unstable (https://volument.com/blog/sendbeacon-is-broken). Please,
+   * do not use it unless absolutely necessary
+   */
+  use_beacon_api?: boolean
+
+  /**
+   * Cookie domain that will be used to identify
+   * users. If not set, location.hostname will be used
+   */
+  cookie_domain?: string
+  /**
+   * Tracking host (where API calls will be sent). If not set,
+   * we'd try to do the best to "guess" it. Last resort is t.usermaven.com.
+   *
+   * Though this parameter is not required, it's highly recommended to set is explicitly
+   */
+  tracking_host?: string
+
+  /**
+   * Name of id cookie. __eventn_id_{data-key} by default
+   */
+  cookie_name?: string
+  /**
+   * API key. It's highly recommended to explicitely set it. Otherwise, the code will work
+   * in some cases (where server is configured with exactly one client key)
+   */
+  key: string
+  /**
+   * If google analytics events should be intercepted. Read more about event interception
+   * at https://docs.eventnative.org/sending-data/javascript-reference/events-interception
+   *
+   * @default false
+   */
+  ga_hook?: boolean
+  /**
+   * If google analytics events should be intercepted. Read more about event interception
+   * at https://docs.eventnative.org/sending-data/javascript-reference/events-interception
+   *
+   * @default false
+   */
+  segment_hook?: boolean
+  /**
+   * If URL of API server call should be randomize to by-pass adblockers
+   *
+   * @default false
+   */
+  randomize_url?: boolean
+
+  /**
+   * If Usermaven should capture third-party cookies: either array
+   * of cookies name or false if the features should be disabled
+   *
+   * @default GA/Segment/Fb cookies: ['_ga': '_fbp', '_ym_uid', 'ajs_user_id', 'ajs_anonymous_id']
+   */
+  capture_3rd_party_cookies?: string[] | false;
+
+  /**
+   * See comment on IdMethod. Currently only 'cookie' and 'cookie-less' are supported
+   */
+  id_method?: IdMethod
+
+  /**
+   * Privacy policy configuration makes all policies strict to comply with the cookies law. If set to 'strict'
+   * ip_policy = 'strict' and cookie_policy = 'strict' will be set.
+   * Currently only 'strict' is supported
+   */
+  privacy_policy?: 'strict'
+
+  /**
+   * IP policy see Policy
+   */
+  ip_policy?: Policy
+
+  /**
+   * Cookie policy see Policy
+   */
+  cookie_policy?: Policy
+
+  /**
+   * Log level. 'WARN' if not set
+   */
+  log_level?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
+
+  /**
+   * Headers that should be added to each request. Could be either static dict or function that returns the dict
+   */
+  custom_headers?: Record<string, string> | (() => Record<string, string>)
+
+  /**
+   * Minimum timeout before re-attempting to send events.
+   * Defaults to 0.
+   */
+  min_send_timeout?: number
+
+  /**
+   * Maximum timeout before re-attempting to send events.
+   * Defaults to 2 seconds.
+   */
+  max_send_timeout?: number
+
+  /**
+   * Maximum number of send event attempts.
+   * Defaults to 4.
+   */
+  max_send_attempts?: number
+
+  /**
+   * Whether failed events should NOT be persisted when applicable.
+   */
+  disable_event_persistence?: boolean
+
+  /**
+   * Auto-capturing is disabled by default
+   *
+   * @default false
+   */
+  autocapture?: boolean,
+
+  /**
+   * Auto pageview is disabled by default
+   *
+   * @default false
+   */
+    auto_pageview?: boolean,
+
+  /**
+   * To control the payload properties character limit. Defaults to null that means there is no limit. i.e 65535
+   *
+   * @default null
+   */
+  properties_string_max_length?: number | null,
+
+  /**
+  * Property names that must be exempted from the payload of capture call
+  *
+  * @default []
+  */
+  property_blacklist?: string[],
+
+  /**
+   * Persistent connection version
+   */
+  project_id?: string;
+
+
+  //NOTE: If any property is added here, please make sure it's added to browser.ts usermavenProps as well
+
+  /**
+  * Mask all element attributes
+  */
+  mask_all_element_attributes?: boolean
+
+  /**
+   * Mask all text
+   */
+  mask_all_text?: boolean
+
+  /**
+   * Exclude pages
+   */
+  exclude?: string
+
+
+  /**
+   * Namespace
+   */
+    namespace?: string
+
+  /**
+   * Cross domain linking (if true, Usermaven will try to extract query params or hash from URL)
+   */
+  cross_domain_linking?: boolean
+
+  /**
+   * Domains that should be used for cross domain linking
+   * @example "*.mydomain.com,*mydomain2.com"
+   */
+  domains?: string
+
+  /**
+   * Form tracking
+   */
+  form_tracking?: 'all' | 'tagged' | 'none' | boolean
+};
+
+/**
+ * Company Attributes
+ */
+export interface CompanyProps {
+  id: string; // Company ID
+  name: string; // Company Name
+  created_at: string; // Company creation date
+  custom: any; // Optional attributes such as industry, website, employee count etc.
+}
+
+/**
+ * User properties (ids).
+ */
+export interface UserProps {
+  anonymous_id?: string             //anonymous is (cookie or ls based),
+  id?: string                       //user id (non anonymous). If not set, first known id (from propName below) will be used
+  email?: string                    //user id (non anonymous). If not set, first known id (from propName below) will be used
+  [propName: string]: any           //any other forms of ids
+  company?: CompanyProps
+}
+
+
+/**
+ * Ids for third-party tracking systems
+ */
+export type ThirdpartyIds = {
+  [id: string]: string
+}
+
+export type Conversion = {
+  //The purpose of this set is mainly to minic GA's set of parameters
+  //(see https://developers.google.com/analytics/devguides/collection/protocol/v1/parameters)
+
+  transaction_id?: string | number  //id of transaction
+  affiliation?: string | number     //affiliation id
+  revenue?: number                  //revenue
+  currency?: string                 //currency
+  shipping_cost?: number            //shipping cost
+  tax?: number                      //tax cost
+
+}
+
+/**
+ * Event context. Data that is present in any event type. EventContext is assembled automatically
+ */
+export type EventCtx = {
+  event_id: string                 //unique event id or empty string for generating id on the backend side
+  user: UserProps                  //user properties
+  company?: CompanyProps           //company properties
+  ids?: ThirdpartyIds              //user ids from external systems
+  utc_time: string                 //current UTC time in ISO 8601
+  local_tz_offset: number          //local timezone offset (in minutes)
+
+  utm: Record<string, string>      //utm tags (without utm prefix, e.g key will be "source", not utm_source. See
+  click_id: Record<string, string> //all external click ids (passed through URL). See CLICK_IDS for supported all supported click ids
+  [propName: string]: any          //context is extendable, any extra properties can be added here
+
+}
+
+
+/**
+ * Tracking environment. Encapsulates environment such as Node browser or
+ */
+export type TrackingEnvironment = {
+  /**
+   * Describes "client": page title, url, etc. See type definition
+   */
+  describeClient(): Partial<ClientProperties>;
+  /**
+   * Returns source ip. If IP should be resolved by Jitsu server, this method should return undefined
+   */
+  getSourceIp(): string | undefined;
+
+  /**
+   * Gets (and persists) anonymous id. Example implementation: id can be persisted in cookies or in other way.
+   *
+   */
+  getAnonymousId(cookieOpts: { name: string, domain?: string, crossDomainLinking?: boolean }): string;
+};
+/**
+ * List of environments where Jitsu tracker can work. See TrackingEnvironment above
+ * to learn what is the environment
+ */
+export type Envs = {
+  // /**
+  //  * Environment where requests and responses are based on fetch API Request & Response object.
+  //  * Example: NextJS Middleware (https://nextjs.org/docs/middleware) is based on this API
+  //  */
+  // fetchApi(req, res);
+  // /**
+  //  * Alias of fetchApi
+  //  */
+  // nextjsMiddleware(req, res);
+
+  /**
+   * Environment where requests and responses are based on core Node.js http APIs (IncomingMessage and Server Response)
+   * Example: NextJS APIs (except Middleware) is based on this one, or Express
+   */
+  httpApi(req, res);
+  /**
+   * Alias of httpApi
+   */
+  nextjsApi(req, res);
+  /**
+   * Alias of httpApi. For requests handled by Express
+   */
+  express(req, res);
+  /**
+   * Browser environment (based on window, document and etc globals)
+   */
+  browser();
+  /**
+   * Empty environment
+   */
+  empty();
+}
+
+declare const envs: Envs;
+
+
+/**
+ * Environment where the event have happened.
+ */
+export type ClientProperties = {
+  screen_resolution: string        //screen resolution
+  user_agent: string               //user
+  referer: string                  //document referer
+  url: string                      //current url
+  page_title: string               //page title
+                                   //see UTM_TYPES for all supported utm tags
+  doc_path: string                 //document path
+  doc_host: string                 //document host
+  doc_search: string               //document search string
+
+  vp_size: string                  //viewport size
+  user_language: string            //user language
+  doc_encoding: string
+}
+
+/**
+ * Optional data that can be added to each event. Consist from optional fields,
+ */
+export type EventPayload = Partial<ClientProperties> & {
+  /**
+   * If track() is called in node env, it's possible to provide
+   * request/response. In this case Jitsu will try to use it for
+   * getting request data (url, referer and etc). Also, it will be used for
+   * setting and getting cookies
+   */
+  req?: Request
+  res?: Response
+  env?: TrackingEnvironment
+
+  conversion?: Conversion          //Conversion data if events indicates a conversion
+  src_payload?: any,               //Third-party payload if event is intercepted from third-party source
+  [propName: string]: any          //payload is extendable, any extra properties can be added here
+}
+
+export type Transport = (url: string, jsonPayload: string) => Promise<void>
+
+/**
+ * Type of event source
+ */
+export type EventSrc =
+  'usermaven' |                     //event came directly from Usermaven
+  'eventn' |                     //same as usermaven but for 'compat' mode, see
+  'ga' |                     //event is intercepted from GA
+  '3rdparty' |                     //event is intercepted from 3rdparty source
+  'ajs';                           //event is intercepted from analytics.js
+
+/**
+ * Basic information about the event
+ */
+export type EventBasics = {
+  source_ip?: string               //IP address. Do not set this field on a client side, it will be rewritten on the server
+  anon_ip?: string                 //First 3 octets of an IP address. Same as IP - will be set on a server
+  api_key: string                  //JS api key
+  src: EventSrc                    //Event source
+  event_type: string               //event type
+}
+
+/**
+ * Event object. A final object which is send to server
+ */
+export type Event = EventBasics & EventPayload & EventCtx;
+
+/**
+ * Event object, if tracker works in compatibility mode
+ */
+export type EventCompat = EventBasics & {
+  eventn_ctx: EventCtx
+} & EventPayload;
+
+export type PersistenceType = 'cookie' | 'localStorage' | 'localStorage+cookie' | 'memory';
+
+// Autocapture
+export type Property = any
+export type Properties = Record<string, Property>
+
+export enum Compression {
+  GZipJS = 'gzip-js',
+  LZ64 = 'lz64',
+  Base64 = 'base64',
+}
+
+export interface EditorParams {
+  jsURL?: string
+  apiURL?: string
+  toolbarVersion?: 'toolbar'
+}
+
+
+export interface DecideResponse {
+  status: number
+  supportedCompression: Compression[]
+  config: {
+      enable_collect_everything: boolean
+  }
+  custom_properties: AutoCaptureCustomProperty[] // TODO: delete, not sent
+  featureFlags: Record<string, string | boolean>
+  sessionRecording?: {
+      endpoint?: string
+  }
+  editorParams: EditorParams
+  toolbarVersion: 'toolbar' /** deprecated, moved to editorParams */
+  isAuthenticated: boolean
+}
+
+export interface AutoCaptureCustomProperty {
+  name: string
+  css_selector: string
+  event_selectors: string[]
+}
+
+
+/log.ts
+
+import { isWindowAvailable } from "./window"
+
+/**
+ * Interface for logging. Plugins might use it
+ * internally
+ */
+export type Logger = {
+  debug: (...args: any) => void
+  info: (...args: any) => void
+  warn: (...args: any) => void
+  error: (...args: any) => void
+}
+
+export type LogLevelName = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'NONE';
+
+export type LogLevel = {
+  name: LogLevelName
+  severity: number
+}
+
+
+export const LogLevels: Record<LogLevelName, LogLevel> = {
+  DEBUG: {name: "DEBUG", severity: 10},
+  INFO: {name: "INFO", severity: 100},
+  WARN: {name: "WARN", severity: 1000},
+  ERROR: {name: "ERROR", severity: 10000},
+  NONE: {name: "NONE", severity: 10000}
+}
+
+let rootLogger = null;
+
+/**
+ * Create logger or return cached instance
+ */
+export function getLogger(): Logger {
+  if (rootLogger) {
+    return rootLogger;
+  }  else {
+    return rootLogger = createLogger();
+  }
+}
+
+export function setRootLogLevel(logLevelName: LogLevelName): Logger {
+  let logLevel = LogLevels[logLevelName.toLocaleUpperCase()];
+  if (!logLevel) {
+    console.warn(`Can't find log level with name ${logLevelName.toLocaleUpperCase()}, defaulting to INFO`);
+    logLevel = LogLevels.INFO;
+  }
+  rootLogger = createLogger(logLevel);
+  return rootLogger;
+}
+
+export function setDebugVar(name: string, val: any) {
+  if (!isWindowAvailable()) {
+    return;
+  }
+  let win = window as any;
+  if (!win.__usermavenDebug) {
+    win.__usermavenDebug = { };
+  }
+  win.__usermavenDebug[name] = val;
+}
+
+
+
+
+/**
+ * Creates a loggger with given log-level
+ * @param logLevel
+ */
+export function createLogger(logLevel?: LogLevel): Logger {
+  let globalLogLevel = isWindowAvailable() && (window as any)['__eventNLogLevel'];
+
+  let minLogLevel = LogLevels.WARN;
+  if (globalLogLevel) {
+    let level = (LogLevels as any)[globalLogLevel.toUpperCase()];
+    if (level && level > 0) {
+      minLogLevel = level as LogLevel
+    }
+  } else if (logLevel) {
+    minLogLevel = logLevel;
+  }
+  const logger = {minLogLevel}
+  Object.values(LogLevels).forEach(({name, severity}) => {
+    (logger as any)[name.toLowerCase()] = (...args: any[]) => {
+      if (severity >= minLogLevel.severity && args.length > 0) {
+        const message = args[0];
+        const msgArgs = args.splice(1);
+        let msgFormatted = `[J-${name}] ${message}`;
+        if (name === 'DEBUG' || name === 'INFO') {
+          console.log(msgFormatted, ...msgArgs);
+        } else if (name === 'WARN') {
+          console.warn(msgFormatted, ...msgArgs);
+        } else {
+          console.error(msgFormatted, ...msgArgs);
+        }
+      }
+    }
+  });
+  setDebugVar("logger", logger);
+
+  return logger as any as Logger;
+}
+
+/queue.ts
+
+export class MemoryQueue<T> {
+
+  private queue: T[] = []
+
+  flush(): T[] {
+    let queue = this.queue
+    this.queue = []
+    return queue
+  }
+
+  push(...values: T[]) {
+    this.queue.push(...values)
+  }
+}
+
+export class LocalStorageQueue<T> {
+
+  private readonly key: string
+
+  constructor(key: string) {
+    this.key = key
+  }
+
+  flush(): T[] {
+    let queue = this.get()
+    if (queue.length) {
+      this.set([])
+    }
+
+    return queue
+  }
+
+  push(...values: T[]) {
+    let queue = this.get()
+    queue.push(...values)
+    this.set(queue)
+  }
+
+  private set(queue: T[]) {
+    localStorage.setItem(this.key, JSON.stringify(queue))
+  }
+
+  private get(): T[] {
+    const data = localStorage.getItem(this.key)
+    if (data !== null && data !== "") {
+      return JSON.parse(data)
+    }
+
+    return []
+  }
+}
+
+/usermaven.ts
+
+import {
+    deleteCookie,
+    generateId,
+    generateRandom,
+    getCookie,
+    getCookieDomain,
+    getCookies,
+    getDataFromParams,
+    getHostWithProtocol,
+    getUmExclusionState,
+    insertAndExecute,
+    parseCookieString,
+    parseQuery,
+    reformatDate,
+    setCookie,
+} from "./helpers";
+import {
+    ClientProperties,
+    Envs,
+    Event,
+    EventCompat,
+    EventCtx,
+    EventPayload,
+    EventSrc,
+    UsermavenClient,
+    UsermavenOptions,
+    Policy,
+    TrackingEnvironment,
+    UserProps, CompanyProps,
+} from "./interface";
+
+import {getLogger, setRootLogLevel} from "./log";
+import {isWindowAvailable, requireWindow} from "./window";
+import {CookieOpts, serializeCookie} from "./cookie";
+import {IncomingMessage, ServerResponse} from "http";
+import {LocalStorageQueue, MemoryQueue} from "./queue";
+import {autocapture} from './autocapture';
+import {_copyAndTruncateStrings, _each, _extend, _findClosestLink, _isArray, _isUndefined} from "./utils";
+import FormTracking from "./form-tracking";
+
+const VERSION_INFO = {
+    env: '__buildEnv__',
+    date: '__buildDate__',
+    version: '__buildVersion__'
+}
+
+const USERMAVEN_VERSION = `${VERSION_INFO.version}/${VERSION_INFO.env}@${VERSION_INFO.date}`;
+let MAX_AGE_TEN_YEARS = 31_622_400 * 10;
+
+const beaconTransport: Transport = (
+    url: string,
+    json: string
+): Promise<void> => {
+    getLogger().debug("Sending beacon", json);
+    const blob = new Blob([json], {type: "text/plain"});
+    navigator.sendBeacon(url, blob);
+    return Promise.resolve();
+};
+
+function tryFormat(string: string): string {
+    if (typeof string === "string") {
+        try {
+            return JSON.stringify(JSON.parse(string), null, 2);
+        } catch (e) {
+            return string;
+        }
+    }
+}
+
+const echoTransport: Transport = (url: string, json: string) => {
+    console.debug(`Jitsu client tried to send payload to ${url}`, tryFormat(json));
+    return Promise.resolve();
+};
+
+// This is a hack to expire all cookies with non-root path left behind by invalid tracking.
+// TODO remove soon
+function expireNonRootCookies(name: string, path: string = undefined) {
+    path = path ?? window.location.pathname
+    if (path == "" || path == "/") {
+        return
+    }
+
+    deleteCookie(name, path)
+    expireNonRootCookies(name, path.slice(0, path.lastIndexOf("/")))
+}
+
+interface Persistence {
+    save(props: Record<string, any>);
+
+    restore(): Record<string, any> | undefined;
+
+    delete();
+}
+
+class CookiePersistence implements Persistence {
+    private cookieDomain: string;
+    private cookieName: string;
+
+    constructor(cookieDomain: string, cookieName: string) {
+        this.cookieDomain = cookieDomain;
+        this.cookieName = cookieName;
+    }
+
+    public save(props: Record<string, any>) {
+        setCookie(this.cookieName, JSON.stringify(props), {
+            domain: this.cookieDomain,
+            secure: document.location.protocol !== "http:",
+            maxAge: MAX_AGE_TEN_YEARS,
+        });
+    }
+
+    restore(): Record<string, any> | undefined {
+        expireNonRootCookies(this.cookieName)
+        let str = getCookie(this.cookieName);
+        if (str) {
+            try {
+                const parsed = JSON.parse(decodeURIComponent(str));
+                if (typeof parsed !== "object") {
+                    getLogger().warn(
+                        `Can't restore value of ${this.cookieName}@${
+                            this.cookieDomain
+                        }, expected to be object, but found ${
+                            typeof parsed !== "object"
+                        }: ${parsed}. Ignoring`
+                    );
+                    return undefined;
+                }
+                return parsed;
+            } catch (e) {
+                getLogger().error("Failed to decode JSON from " + str, e);
+                return undefined;
+            }
+        }
+        return undefined;
+    }
+
+    delete() {
+        deleteCookie(this.cookieName);
+    }
+}
+
+class NoPersistence implements Persistence {
+    public save(props: Record<string, any>) {
+    }
+
+    restore(): Record<string, any> | undefined {
+        return undefined;
+    }
+
+    delete() {
+    }
+}
+
+const defaultCompatMode = false;
+
+export function usermavenClient(opts?: UsermavenOptions): UsermavenClient {
+    let client = new UsermavenClientImpl();
+    client.init(opts);
+    return client;
+}
+
+type PermanentProperties = {
+    globalProps: Record<string, any>;
+    propsPerEvent: Record<string, Record<string, any>>;
+};
+
+const browserEnv: TrackingEnvironment = {
+    getSourceIp: () => undefined,
+    describeClient: () => ({
+        referer: document.referrer,
+        url: window.location.href,
+        page_title: document.title,
+        doc_path: document.location.pathname,
+        doc_host: document.location.hostname,
+        doc_search: window.location.search,
+        screen_resolution: screen.width + "x" + screen.height,
+        vp_size:
+            Math.max(
+                document.documentElement.clientWidth || 0,
+                window.innerWidth || 0
+            ) +
+            "x" +
+            Math.max(
+                document.documentElement.clientHeight || 0,
+                window.innerHeight || 0
+            ),
+        user_agent: navigator.userAgent,
+        user_language: navigator.language,
+        doc_encoding: document.characterSet,
+    }),
+
+    getAnonymousId: ({name, domain, crossDomainLinking = true}) => {
+        expireNonRootCookies(name)
+
+        // Check if cross domain linking is enabled
+        if (crossDomainLinking) {
+            // Try to extract the '_um' parameter from query string and hash fragment (https://example.com#_um=1~abcde5~)
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryId = urlParams.get('_um');
+
+
+            const urlHash = window.location.hash.substring(1);
+            const hashedValues = urlHash.split("~");
+            const fragmentId = hashedValues.length > 1 ? hashedValues[1] : undefined;
+
+            // If the '_um' parameter is set in both the query string and hash fragment,
+            // prioritize the one in query string
+            let crossDomainAnonymousId = queryId || fragmentId;
+
+            // If coming from another domain, use the ID from URL parameter
+            if (crossDomainAnonymousId) {
+                getLogger().debug("Existing user id from other domain", crossDomainAnonymousId);
+                // Check if the ID needs to be set as cookie
+                const currentCookie = getCookie(name);
+                if (!currentCookie || currentCookie !== crossDomainAnonymousId) {
+                    setCookie(name, crossDomainAnonymousId, {
+                        domain,
+                        secure: document.location.protocol !== "http:",
+                        maxAge: MAX_AGE_TEN_YEARS,
+                    });
+                }
+                return crossDomainAnonymousId;
+            }
+        }
+
+
+        const idCookie = getCookie(name);
+        if (idCookie) {
+            getLogger().debug("Existing user id", idCookie);
+            return idCookie;
+        }
+        let newId = generateId();
+        getLogger().debug("New user id", newId);
+        setCookie(name, newId, {
+            domain,
+            secure: document.location.protocol !== "http:",
+            maxAge: MAX_AGE_TEN_YEARS,
+        });
+        return newId;
+    },
+};
+
+
+function ensurePrefix(prefix: string, str?: string) {
+    if (!str) {
+        return str;
+    }
+    return str?.length > 0 && str.indexOf(prefix) !== 0 ? prefix + str : str;
+}
+
+function cutPostfix(postfixes: string | string[], str?: string) {
+    for (const postfix of typeof postfixes === "string"
+        ? [postfixes]
+        : postfixes) {
+        while (str && str.length > 0 && str.charAt(str.length - 1) === postfix) {
+            str = str.substring(0, str.length - 1);
+        }
+    }
+    return str;
+}
+
+export function fetchApi(
+    req: Request,
+    res: Response,
+    opts: { disableCookies?: boolean } = {}
+): TrackingEnvironment {
+    return {
+        getAnonymousId({name, domain}): string {
+            if (opts?.disableCookies) {
+                return "";
+            }
+
+            const cookie = parseCookieString(req.headers["cookie"])[name];
+            if (!cookie) {
+                const cookieOpts: CookieOpts = {
+                    maxAge: 31_622_400 * 10,
+                    httpOnly: false,
+                };
+                if (domain) {
+                    cookieOpts.domain = domain;
+                }
+                let newId = generateId();
+                res.headers.set("Set-Cookie", serializeCookie(name, newId, cookieOpts));
+                return newId;
+            } else {
+                return cookie;
+            }
+        },
+        getSourceIp() {
+            let ip =
+                req.headers["x-forwarded-for"] || req.headers["x-real-ip"] || req["ip"];
+            return ip && ip.split(",")[0].trim();
+        },
+        describeClient(): ClientProperties {
+            const requestHost = req.headers.get("host") || req.headers.get("host");
+            let proto = cutPostfix(
+                [":", "/"],
+                req.headers["x-forwarded-proto"] || req["nextUrl"]["protocol"] || "http"
+            );
+            while (proto && proto.length > 0 && proto.charAt(proto.length - 1)) {
+                proto = proto.substring(0, proto.length - 1);
+            }
+            let reqUrl = req.url || "/";
+            let queryPos = reqUrl.indexOf("?");
+            let path, query;
+            if (queryPos >= 0) {
+                path = reqUrl.substring(0, queryPos);
+                query = reqUrl.substring(queryPos + 1);
+            } else {
+                path = reqUrl;
+                query = undefined;
+            }
+            query = ensurePrefix(query, "?");
+            path = ensurePrefix(path, "/");
+            return {
+                doc_encoding: "",
+                doc_host: requestHost,
+                doc_path: reqUrl,
+                doc_search: query,
+                page_title: "",
+                referer: req.headers["referrer"],
+                screen_resolution: "",
+                url: `${proto}://${requestHost}${path || ""}${query || ""}`,
+                user_agent: req.headers["user-agent"],
+                user_language:
+                    req.headers["accept-language"] &&
+                    req.headers["accept-language"].split(",")[0],
+                vp_size: "",
+            };
+        },
+    };
+}
+
+export function httpApi(
+    req: IncomingMessage,
+    res: ServerResponse,
+    opts: { disableCookies?: boolean } = {}
+): TrackingEnvironment {
+    const header: (req: IncomingMessage, name: string) => string | undefined = (
+        req,
+        name
+    ) => {
+        let vals = req.headers[name.toLowerCase()];
+        if (!vals) {
+            return undefined;
+        }
+        if (typeof vals === "string") {
+            return vals;
+        } else if (vals.length > 0) {
+            return vals.join(",");
+        }
+    };
+
+    return {
+        getAnonymousId({name, domain}): string {
+            if (opts?.disableCookies) {
+                return "";
+            }
+
+            const cookie = parseCookieString(req.headers["cookie"])[name];
+            if (!cookie) {
+                const cookieOpts: CookieOpts = {
+                    maxAge: 31_622_400 * 10,
+                    httpOnly: false,
+                };
+                if (domain) {
+                    cookieOpts.domain = domain;
+                }
+                let newId = generateId();
+                res.setHeader("Set-Cookie", serializeCookie(name, newId, cookieOpts));
+                return newId;
+            } else {
+                return cookie;
+            }
+        },
+        getSourceIp() {
+            let ip =
+                header(req, "x-forwarded-for") ||
+                header(req, "x-real-ip") ||
+                req.socket.remoteAddress;
+            return ip && ip.split(",")[0].trim();
+        },
+        describeClient(): ClientProperties {
+            let url: Partial<URL> = req.url
+                ? new URL(
+                    req.url,
+                    req.url.startsWith("http") ? undefined : "http://localhost"
+                )
+                : {};
+            const requestHost =
+                header(req, "x-forwarded-host") || header(req, "host") || url.hostname;
+            const proto = cutPostfix(
+                [":", "/"],
+                header(req, "x-forwarded-proto") || url.protocol
+            );
+            let query = ensurePrefix("?", url.search);
+            let path = ensurePrefix("/", url.pathname);
+            return {
+                doc_encoding: "",
+                doc_host: requestHost,
+                doc_path: req.url,
+                doc_search: query,
+                page_title: "",
+                referer: header(req, "referrer"),
+                screen_resolution: "",
+                url: `${proto}://${requestHost}${path || ""}${query || ""}`,
+                user_agent: req.headers["user-agent"],
+                user_language:
+                    req.headers["accept-language"] &&
+                    req.headers["accept-language"].split(",")[0],
+                vp_size: "",
+            };
+        },
+    };
+}
+
+const emptyEnv: TrackingEnvironment = {
+    getSourceIp: () => undefined,
+    describeClient: () => ({}),
+    getAnonymousId: () => "",
+};
+/**
+ * Dictionary of supported environments
+ */
+export const envs: Envs = {
+    httpApi: httpApi,
+    nextjsApi: httpApi,
+    // fetchApi: fetchApi,
+    // nextjsMiddleware: fetchApi,
+    browser: () => browserEnv,
+    express: httpApi,
+    empty: () => emptyEnv,
+};
+
+const xmlHttpTransport: Transport = (
+    url: string,
+    jsonPayload: string,
+    additionalHeaders: Record<string, string>,
+    handler = (code, body) => {
+    }
+) => {
+    let req = new window.XMLHttpRequest();
+    return new Promise<void>((resolve, reject) => {
+        req.onerror = (e: any) => {
+            getLogger().error(`Failed to send payload to ${url}: ${e?.message || "unknown error"}`, jsonPayload, e);
+            handler(-1, {});
+            reject(new Error(`Failed to send JSON. See console logs`));
+        };
+        req.onload = () => {
+            if (req.status !== 200) {
+                handler(req.status, {});
+                getLogger().warn(
+                    `Failed to send data to ${url} (#${req.status} - ${req.statusText})`,
+                    jsonPayload
+                );
+                reject(
+                    new Error(
+                        `Failed to send JSON. Error code: ${req.status}. See logs for details`
+                    )
+                );
+            } else {
+                handler(req.status, req.responseText);
+            }
+            resolve();
+        };
+        req.open("POST", url);
+        req.setRequestHeader("Content-Type", "application/json");
+        Object.entries(additionalHeaders || {}).forEach(([key, val]) =>
+            req.setRequestHeader(key, val)
+        );
+        req.send(jsonPayload);
+        getLogger().debug("sending json", jsonPayload);
+    });
+};
+
+const fetchTransport: (fetch: any) => Transport = (fetch) => {
+    return async (
+        url: string,
+        jsonPayload: string,
+        additionalHeaders: Record<string, string>,
+        handler = (code, body) => {
+        }
+    ) => {
+        let res: any;
+        try {
+            res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                    ...(additionalHeaders || {}),
+                },
+                body: jsonPayload,
+                keepalive: true,
+            });
+        } catch (e: any) {
+            getLogger().error(`Failed to send data to ${url}: ${e?.message || "unknown error"}`, jsonPayload, e);
+            handler(-1, {});
+            return
+        }
+        if (res.status !== 200) {
+            getLogger().warn(
+                `Failed to send data to ${url} (#${res.status} - ${res.statusText})`,
+                jsonPayload
+            );
+            handler(res.status, {});
+            return
+        }
+        let resJson = {} as any;
+        let text = "";
+        const contentType = res.headers?.get('Content-Type') ?? ""
+        try {
+            text = await res.text();
+            resJson = JSON.parse(text);
+        } catch (e) {
+            getLogger().error(`Failed to parse ${url} response. Content-type: ${contentType} text: ${text}`, e);
+        }
+        try {
+            handler(res.status, resJson);
+        } catch (e) {
+            getLogger().error(`Failed to handle ${url} response. Content-type: ${contentType} text: ${text}`, e);
+        }
+    };
+};
+
+type QueueStore<T> = {
+    flush: () => T[]
+    push: (...values: T[]) => void
+}
+
+/**
+ * Abstraction on top of HTTP calls. Implementation can be either based on XMLHttpRequest, Beacon API or
+ * fetch (if running in Node env)
+ *
+ * Implementation should reject promise if request is unsuccessful. Parameters are:
+ *    - url - URL
+ *    - jsonPayload - POST payload. If not string, result should be converted to string with JSON.parse()
+ *    - an optional handler that will be called in any case (both for failed and succesfull requests)
+ */
+export type Transport = (
+    url: string,
+    jsonPayload: string,
+    additionalHeaders: Record<string, string>,
+    handler?: (statusCode: number, responseBody: any) => void
+) => Promise<void>;
+
+
+class UsermavenClientImpl implements UsermavenClient {
+
+    private userIdPersistence?: Persistence;
+    private propsPersistance?: Persistence;
+
+    private userProperties: UserProps = {};
+    private groupProperties: CompanyProps | any = {};
+    private permanentProperties: PermanentProperties = {
+        globalProps: {},
+        propsPerEvent: {},
+    };
+    private cookieDomain: string = "";
+    private trackingHost: string = "";
+    private idCookieName: string = "";
+    private randomizeUrl: boolean = false;
+    private namespace: string = "usermaven";
+    private crossDomainLinking: boolean = true;
+    private formTracking: 'all' | 'tagged' | 'none' | boolean = false;
+    private domains: string[] = [];
+
+    private apiKey: string = "";
+    private initialized: boolean = false;
+    private _3pCookies: Record<string, boolean> = {};
+    private initialOptions?: UsermavenOptions;
+    private compatMode: boolean;
+    private cookiePolicy: Policy = "keep";
+    private ipPolicy: Policy = "keep";
+    private beaconApi: boolean = false;
+    private transport: Transport = xmlHttpTransport;
+    private customHeaders: () => Record<string, string> = () => ({});
+
+    private queue: QueueStore<[any, number]> = new MemoryQueue()
+    private maxSendAttempts: number = 4
+    private retryTimeout: [number, number] = [500, 1e12]
+    private flushing: boolean = false
+    private attempt: number = 1
+
+    private propertyBlacklist: string[] = []
+    public config?: any;
+    // public persistence?: UserMavenPersistence;
+    // public sessionManager?: SessionIdManager;
+
+    public __autocapture_enabled = false;
+    public __auto_pageview_enabled = false;
+    // private anonymousId: string = '';
+
+    // Fallback tracking host
+    private trackingHostFallback: string = VERSION_INFO.env === "production" ? "https://events.usermaven.com" : "https://eventcollectors.usermaven.com";
+
+    // Used for session + autocapture
+    get_config(prop_name) {
+        return this.config ? this.config[prop_name] : null
+    }
+
+    id(props: UserProps, doNotSendEvent?: boolean): Promise<void> {
+        this.userProperties = {...this.userProperties, ...props}
+        getLogger().debug("Usermaven user identified", props)
+
+        if (this.userIdPersistence) {
+            this.userIdPersistence.save(props);
+        } else {
+            getLogger().warn("Id() is called before initialization");
+        }
+        if (!doNotSendEvent) {
+            return this.track("user_identify", {});
+        } else {
+            return Promise.resolve();
+        }
+    }
+
+    group(props: CompanyProps, doNotSendEvent?: boolean): Promise<void> {
+        this.groupProperties = {...this.groupProperties, ...props}
+        getLogger().debug("Usermaven group identified", props)
+
+        if (this.userIdPersistence) {
+            // Update the 'company' property in the user persistence
+            this.userIdPersistence.save({company: props});
+        } else {
+            getLogger().warn("Group() is called before initialization");
+        }
+        if (!doNotSendEvent) {
+            return this.track("group", {});
+        } else {
+            return Promise.resolve();
+        }
+    }
+
+    reset(resetAnonId?: boolean): Promise<void> {
+        if (this.userIdPersistence) {
+            this.userIdPersistence.delete();
+        }
+        if (this.propsPersistance) {
+            this.propsPersistance.delete();
+        }
+        if (resetAnonId) {
+            const idCookie = getCookie(this.idCookieName);
+            if (idCookie) {
+                getLogger().debug("Removing id cookie", idCookie);
+                setCookie(this.idCookieName, "", {
+                    domain: this.cookieDomain,
+                    expires: new Date(0),
+                });
+            }
+        }
+        return Promise.resolve();
+    }
+
+    rawTrack(payload: any) {
+        return this.sendJson(payload);
+    }
+
+    makeEvent(
+        event_type: string,
+        src: EventSrc,
+        payload: EventPayload
+    ): Event | EventCompat {
+
+        let {env, ...payloadData} = payload;
+        if (!env) {
+            env = isWindowAvailable() ? envs.browser() : envs.empty();
+        }
+        this.restoreId();
+        let context = this.getCtx(env);
+
+        let persistentProps = {
+            ...this.permanentProperties.globalProps,
+            ...(this.permanentProperties.propsPerEvent[event_type] ?? {}),
+        };
+        let base = {
+            api_key: this.apiKey,
+            src,
+            event_type,
+            ...payloadData,
+        };
+        let sourceIp = env.getSourceIp();
+        if (sourceIp) {
+            base["source_ip"] = sourceIp;
+        }
+
+        return this.compatMode
+            ? {...persistentProps, eventn_ctx: context, ...base}
+            : {...persistentProps, ...context, ...base};
+    }
+
+    _send3p(sourceType: EventSrc, object: any, type?: string): Promise<any> {
+        let eventType = "3rdparty";
+        if (type && type !== "") {
+            eventType = type;
+        }
+
+        const e = this.makeEvent(eventType, sourceType, {
+            src_payload: object,
+        });
+        return this.sendJson(e);
+    }
+
+    async sendJson(json: any): Promise<void> {
+        let umExclusionState = getUmExclusionState()
+
+        if(!umExclusionState){
+            if (this.maxSendAttempts > 1) {
+                this.queue.push([json, 0])
+                this.scheduleFlush(0)
+            } else {
+                await this.doSendJson(json)
+            }
+        }
+    }
+
+    private doSendJson(json: any): Promise<void> {
+        let cookiePolicy =
+            this.cookiePolicy !== "keep" ? `&cookie_policy=${this.cookiePolicy}` : "";
+        let ipPolicy =
+            this.ipPolicy !== "keep" ? `&ip_policy=${this.ipPolicy}` : "";
+        let urlPrefix = isWindowAvailable() ? "/api/v1/event" : "/api/v1/s2s/event";
+        let url = `${this.trackingHost}${urlPrefix}?token=${this.apiKey}${cookiePolicy}${ipPolicy}`;
+        if (this.randomizeUrl) {
+            url = `${
+                this.trackingHost
+            }/api.${generateRandom()}?p_${generateRandom()}=${
+                this.apiKey
+            }${cookiePolicy}${ipPolicy}`;
+        }
+        let jsonString = JSON.stringify(json);
+        getLogger().debug(`Sending payload to ${url}`, json.length);
+        return this.transport(url, jsonString, this.customHeaders(), (code, body) =>
+            this.postHandle(code, body)
+        );
+    }
+
+    scheduleFlush(timeout?: number) {
+        if (this.flushing) {
+            return
+        }
+
+        this.flushing = true
+        if (typeof timeout === "undefined") {
+            let random = Math.random() + 1
+            let factor = Math.pow(2, this.attempt++)
+            timeout = Math.min(this.retryTimeout[0] * random * factor, this.retryTimeout[1])
+        }
+
+        getLogger().debug(`Scheduling event queue flush in ${timeout} ms.`)
+
+        setTimeout(() => this.flush(), timeout)
+    }
+
+    private async flush(): Promise<void> {
+        if (isWindowAvailable() && !window.navigator.onLine) {
+            this.flushing = false
+            this.scheduleFlush()
+        }
+
+        let queue = this.queue.flush()
+        this.flushing = false
+
+        if (queue.length === 0) {
+            return
+        }
+
+        try {
+            await this.doSendJson(queue.map(el => el[0]))
+            this.attempt = 1
+            getLogger().debug(`Successfully flushed ${queue.length} events from queue`)
+        } catch (e) {
+            // In case of failing custom domain (trackingHost), we will replace it with default domain (trackingHostFallback)
+            if (this.trackingHost !== this.trackingHostFallback) {
+                getLogger().debug(`Using fallback tracking host ${this.trackingHostFallback} instead of ${this.trackingHost} on ${VERSION_INFO.env}`)
+                this.trackingHost = this.trackingHostFallback
+            }
+
+            queue = queue.map(el => [el[0], el[1] + 1] as [any, number]).filter(el => {
+                if (el[1] >= this.maxSendAttempts) {
+                    getLogger().error(`Dropping queued event after ${el[1]} attempts since max send attempts ${this.maxSendAttempts} reached. See logs for details`)
+                    return false
+                }
+
+                return true
+            })
+
+            if (queue.length > 0) {
+                this.queue.push(...queue)
+                this.scheduleFlush()
+            } else {
+                this.attempt = 1
+            }
+        }
+    }
+
+
+    postHandle(status: number, response: any): any {
+        if (this.cookiePolicy === "strict" || this.cookiePolicy === "comply") {
+            if (status === 200) {
+                let data = response;
+                if (typeof response === "string") {
+                    data = JSON.parse(response);
+                }
+                if (!data["delete_cookie"]) {
+                    return;
+                }
+            }
+            this.userIdPersistence.delete();
+            this.propsPersistance.delete();
+            deleteCookie(this.idCookieName);
+        }
+        if (status === 200) {
+            let data = response;
+            if (typeof response === "string" && response.length > 0) {
+                data = JSON.parse(response);
+                let extras = data["jitsu_sdk_extras"];
+                if (extras && extras.length > 0) {
+                    const isWindow = isWindowAvailable();
+                    if (!isWindow) {
+                        getLogger().error(
+                            "Tags destination supported only in browser environment"
+                        );
+                    } else {
+                        for (const {type, id, value} of extras) {
+                            if (type === "tag") {
+                                const tag = document.createElement("div");
+                                tag.id = id;
+                                insertAndExecute(tag, value);
+                                if (tag.childElementCount > 0) {
+                                    document.body.appendChild(tag);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    getCtx(env: TrackingEnvironment): EventCtx {
+        let now = new Date();
+        let props = env.describeClient() || {};
+        const user = {...this.userProperties}
+
+        const company = user['company'] || {}
+
+        delete user['company']
+
+        const payload = {
+            event_id: "", //generate id on the backend
+            user: {
+                anonymous_id:
+                    this.cookiePolicy !== "strict"
+                        ? env.getAnonymousId({
+                            name: this.idCookieName,
+                            domain: this.cookieDomain,
+                            crossDomainLinking: this.crossDomainLinking,
+                        })
+                        : "",
+                ...user,
+            },
+            ids: this._getIds(),
+            utc_time: reformatDate(now.toISOString()),
+            local_tz_offset: now.getTimezoneOffset(),
+            ...props,
+            ...getDataFromParams(parseQuery(props.doc_search)),
+        };
+        // id and name attributes will be checked on backend
+        if (Object.keys(company).length) {
+            payload['company'] = company
+        }
+
+        return payload
+    }
+
+    private _getIds(): Record<string, string> {
+        if (!isWindowAvailable()) {
+            return {};
+        }
+        let cookies = getCookies(false);
+        let res: Record<string, string> = {};
+        for (let [key, value] of Object.entries(cookies)) {
+            if (this._3pCookies[key]) {
+                res[key.charAt(0) == "_" ? key.substr(1) : key] = value;
+            }
+        }
+        return res;
+    }
+
+    pathMatches(wildcardPath, docUrl) {
+        const actualPath = new URL(docUrl).pathname;
+        return actualPath.match(new RegExp('^' + wildcardPath.trim().replace(/\*\*/g, '.*').replace(/([^\.])\*/g, '$1[^\\s\/]*') + '\/?$'))
+    }
+
+    track(type: string, payload?: EventPayload): Promise<void> {
+        let data = payload || {};
+        getLogger().debug("track event of type", type, data);
+
+        const env = isWindowAvailable() ? envs.browser() : envs.empty();
+        const context = this.getCtx(env);
+        // Check if the page is not excluded.
+        if (this.config && this.config.exclude && this.config.exclude.length > 1 && context?.url) {
+            const excludeList = this.config.exclude.split(',');
+            // check if the current page is in the exclude list
+
+            if (excludeList.some((excludePage) => this.pathMatches(excludePage.trim(), context?.url))) {
+                getLogger().debug("Page is excluded from tracking");
+                return
+            }
+        }
+
+        let p = payload || {};
+
+        // All custom events and scroll event will have event_attributes
+        if (type !== "$autocapture" && type !== "user_identify" && type !== "pageview" && type !== "$pageleave") {
+            p = {
+                event_attributes: payload,
+            }
+        }
+
+        const e = this.makeEvent(
+            type,
+            this.compatMode ? "eventn" : "usermaven",
+            p
+        );
+
+        return this.sendJson(e);
+    }
+
+    init(options: UsermavenOptions) {
+        if (isWindowAvailable() && !options.force_use_fetch) {
+            if (options.fetch) {
+                getLogger().warn(
+                    "Custom fetch implementation is provided to Usermaven. However, it will be ignored since Usermaven runs in browser"
+                );
+            }
+            this.transport = this.beaconApi ? beaconTransport : xmlHttpTransport;
+        } else {
+            if (!options.fetch && !globalThis.fetch) {
+                throw new Error(
+                    "Usermaven runs in Node environment. However, neither UsermavenOptions.fetch is provided, nor global fetch function is defined. \n" +
+                    "Please, provide custom fetch implementation. You can get it via node-fetch package"
+                );
+            }
+            this.transport = fetchTransport(options.fetch || globalThis.fetch);
+        }
+
+        if (
+            options.custom_headers &&
+            typeof options.custom_headers === "function"
+        ) {
+            this.customHeaders = options.custom_headers;
+        } else if (options.custom_headers) {
+            this.customHeaders = () =>
+                options.custom_headers as Record<string, string>;
+        }
+
+        if (options.tracking_host === "echo") {
+            getLogger().warn(
+                'jitsuClient is configured with "echo" transport. Outgoing requests will be written to console'
+            );
+            this.transport = echoTransport;
+        }
+
+        if (options.ip_policy) {
+            this.ipPolicy = options.ip_policy;
+        }
+        if (options.cookie_policy) {
+            this.cookiePolicy = options.cookie_policy;
+        }
+        if (options.privacy_policy === "strict") {
+            this.ipPolicy = "strict";
+            this.cookiePolicy = "strict";
+        }
+        if (navigator?.sendBeacon && options.use_beacon_api) {
+            this.beaconApi = true;
+        }
+
+        //can't handle delete cookie response when beacon api
+        if (this.cookiePolicy === "comply" && this.beaconApi) {
+            this.cookiePolicy = "strict";
+        }
+        if (options.log_level) {
+            setRootLogLevel(options.log_level);
+        }
+        this.initialOptions = options;
+        getLogger().debug(
+            "Initializing Usemaven Tracker tracker",
+            options,
+            USERMAVEN_VERSION
+        );
+        if (!options.key) {
+            getLogger().error("Can't initialize Usemaven, key property is not set");
+            return;
+        }
+        this.compatMode =
+            options.compat_mode === undefined
+                ? defaultCompatMode
+                : !!options.compat_mode;
+        this.cookieDomain = options.cookie_domain || getCookieDomain();
+        this.namespace = options.namespace || "usermaven";
+        this.crossDomainLinking = options.cross_domain_linking ?? true;
+        this.formTracking = options.form_tracking ?? false;
+        this.domains = options.domains ? (options.domains).split(',').map((domain) => domain.trim()) : [];
+        this.trackingHost = getHostWithProtocol(
+            options["tracking_host"] || "t.usermaven.com"
+        );
+        this.randomizeUrl = options.randomize_url || false;
+        this.apiKey = options.key;
+        this.__auto_pageview_enabled = options.auto_pageview || false;
+
+        this.idCookieName = options.cookie_name || `__eventn_id_${options.key}`;
+
+        if (this.cookiePolicy === "strict") {
+            this.propsPersistance = new NoPersistence();
+        } else {
+            this.propsPersistance = isWindowAvailable()
+                ? new CookiePersistence(this.cookieDomain, this.idCookieName + "_props")
+                : new NoPersistence();
+        }
+
+        if (this.cookiePolicy === "strict") {
+            this.userIdPersistence = new NoPersistence();
+        } else {
+            this.userIdPersistence = isWindowAvailable()
+                ? new CookiePersistence(this.cookieDomain, this.idCookieName + "_usr")
+                : new NoPersistence();
+        }
+
+        if (this.propsPersistance) {
+            const restored = this.propsPersistance.restore();
+            if (restored) {
+                this.permanentProperties = restored as PermanentProperties;
+                this.permanentProperties.globalProps = restored.globalProps ?? {};
+                this.permanentProperties.propsPerEvent = restored.propsPerEvent ?? {};
+            }
+            getLogger().debug(
+                "Restored persistent properties",
+                this.permanentProperties
+            );
+        }
+
+
+        this.propertyBlacklist = options.property_blacklist && options.property_blacklist.length > 0 ? options.property_blacklist : [];
+
+
+        // // Added these configuration for session management + autocapture
+
+        const defaultConfig = {
+            autocapture: false,
+            properties_string_max_length: null, // 65535
+            property_blacklist: [],
+            sanitize_properties: null,
+            auto_pageview: false
+        }
+        this.config = _extend({}, defaultConfig, options || {}, this.config || {}, {token: this.apiKey})
+
+        getLogger().debug('Default Configuration', this.config);
+        // this.manageSession(this.config);
+
+        this.manageAutoCapture(this.config);
+
+        this.manageFormTracking(this.config);
+
+        this.manageCrossDomainLinking({
+            cross_domain_linking: this.crossDomainLinking,
+            domains: this.domains,
+            cookiePolicy: this.cookiePolicy
+        });
+
+        if (options.capture_3rd_party_cookies === false) {
+            this._3pCookies = {};
+        } else {
+            (
+                options.capture_3rd_party_cookies || [
+                    "_ga",
+                    "_fbp",
+                    "_ym_uid",
+                    "ajs_user_id",
+                    "ajs_anonymous_id",
+                ]
+            ).forEach((name) => (this._3pCookies[name] = true));
+        }
+
+        if (options.ga_hook) {
+            getLogger().warn("GA event interceptor isn't supported anymore");
+        }
+        if (options.segment_hook) {
+            interceptSegmentCalls(this);
+        }
+
+        if (isWindowAvailable()) {
+            if (!options.disable_event_persistence) {
+                this.queue = new LocalStorageQueue(`${this.namespace}-event-queue`)
+                this.scheduleFlush(0)
+            }
+
+            window.addEventListener("beforeunload", () => this.flush())
+        }
+
+        if (this.__auto_pageview_enabled) {
+            enableAutoPageviews(this)
+        }
+
+        this.retryTimeout = [
+            options.min_send_timeout ?? this.retryTimeout[0],
+            options.max_send_timeout ?? this.retryTimeout[1],
+        ]
+
+        if (!!options.max_send_attempts) {
+            this.maxSendAttempts = options.max_send_attempts!
+        }
+
+        this.initialized = true;
+    }
+
+    interceptAnalytics(analytics: any) {
+        let interceptor = (chain: any) => {
+            try {
+                let payload = {...chain.payload};
+                getLogger().debug("Intercepted segment payload", payload.obj);
+
+                let integration = chain.integrations["Segment.io"];
+                if (integration && integration.analytics) {
+                    let analyticsOriginal = integration.analytics;
+                    if (
+                        typeof analyticsOriginal.user === "function" &&
+                        analyticsOriginal.user() &&
+                        typeof analyticsOriginal.user().id === "function"
+                    ) {
+                        payload.obj.userId = analyticsOriginal.user().id();
+                    }
+                }
+                if (payload?.obj?.timestamp) {
+                    payload.obj.sentAt = payload.obj.timestamp;
+                }
+
+                let type = chain.payload.type();
+                if (type === "track") {
+                    type = chain.payload.event();
+                }
+
+                this._send3p("ajs", payload, type);
+            } catch (e) {
+                getLogger().warn("Failed to send an event", e);
+            }
+
+            chain.next(chain.payload);
+        };
+        if (typeof analytics.addSourceMiddleware === "function") {
+            //analytics is fully initialized
+            getLogger().debug(
+                "Analytics.js is initialized, calling addSourceMiddleware"
+            );
+            analytics.addSourceMiddleware(interceptor);
+        } else {
+            getLogger().debug(
+                "Analytics.js is not initialized, pushing addSourceMiddleware to callstack"
+            );
+            analytics.push(["addSourceMiddleware", interceptor]);
+        }
+        analytics["__en_intercepted"] = true;
+    }
+
+    private restoreId() {
+        if (this.userIdPersistence) {
+            let props = this.userIdPersistence.restore();
+            if (props) {
+                this.userProperties = {...props, ...this.userProperties};
+            }
+        }
+    }
+
+    set(properties, opts?) {
+        const eventType = opts?.eventType;
+        const persist = opts?.persist === undefined || opts?.persist;
+        if (eventType !== undefined) {
+            let current = this.permanentProperties.propsPerEvent[eventType] ?? {};
+            this.permanentProperties.propsPerEvent[eventType] = {
+                ...current,
+                ...properties,
+            };
+        } else {
+            this.permanentProperties.globalProps = {
+                ...this.permanentProperties.globalProps,
+                ...properties,
+            };
+        }
+
+        if (this.propsPersistance && persist) {
+            this.propsPersistance.save(this.permanentProperties);
+        }
+    }
+
+    unset(propertyName: string, opts) {
+        requireWindow();
+        const eventType = opts?.eventType;
+        const persist = opts?.persist === undefined || opts?.persist;
+
+        if (!eventType) {
+            delete this.permanentProperties.globalProps[propertyName];
+        } else if (this.permanentProperties.propsPerEvent[eventType]) {
+            delete this.permanentProperties.propsPerEvent[eventType][propertyName];
+        }
+        if (this.propsPersistance && persist) {
+            this.propsPersistance.save(this.permanentProperties);
+        }
+    }
+
+    manageCrossDomainLinking(options: {
+        cross_domain_linking?: boolean;
+        domains?: string[];
+        cookiePolicy?: Policy;
+    }): boolean {
+        if (!isWindowAvailable() || !options.cross_domain_linking || options.domains.length === 0 || options.cookiePolicy === "strict") {
+            return false;
+        }
+        const cookieName = this.idCookieName;
+
+        const domains = options.domains || [];
+
+        // Listen for all clicks on the page
+        document.addEventListener('click', function (event) {
+
+            // Find the closest link
+            const target = _findClosestLink(event.target as HTMLElement | null);
+            if (target) {
+                // Check if the link is pointing to a different domain
+                const href = target?.hasAttribute('href') ? target?.getAttribute('href') : ''
+                if (href && href.startsWith('http')) {
+                    const url = new URL(href);
+
+                    const cookie = getCookie(cookieName);
+
+                    // Skip the link if it's pointing to the current domain
+                    if (url.hostname === window.location.hostname) {
+                        return;
+                    }
+
+                    if (domains.includes(url.hostname) && cookie) {
+
+                        // Add the '_um' parameter to the URL
+                        url.searchParams.append('_um', cookie);
+                        target.setAttribute('href', url.toString());
+                    }
+                }
+            }
+        }, false);
+    }
+
+
+    /**
+     * Manage auto-capturing
+     * @param options
+     */
+    manageAutoCapture(options: UsermavenOptions) {
+        getLogger().debug("Auto Capture Status: ", this.config['autocapture']);
+
+        this.__autocapture_enabled = this.config['autocapture'] && isWindowAvailable();
+
+        if (!this.__autocapture_enabled) {
+            return
+        }
+
+        var num_buckets = 100
+        var num_enabled_buckets = 100
+        if (!autocapture.enabledForProject(this.apiKey, num_buckets, num_enabled_buckets)) {
+            this.config['autocapture'] = false
+            this.__autocapture_enabled = false
+            getLogger().debug('Not in active bucket: disabling Automatic Event Collection.')
+        } else if (!autocapture.isBrowserSupported()) {
+            this.config['autocapture'] = false
+            this.__autocapture_enabled = false
+            getLogger().debug('Disabling Automatic Event Collection because this browser is not supported')
+        } else {
+            getLogger().debug('Autocapture enabled...')
+            autocapture.init(this, options)
+        }
+    }
+
+    /**
+     * Manage form tracking
+     */
+    manageFormTracking(options: UsermavenOptions) {
+        if (!isWindowAvailable() || !this.formTracking || this.formTracking === "none") {
+            return
+        }
+
+        getLogger().debug('Form tracking enabled...')
+
+        // all and true are the same
+        const trackingType = this.formTracking === true ? 'all' : this.formTracking
+
+        FormTracking.getInstance(this, trackingType).track()
+    }
+
+    /**
+     * Capture an event. This is the most important and
+     * frequently used usermaven function.
+     *
+     * ### Usage:
+     *     usermaven.capture('Registered', {'Gender': 'Male', 'Age': 21}, {});
+     *
+     * @param {String} event_name The name of the event. This can be anything the user does - 'Button Click', 'Sign Up', 'Item Purchased', etc.
+     * @param {Object} [properties] A set of properties to include with the event you're sending. These describe the user who did the event or details about the event itself.
+     * @param {Object} [options] Optional configuration for this capture request.
+     * @param {String} [options.transport] Transport method for network request ('XHR' or 'sendBeacon').
+     */
+    capture(event_name, properties = {}) {
+        if (!this.initialized) {
+            console.error('Trying to capture event before initialization')
+            return;
+        }
+        if (_isUndefined(event_name) || typeof event_name !== 'string') {
+            console.error('No event name provided to usermaven.capture')
+            return
+        }
+        // if (_.isBlockedUA(userAgent)) {
+        //   return
+        // }
+
+
+        let data = {
+            event: event_name + (properties['$event_type'] ? '_' + properties['$event_type'] : ''),
+            properties: this._calculate_event_properties(event_name, properties),
+        };
+
+        data = _copyAndTruncateStrings(data, this.get_config('properties_string_max_length'))
+
+        // send event if there is a tagname available
+        if (data.properties?.autocapture_attributes?.tag_name) {
+            this.track("$autocapture", data.properties)
+            // this.track(data.event, data.properties)
+        }
+
+        // send event if the event is $scroll
+        if (event_name === '$scroll') {
+            this.track(event_name, data.properties)
+        }
+
+        // send event if the event is $form
+        if (event_name === '$form') {
+            this.track(event_name, data.properties)
+        }
+
+    }
+
+    _calculate_event_properties(event_name, event_properties) {
+        // set defaults
+        let properties = event_properties || {}
+
+        if (event_name === '$snapshot' || event_name === '$scroll' || event_name === '$form') {
+            return properties
+        }
+
+        if (_isArray(this.propertyBlacklist)) {
+            _each(this.propertyBlacklist, function (blacklisted_prop) {
+                delete properties[blacklisted_prop]
+            })
+        } else {
+            console.error('Invalid value for property_blacklist config: ' + this.propertyBlacklist)
+        }
+
+        // assign first element from $elements only
+        let attributes = {};
+        const elements = properties['$elements'] || []
+        if (elements.length) {
+            attributes = elements[0];
+        }
+
+        properties['autocapture_attributes'] = attributes;
+        properties['autocapture_attributes']["el_text"] = properties['autocapture_attributes']["$el_text"] ?? "";
+        properties['autocapture_attributes']["event_type"] = properties["$event_type"] ?? "";
+        ['$ce_version', "$event_type", "$initial_referrer", "$initial_referring_domain", "$referrer", "$referring_domain", "$elements"].forEach((key) => {
+            delete properties[key]
+        })
+        // TODO: later remove this from the autotrack code.
+        delete properties['autocapture_attributes']["$el_text"];
+        delete properties['autocapture_attributes']["nth_child"];
+        delete properties['autocapture_attributes']["nth_of_type"];
+        return properties
+    }
+}
+
+function enableAutoPageviews (t: UsermavenClient) {
+    const page = () => t.track("pageview");
+    // Attach pushState and popState listeners
+    const originalPushState = history.pushState;
+    if (originalPushState) {
+        // eslint-disable-next-line functional/immutable-data
+        history.pushState = function (data, title, url) {
+            originalPushState.apply(this, [data, title, url]);
+            page();
+        };
+        addEventListener('popstate', page);
+    }
+
+    addEventListener('hashchange', page);
+}
+
+function interceptSegmentCalls(t: UsermavenClient) {
+    let win = window as any;
+    if (!win.analytics) {
+        win.analytics = [];
+    }
+    t.interceptAnalytics(win.analytics);
+}
+
+
+/utils.ts
+
+import { getLogger } from './log';
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type Breaker = {}
+export type EventHandler = (event: Event) => boolean | void
+const ObjProto = Object.prototype
+const toString = ObjProto.toString
+const hasOwnProperty = ObjProto.hasOwnProperty
+
+
+const ArrayProto = Array.prototype
+const nativeForEach = ArrayProto.forEach,
+    nativeIndexOf = ArrayProto.indexOf,
+    nativeIsArray = Array.isArray,
+    breaker: Breaker = {}
+
+
+export const _isArray =
+    nativeIsArray ||
+    function (obj: any): obj is any[] {
+        return toString.call(obj) === '[object Array]'
+}
+
+export function _eachArray<E = any>(
+    obj: E[] | null | undefined,
+    iterator: (value: E, key: number) => void | Breaker,
+    thisArg?: any
+): void {
+    if (Array.isArray(obj)) {
+        if (nativeForEach && obj.forEach === nativeForEach) {
+            obj.forEach(iterator, thisArg)
+        } else if ('length' in obj && obj.length === +obj.length) {
+            for (let i = 0, l = obj.length; i < l; i++) {
+                if (i in obj && iterator.call(thisArg, obj[i], i) === breaker) {
+                    return
+                }
+            }
+        }
+    }
+}
+// Embed part of the Underscore Library
+export const _trim = function (str: string): string {
+    return str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '')
+}
+    
+export const _bind_instance_methods = function (obj: Record<string, any>): void {
+    for (const func in obj) {
+        if (typeof obj[func] === 'function') {
+            obj[func] = obj[func].bind(obj)
+        }
+    }
+}
+
+/**
+ * @param {*=} obj
+ * @param {function(...*)=} iterator
+ * @param {Object=} thisArg
+ */
+ export function _each(obj: any, iterator: (value: any, key: any) => void | Breaker, thisArg?: any): void {
+    if (obj === null || obj === undefined) {
+        return
+    }
+    if (nativeForEach && Array.isArray(obj) && obj.forEach === nativeForEach) {
+        obj.forEach(iterator, thisArg)
+    } else if ('length' in obj && obj.length === +obj.length) {
+        for (let i = 0, l = obj.length; i < l; i++) {
+            if (i in obj && iterator.call(thisArg, obj[i], i) === breaker) {
+                return
+            }
+        }
+    } else {
+        for (const key in obj) {
+            if (hasOwnProperty.call(obj, key)) {
+                if (iterator.call(thisArg, obj[key], key) === breaker) {
+                    return
+                }
+            }
+        }
+    }
+}
+export const _extend = function (obj: Record<string, any>, ...args: Record<string, any>[]): Record<string, any> {
+    _eachArray(args, function (source) {
+        for (const prop in source) {
+            if (source[prop] !== void 0) {
+                obj[prop] = source[prop]
+            }
+        }
+    })
+    return obj
+}
+export function _includes<T = any>(str: T[] | string, needle: T): boolean {
+    return (str as any).indexOf(needle) !== -1
+}
+
+// from a comment on http://dbj.org/dbj/?p=286
+// fails on only one very rare and deliberate custom object:
+// let bomb = { toString : undefined, valueOf: function(o) { return "function BOMBA!"; }};
+export const _isFunction = function (f: any): f is (...args: any[]) => any {
+    try {
+        return /^\s*\bfunction\b/.test(f)
+    } catch (x) {
+        return false
+    }
+}
+export const _isUndefined = function (obj: any): obj is undefined {
+    return obj === void 0
+}
+
+export const _register_event = (function () {
+    // written by Dean Edwards, 2005
+    // with input from Tino Zijdel - crisp@xs4all.nl
+    // with input from Carl Sverre - mail@carlsverre.com
+    // with input from PostHog
+    // http://dean.edwards.name/weblog/2005/10/add-event/
+    // https://gist.github.com/1930440
+
+    /**
+     * @param {Object} element
+     * @param {string} type
+     * @param {function(...*)} handler
+     * @param {boolean=} oldSchool
+     * @param {boolean=} useCapture
+     */
+    const register_event = function (
+        element: Element | Window | Document | Node,
+        type: string,
+        handler: EventHandler,
+        oldSchool?: boolean,
+        useCapture?: boolean
+    ) {
+        if (!element) {
+            getLogger().error('No valid element provided to register_event')
+            return
+        }
+
+        if (element.addEventListener && !oldSchool) {
+            element.addEventListener(type, handler, !!useCapture)
+        } else {
+            const ontype = 'on' + type
+            const old_handler = (element as any)[ontype] // can be undefined
+            ;(element as any)[ontype] = makeHandler(element, handler, old_handler)
+        }
+    }
+
+    function makeHandler(
+        element: Element | Window | Document | Node,
+        new_handler: EventHandler,
+        old_handlers: EventHandler
+    ) {
+        return function (event: Event): boolean | void {
+            event = event || fixEvent(window.event)
+
+            // this basically happens in firefox whenever another script
+            // overwrites the onload callback and doesn't pass the event
+            // object to previously defined callbacks.  All the browsers
+            // that don't define window.event implement addEventListener
+            // so the dom_loaded handler will still be fired as usual.
+            if (!event) {
+                return undefined
+            }
+
+            let ret = true
+            let old_result: any
+
+            if (_isFunction(old_handlers)) {
+                old_result = old_handlers(event)
+            }
+            const new_result = new_handler.call(element, event)
+
+            if (false === old_result || false === new_result) {
+                ret = false
+            }
+
+            return ret
+        }
+    }
+
+    function fixEvent(event: Event | undefined): Event | undefined {
+        if (event) {
+            event.preventDefault = fixEvent.preventDefault
+            event.stopPropagation = fixEvent.stopPropagation
+        }
+        return event
+    }
+    fixEvent.preventDefault = function () {
+        ;(this as any as Event).returnValue = false
+    }
+    fixEvent.stopPropagation = function () {
+        ;(this as any as Event).cancelBubble = true
+    }
+
+    return register_event
+})()
+
+
+export const _safewrap = function <F extends (...args: any[]) => any = (...args: any[]) => any>(f: F): F {
+    return function (...args) {
+        try {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            return f.apply(this, args)
+        } catch (e) {
+            getLogger().error('Implementation error. Please turn on debug and contact support@usermaven.com.', e)
+            // if (Config.DEBUG) {
+            //     getLogger.critical(e)
+            // }
+        }
+    } as F
+}
+
+
+export const _safewrap_instance_methods = function (obj: Record<string, any>): void {
+    for (const func in obj) {
+        if (typeof obj[func] === 'function') {
+            obj[func] = _safewrap(obj[func])
+        }
+    }
+}
+
+const COPY_IN_PROGRESS_ATTRIBUTE =
+    typeof Symbol !== 'undefined' ? Symbol('__deepCircularCopyInProgress__') : '__deepCircularCopyInProgress__'
+
+
+/**
+ * Deep copies an object.
+ * It handles cycles by replacing all references to them with `undefined`
+ * Also supports customizing native values
+ *
+ * @param value
+ * @param customizer
+ * @param [key] if provided this is the object key associated with the value to be copied. It allows the customizer function to have context when it runs
+ * @returns {{}|undefined|*}
+ */
+ function deepCircularCopy<T extends Record<string, any> = Record<string, any>>(
+    value: T,
+    customizer?: <K extends keyof T = keyof T>(value: T[K], key?: K) => T[K],
+    key?: string
+): T | undefined {
+    if (value !== Object(value)) return customizer ? customizer(value as any, key) : value // primitive value
+
+    if (value[COPY_IN_PROGRESS_ATTRIBUTE as any]) return undefined
+    ;(value as any)[COPY_IN_PROGRESS_ATTRIBUTE] = true
+    let result: T
+
+    if (_isArray(value)) {
+        result = [] as any as T
+        _eachArray(value, (it) => {
+            result.push(deepCircularCopy(it, customizer))
+        })
+    } else {
+        result = {} as T
+        _each(value, (val, key) => {
+            if (key !== COPY_IN_PROGRESS_ATTRIBUTE) {
+                ;(result as any)[key] = deepCircularCopy(val, customizer, key)
+            }
+        })
+    }
+    delete value[COPY_IN_PROGRESS_ATTRIBUTE as any]
+    return result
+}
+
+
+const LONG_STRINGS_ALLOW_LIST = ['$performance_raw']
+
+export function _copyAndTruncateStrings<T extends Record<string, any> = Record<string, any>>(
+    object: T,
+    maxStringLength: number | null
+): T {
+    return deepCircularCopy(object, (value: any, key) => {
+        if (key && LONG_STRINGS_ALLOW_LIST.indexOf(key as string) > -1) {
+            return value
+        }
+        if (typeof value === 'string' && maxStringLength !== null) {
+            return (value as string).slice(0, maxStringLength)
+        }
+        return value
+    }) as T
+}
+
+// This is to block various web spiders from executing our JS and
+// sending false capturing data
+export const _isBlockedUA = function (ua: string): boolean {
+    if (
+        /(google web preview|baiduspider|yandexbot|bingbot|googlebot|yahoo! slurp|ahrefsbot|facebookexternalhit|facebookcatalog)/i.test(
+            ua
+        )
+    ) {
+        return true
+    }
+    return false
+}
+
+// Function to find the closest link element
+export function _findClosestLink(element: HTMLElement | null): HTMLElement | null {
+    while (element && element.tagName) {
+        if (element.tagName.toLowerCase() == 'a') {
+            return element;
+        }
+        element = element.parentNode as HTMLElement | null;
+    }
+    return null;
+}
+
+
+export function _cleanObject(obj: Record<string, any>) {
+    for (let propName in obj) {
+        if (obj[propName] === '' || obj[propName] === null || obj[propName] === undefined || (typeof obj[propName] === 'object' && Object.keys(obj[propName]).length === 0)) {
+            delete obj[propName];
+        }
+    }
+    return obj;
+}
+
+/window.js
+
+/**
+ * Checks if global variable 'window' is available. If it's available,
+ * code runs in browser environment
+ */
+import { getLogger } from "./log"
+
+export function isWindowAvailable(warnMsg = undefined) {
+  //here we check not only of window object is globally available, but also if it's not a fake one
+  //react-native do have a window object, but it's not a real one: https://stackoverflow.com/questions/49911424/what-does-the-variable-window-represent-in-react-native
+  const windowAvailable = !!globalThis.window && !!globalThis.window.document && !!globalThis.window.location
+
+  if (!windowAvailable && warnMsg) {
+    getLogger().warn(warnMsg);
+  }
+  return windowAvailable;
+}
+
+
+/**
+ * @param msg
+ * @return {Window}
+ */
+export function requireWindow(msg = undefined) {
+  if (!isWindowAvailable()) {
+    throw new Error(msg || "window' is not available. Seems like this code runs outside browser environment. It shouldn't happen")
+  }
+  return window;
+}
+
