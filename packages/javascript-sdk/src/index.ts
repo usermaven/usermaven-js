@@ -26,19 +26,8 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
     return client;
 }
 
-function initFromScript() {
-    let script: HTMLScriptElement | null = document.currentScript as HTMLScriptElement;
-
-    // If currentScript is null (which can happen in some browsers), try to find the script tag
-    if (!script) {
-        const scripts = document.getElementsByTagName('script');
-        script = scripts[scripts.length - 1];
-    }
-
-    if (!script) {
-        console.error('Unable to find Usermaven script tag');
-        return;
-    }
+function initFromScript(script: HTMLScriptElement) {
+    console.log('script', script);
 
     const config: Partial<Config> = {
         apiKey: script.getAttribute('data-key') || undefined,
@@ -69,21 +58,37 @@ function initFromScript() {
         compatMode: script.getAttribute('data-compat-mode') === 'true',
     };
 
+    console.log('config', config);
+
     const client = createUsermavenClient(config);
 
     // Expose the client globally
     (window as any).usermaven = client;
 }
 
-// Check if we're in a browser environment
-if (typeof window !== 'undefined') {
-    // If the script is loaded with defer or async, we need to wait for the DOM to be ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initFromScript);
-    } else {
-        initFromScript();
+// Wrap the initialization in an IIFE
+(function (document, window) {
+    // Capture the current script
+    const currentScript = document.currentScript as HTMLScriptElement;
+
+    function initialize() {
+        if (currentScript) {
+            initFromScript(currentScript);
+        } else {
+            console.error('Unable to find Usermaven script tag');
+        }
     }
-}
+
+    // Check if we're in a browser environment
+    if (typeof window !== 'undefined') {
+        // If the script is loaded with defer or async, we need to wait for the DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initialize);
+        } else {
+            initialize();
+        }
+    }
+})(document, window);
 
 export { createUsermavenClient, Config, UserProps, EventPayload, LogLevel };
 
