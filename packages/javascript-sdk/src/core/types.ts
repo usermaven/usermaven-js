@@ -11,3 +11,12 @@ export interface EventPayload {
 export interface Transport {
     send(payload: any): Promise<void>;
 }
+
+export interface UserProps {
+    id?: string;
+    email?: string;
+    [key: string]: any;
+}
+
+
+

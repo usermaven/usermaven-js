@@ -5,8 +5,9 @@ export default defineConfig({
     build: {
         lib: {
             entry: path.resolve(__dirname, 'src/index.ts'),
-            name: 'UsermavenSDK',
+            name: 'Usermaven',
             fileName: (format) => `usermaven-js-sdk.${format}.js`,
+            formats: ['es', 'umd'],
         },
         rollupOptions: {
             output: {
@@ -16,8 +17,10 @@ export default defineConfig({
             },
         },
     },
+    server: {
+        open: '/examples/index.html',
+    },
     test: {
-        // Configure Vitest options here
         globals: true,
         environment: 'jsdom',
     },

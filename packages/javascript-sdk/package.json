@@ -8,7 +8,6 @@
   "files": [
     "dist"
   ],
-  "author": "Usermaven <hello@usermaven.com>",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -23,7 +22,6 @@
     "analytics",
     "tracking"
   ],
-  "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^18.15.11",

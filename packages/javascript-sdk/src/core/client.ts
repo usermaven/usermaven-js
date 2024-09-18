@@ -24,7 +24,7 @@ export class UsermavenClient {
 
     constructor(config: Config) {
         this.config = config;
-        this.logger = new Logger(config.logLevel);
+        this.logger = new Logger(config.logLevel || 1);
         this.cookieManager = new CookieManager(config.cookieDomain, config.cookieName);
         this.transport = this.initializeTransport();
         this.persistence = this.initializePersistence();
@@ -42,10 +42,35 @@ export class UsermavenClient {
         }
     }
 
+    public init(config: Partial<Config>): void {
+        // Merge the new config with the existing one
+        this.config = { ...this.config, ...config };
+
+        // Reinitialize components with the new config
+        this.logger = new Logger(this.config.logLevel || 1);
+        this.cookieManager = new CookieManager(this.config.cookieDomain, this.config.cookieName);
+        this.transport = this.initializeTransport();
+        this.persistence = this.initializePersistence();
+
+        if (this.config.autocapture) {
+            this.autoCapture = new AutoCapture(this);
+        }
+
+        if (this.config.formTracking) {
+            this.formTracking = new FormTracking(this);
+        }
+
+        if (this.config.autoPageview) {
+            this.pageviewTracking = new PageviewTracking(this);
+        }
+
+        this.logger.info('Usermaven client initialized');
+    }
+
     private initializeTransport(): Transport {
         if (this.config.useBeaconApi && navigator.sendBeacon) {
             return new BeaconTransport(this.config.trackingHost);
-        } else if (this.config.forceUseFetch || !window.XMLHttpRequest) {
+        } else if (this.config.forceUseFetch || !window?.XMLHttpRequest) {
             return new FetchTransport(this.config.trackingHost);
         } else {
             return new XhrTransport(this.config.trackingHost);
