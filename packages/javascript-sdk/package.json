@@ -16,9 +16,10 @@
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
+    "mock": "node server/mockServer.js",
     "example:build": "tsc examples/test.ts --outDir examples",
     "example:serve": "vite --config vite.config.ts",
-    "start": "npm run example:build && concurrently \"npm run dev\" \"npm run example:serve\""
+    "start": "concurrently \"npm run example:serve\" \"npm run mock\""
   },
   "keywords": [
     "usermaven",
@@ -30,7 +31,11 @@
     "@types/node": "^18.15.11",
     "@typescript-eslint/eslint-plugin": "^5.57.1",
     "@typescript-eslint/parser": "^5.57.1",
+    "body-parser": "^1.20.3",
+    "concurrently": "^9.0.1",
+    "cors": "^2.8.5",
     "eslint": "^8.37.0",
+    "express": "^4.21.0",
     "prettier": "^2.8.7",
     "typescript": "^5.0.3",
     "vite": "^4.2.1",
