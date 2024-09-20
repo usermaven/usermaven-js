@@ -18,3 +18,15 @@ export function debounce(func: Function, wait: number): Function {
         timeout = setTimeout(later, wait);
     };
 }
+
+export function parseQueryString(queryString: string): Record<string, string> {
+    const params: Record<string, string> = {};
+    const queries = queryString.substring(1).split('&');
+
+    for (let i = 0; i < queries.length; i++) {
+        const pair = queries[i].split('=');
+        params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+    }
+
+    return params;
+}

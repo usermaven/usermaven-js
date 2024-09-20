@@ -10,7 +10,7 @@ export class PageviewTracking {
     }
 
     private trackInitialPageview(): void {
-        this.client.pageview();
+        this.client.track('pageview');
     }
 
     private initializePageviewTracking(): void {
@@ -23,6 +23,6 @@ export class PageviewTracking {
     }
 
     private handlePageview(): void {
-        this.client.pageview();
+        this.client.track('pageview');
     }
 }

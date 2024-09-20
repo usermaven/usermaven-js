@@ -24,13 +24,17 @@ export class FormTracking {
         });
 
         const eventData = {
-            formId: form.id,
-            formName: form.name,
-            formAction: form.action,
-            formMethod: form.method,
-            formFields,
+            autocapture_attributes: {
+                tag_name: 'form',
+                attr__id: form.id,
+                attr__name: form.name,
+                attr__action: form.action,
+                attr__method: form.method,
+                event_type: 'submit'
+            },
+            form_fields: formFields
         };
 
-        this.client.track('form_submit', eventData);
+        this.client.track('$form', eventData);
     }
 }

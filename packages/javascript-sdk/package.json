@@ -19,7 +19,7 @@
     "mock": "node server/mockServer.js",
     "example:build": "tsc examples/test.ts --outDir examples",
     "example:serve": "vite --config vite.config.ts",
-    "start": "concurrently \"npm run example:serve\" \"npm run mock\""
+    "start": "concurrently \"npm run example:serve\" \"npm run mock\" \"npm run dev\""
   },
   "keywords": [
     "usermaven",
@@ -32,13 +32,17 @@
     "@typescript-eslint/eslint-plugin": "^5.57.1",
     "@typescript-eslint/parser": "^5.57.1",
     "body-parser": "^1.20.3",
+    "chalk": "^5.3.0",
+    "colors": "^1.4.0",
     "concurrently": "^9.0.1",
     "cors": "^2.8.5",
     "eslint": "^8.37.0",
     "express": "^4.21.0",
+    "morgan": "^1.10.0",
     "prettier": "^2.8.7",
     "typescript": "^5.0.3",
     "vite": "^4.2.1",
-    "vitest": "^0.29.8"
+    "vitest": "^0.29.8",
+    "winston": "^3.14.2"
   }
 }

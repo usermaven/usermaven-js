@@ -17,21 +17,22 @@ export class AutoCapture {
     private handleClick(event: MouseEvent): void {
         const target = event.target as HTMLElement;
         const eventData = {
-            type: 'click',
-            target: {
-                tagName: target.tagName,
-                id: target.id,
-                className: target.className,
-                text: target.textContent?.trim().substring(0, 50),
-            },
+            autocapture_attributes: {
+                tag_name: target.tagName.toLowerCase(),
+                classes: Array.from(target.classList),
+                attr__id: target.id,
+                attr__class: target.className,
+                el_text: target.textContent?.trim().substring(0, 50) || "",
+                event_type: "click"
+            }
         };
-        this.client.track('autocapture', eventData);
+        this.client.track('$autocapture', eventData);
     }
 
     private handleScroll(): void {
         const scrollPercentage = Math.round(
             (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
         );
-        this.client.track('scroll', { percentage: scrollPercentage });
+        this.client.track('$scroll', { percent: scrollPercentage });
     }
 }
