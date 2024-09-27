@@ -29,7 +29,7 @@ export class FetchTransport implements Transport {
             getLogger().debug(`Successfully sent data to ${url}`);
         } catch (error) {
             getLogger().error(`Failed to send data to ${url}: ${error.message}`, jsonPayload, error);
-            throw error;
+            throw error; // Rethrow the error to trigger retry mechanism
         }
     }
 

@@ -1,6 +1,8 @@
+// src/core/client.ts
+
 import { Config } from './config';
 import { UserProps, EventPayload, Transport } from './types';
-import { Logger } from '../utils/logger';
+import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
 import { AutoCapture } from '../tracking/autocapture';
 import { FormTracking } from '../tracking/form-tracking';
@@ -10,7 +12,8 @@ import { FetchTransport } from '../transport/fetch';
 import { XhrTransport } from '../transport/xhr';
 import { LocalStoragePersistence } from '../persistence/local-storage';
 import { MemoryPersistence } from '../persistence/memory';
-import {generateId, parseQueryString} from '../utils/helpers';
+import { generateId, parseQueryString } from '../utils/helpers';
+import { RetryQueue } from '../utils/queue';
 
 export class UsermavenClient {
     private config: Config;
@@ -21,13 +24,17 @@ export class UsermavenClient {
     private autoCapture?: AutoCapture;
     private formTracking?: FormTracking;
     private pageviewTracking?: PageviewTracking;
+    private retryQueue: RetryQueue;
+    private anonymousId: string;
 
     constructor(config: Config) {
         this.config = config;
-        this.logger = new Logger(config.logLevel || 1);
-        this.cookieManager = new CookieManager(config.cookieDomain, config.cookieName);
+        this.logger = getLogger();
+        this.cookieManager = new CookieManager(config.cookieDomain);
         this.transport = this.initializeTransport();
         this.persistence = this.initializePersistence();
+        this.retryQueue = new RetryQueue(this.transport, config.maxSendAttempts, config.minSendTimeout);
+        this.anonymousId = this.getOrCreateAnonymousId();
 
         if (config.autocapture) {
             this.autoCapture = new AutoCapture(this);
@@ -40,18 +47,18 @@ export class UsermavenClient {
         if (config.autoPageview) {
             this.pageviewTracking = new PageviewTracking(this);
         }
+
+        this.logger.info('Usermaven client initialized');
     }
 
-
     public init(config: Partial<Config>): void {
-        // Merge the new config with the existing one
         this.config = { ...this.config, ...config };
-
-        // Reinitialize components with the new config
-        this.logger = new Logger(this.config.logLevel || 1);
-        this.cookieManager = new CookieManager(this.config.cookieDomain, this.config.cookieName);
+        this.logger = getLogger();
+        this.cookieManager = new CookieManager(this.config.cookieDomain);
         this.transport = this.initializeTransport();
         this.persistence = this.initializePersistence();
+        this.retryQueue = new RetryQueue(this.transport, this.config.maxSendAttempts, this.config.minSendTimeout);
+        this.anonymousId = this.getOrCreateAnonymousId();
 
         if (this.config.autocapture) {
             this.autoCapture = new AutoCapture(this);
@@ -65,7 +72,7 @@ export class UsermavenClient {
             this.pageviewTracking = new PageviewTracking(this);
         }
 
-        this.logger.info('Usermaven client initialized');
+        this.logger.info('Usermaven client reinitialized');
     }
 
     private initializeTransport(): Transport {
@@ -86,6 +93,20 @@ export class UsermavenClient {
         }
     }
 
+    private getOrCreateAnonymousId(): string {
+        const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+        let id = this.cookieManager.get(cookieName);
+
+        if (!id) {
+            id = generateId();
+            // Set cookie for 10 years
+            const tenYearsInDays = 365 * 10;
+            this.cookieManager.set(cookieName, id, tenYearsInDays, true, false);
+        }
+
+        return id;
+    }
+
     public identify(userProps: UserProps): void {
         const userId = userProps.id || generateId();
         this.persistence.set('userId', userId);
@@ -95,18 +116,17 @@ export class UsermavenClient {
 
     public track(eventName: string, eventProps?: EventPayload): void {
         const payload = this.createEventPayload(eventName, eventProps);
-        this.transport.send(payload);
+        this.retryQueue.add(payload);
     }
 
     private createEventPayload(eventName: string, eventProps?: EventPayload): any {
         const userProps = this.persistence.get('userProps') || {};
         const userId = this.persistence.get('userId');
-        const anonymousId = this.getCookie(this.config.cookieName || '') || generateId();
 
         return {
             event_id: "",
             user: {
-                anonymous_id: anonymousId,
+                anonymous_id: this.anonymousId,
                 id: userId,
                 ...userProps
             },
@@ -175,5 +195,43 @@ export class UsermavenClient {
 
     public getLogger(): Logger {
         return this.logger;
+    }
+
+    public reset(resetAnonymousId: boolean = false): void {
+        this.persistence.clear();
+        if (resetAnonymousId) {
+            const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+            this.cookieManager.delete(cookieName);
+            this.anonymousId = this.getOrCreateAnonymousId();
+        }
+        this.logger.info('Client reset');
+    }
+
+    public set(properties: Record<string, any>, options?: { eventType?: string, persist?: boolean }): void {
+        const eventType = options?.eventType;
+        const persist = options?.persist ?? true;
+
+        if (eventType) {
+            let current = this.persistence.get(`props_${eventType}`) || {};
+            this.persistence.set(`props_${eventType}`, { ...current, ...properties });
+        } else {
+            let current = this.persistence.get('global_props') || {};
+            this.persistence.set('global_props', { ...current, ...properties });
+        }
+    }
+
+    public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {
+        const eventType = options?.eventType;
+        const persist = options?.persist ?? true;
+
+        if (eventType) {
+            let props = this.persistence.get(`props_${eventType}`) || {};
+            delete props[propertyName];
+            this.persistence.set(`props_${eventType}`, props);
+        } else {
+            let props = this.persistence.get('global_props') || {};
+            delete props[propertyName];
+            this.persistence.set('global_props', props);
+        }
     }
 }

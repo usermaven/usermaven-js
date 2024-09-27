@@ -1,14 +1,22 @@
-export class CookieManager {
-    constructor(private domain: string, private cookieName: string) {}
+// src/utils/cookie.ts
 
-    set(value: string, expirationDays: number = 365): void {
+export class CookieManager {
+    constructor(private domain?: string) {
+        if (!this.domain) {
+            this.domain = window.location.hostname;
+        }
+    }
+
+    set(name: string, value: string, expirationDays: number = 365, secure: boolean = true, httpOnly: boolean = false): void {
         const date = new Date();
         date.setTime(date.getTime() + expirationDays * 24 * 60 * 60 * 1000);
         const expires = `expires=${date.toUTCString()}`;
-        document.cookie = `${this.cookieName}=${value};${expires};path=/;domain=${this.domain}`;
+        const secureFlag = secure ? '; Secure' : '';
+        const httpOnlyFlag = httpOnly ? '; HttpOnly' : '';
+        document.cookie = `${name}=${value};${expires};path=/;domain=${this.domain}${secureFlag}${httpOnlyFlag}`;
     }
 
-    get(name: string = this.cookieName): string | null {
+    get(name: string): string | null {
         const cookieName = `${name}=`;
         const decodedCookie = decodeURIComponent(document.cookie);
         const cookieArray = decodedCookie.split(';');
@@ -21,7 +29,7 @@ export class CookieManager {
         return null;
     }
 
-    delete(): void {
-        document.cookie = `${this.cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;domain=${this.domain}`;
+    delete(name: string): void {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;domain=${this.domain}`;
     }
 }
