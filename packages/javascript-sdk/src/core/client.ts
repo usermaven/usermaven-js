@@ -1,4 +1,3 @@
-// src/core/client.ts
 
 import { Config } from './config';
 import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
@@ -33,7 +32,13 @@ export class UsermavenClient {
         this.cookieManager = new CookieManager(config.cookieDomain);
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
-        this.retryQueue = new RetryQueue(this.transport, config.maxSendAttempts, config.minSendTimeout);
+        this.retryQueue = new RetryQueue(
+            this.transport,
+            config.maxSendAttempts || 3,
+            config.minSendTimeout || 1000,
+            10,
+             500  // Reduced interval to .5 second
+        );
         this.anonymousId = this.getOrCreateAnonymousId();
 
         if (config.autocapture) {
@@ -204,7 +209,7 @@ export class UsermavenClient {
         const eventPayload = this.createEventPayload(typeName, payload);
 
         try {
-            await this.transport.send([eventPayload]);
+            this.retryQueue.add(eventPayload);
             this.logger.debug(`Event tracked: ${typeName}`, [eventPayload]);
         } catch (error) {
             this.logger.error(`Failed to track event: ${typeName}`, error);
@@ -265,9 +270,9 @@ export class UsermavenClient {
             api_key: this.config.apiKey,
             src: "usermaven",
             event_type: eventName,
+            event_attributes: eventProps || {},
             ...globalProps,
             ...eventTypeProps,
-            ...eventProps
         };
     }
 
