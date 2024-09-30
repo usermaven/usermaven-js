@@ -6,46 +6,75 @@ import { Transport } from '../core/types';
 export class RetryQueue {
     private queue: QueueItem[] = [];
     private processing: boolean = false;
+    private batchSize: number;
+    private batchInterval: number;
+    private batchTimeoutId: number | null = null;
 
     constructor(
         private transport: Transport,
         private maxRetries: number = 3,
-        private retryInterval: number = 1000
-    ) {}
+        private retryInterval: number = 1000,
+        batchSize: number = 10,
+        batchInterval: number = 5000
+    ) {
+        this.batchSize = Math.max(1, batchSize);
+        this.batchInterval = Math.max(1000, batchInterval);
+    }
 
     add(payload: any): void {
         this.queue.push({ payload, retries: 0 });
-        if (!this.processing) {
-            this.processQueue();
+        this.scheduleBatch();
+    }
+
+    private scheduleBatch(): void {
+        if (this.batchTimeoutId !== null) {
+            clearTimeout(this.batchTimeoutId);
+        }
+
+        if (this.queue.length >= this.batchSize) {
+            this.processBatch();
+        } else {
+            this.batchTimeoutId = window.setTimeout(() => this.processBatch(), this.batchInterval);
         }
     }
 
-    private async processQueue(): Promise<void> {
-        if (this.queue.length === 0) {
-            this.processing = false;
+    private async processBatch(): Promise<void> {
+        if (this.processing || this.queue.length === 0) {
             return;
         }
 
         this.processing = true;
-        const item = this.queue[0];
+        const batch = this.queue.slice(0, this.batchSize);
+        const payloads = batch.map(item => item.payload);
 
         try {
-            await this.transport.send(item.payload);
-            this.queue.shift(); // Remove the first item if successful
-            getLogger().debug('Successfully sent payload');
+            await this.transport.send(payloads);
+            this.queue.splice(0, batch.length);
+            getLogger().debug(`Successfully sent batch of ${batch.length} payloads`);
         } catch (error) {
+            getLogger().error('Failed to send batch', error);
+            await this.handleBatchFailure(batch);
+        }
+
+        this.processing = false;
+        this.scheduleBatch();
+    }
+
+    private async handleBatchFailure(batch: QueueItem[]): Promise<void> {
+        for (const item of batch) {
             if (item.retries < this.maxRetries) {
                 item.retries++;
                 getLogger().warn(`Retry attempt ${item.retries} for payload`);
-                await this.wait(this.retryInterval);
             } else {
                 getLogger().error('Max retries reached, discarding payload', item.payload);
-                this.queue.shift(); // Remove the item if max retries reached
+                const index = this.queue.indexOf(item);
+                if (index !== -1) {
+                    this.queue.splice(index, 1);
+                }
             }
         }
 
-        // Process next item in the queue
-        this.processQueue();
+        await this.wait(this.retryInterval);
     }
 
     private wait(ms: number): Promise<void> {

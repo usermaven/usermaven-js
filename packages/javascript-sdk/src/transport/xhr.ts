@@ -1,10 +1,10 @@
-import { Transport } from './transport';
+import { Transport } from '../core/types';
 import { getLogger } from '../utils/logger';
 
 export class XhrTransport implements Transport {
     constructor(private trackingHost: string) {}
 
-    send(payload: any): Promise<void> {
+    send(payloads: any[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `${this.trackingHost}/api/v1/event`, true);
@@ -12,7 +12,7 @@ export class XhrTransport implements Transport {
 
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    getLogger().debug("XHR request sent successfully");
+                    getLogger().debug(`Successfully sent ${payloads.length} event(s)`);
                     resolve();
                 } else {
                     reject(new Error(`HTTP error! status: ${xhr.status}`));
@@ -23,7 +23,7 @@ export class XhrTransport implements Transport {
                 reject(new Error('Network error'));
             };
 
-            xhr.send(JSON.stringify(payload));
+            xhr.send(JSON.stringify(payloads));
         });
     }
 }

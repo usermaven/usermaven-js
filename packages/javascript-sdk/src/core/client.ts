@@ -204,8 +204,8 @@ export class UsermavenClient {
         const eventPayload = this.createEventPayload(typeName, payload);
 
         try {
-            await this.transport.send(eventPayload);
-            this.logger.debug(`Event tracked: ${typeName}`, eventPayload);
+            await this.transport.send([eventPayload]);
+            this.logger.debug(`Event tracked: ${typeName}`, [eventPayload]);
         } catch (error) {
             this.logger.error(`Failed to track event: ${typeName}`, error);
         }
@@ -347,12 +347,4 @@ export class UsermavenClient {
         this.logger.debug(`Property unset: ${propertyName}`, `Event type: ${eventType || 'global'}`);
     }
 
-    private manageCrossDomainLinking(options: {
-        cross_domain_linking?: boolean;
-        domains?: string[];
-        cookiePolicy?: Policy;
-    }): boolean {
-        // ... implementation
-        return true
-    }
 }
