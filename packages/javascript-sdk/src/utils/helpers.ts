@@ -1,5 +1,8 @@
 export function generateId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 }
 
 export function isValidEmail(email: string): boolean {
@@ -17,6 +20,20 @@ export function debounce(func: Function, wait: number): Function {
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
+}
+
+export function getUtmParams(): Record<string, string> {
+    const utmParams: Record<string, string> = {};
+    const queryParams = parseQueryString(window.location.search);
+    const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+
+    utmKeys.forEach(key => {
+        if (queryParams[key]) {
+            utmParams[key.replace('utm_', '')] = queryParams[key];
+        }
+    });
+
+    return utmParams;
 }
 
 export function parseQueryString(queryString: string): Record<string, string> {

@@ -1,7 +1,7 @@
 // src/core/client.ts
 
 import { Config } from './config';
-import {UserProps, EventPayload, Transport, CompanyProps} from './types';
+import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
 import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
 import { AutoCapture } from '../tracking/autocapture';
@@ -75,6 +75,43 @@ export class UsermavenClient {
         this.logger.info('Usermaven client reinitialized');
     }
 
+    private manageCrossDomainLinking(): void {
+        if (!this.config.crossDomainLinking || !this.config.domains) {
+            return;
+        }
+
+        const domains = this.config.domains.split(',').map(d => d.trim());
+        const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+
+        document.addEventListener('click', (event) => {
+            const target = this.findClosestLink(event.target as HTMLElement);
+            if (!target) return;
+
+            const href = target.getAttribute('href');
+            if (!href || !href.startsWith('http')) return;
+
+            const url = new URL(href);
+            if (url.hostname === window.location.hostname) return;
+
+            if (domains.includes(url.hostname)) {
+                const cookie = this.cookieManager.get(cookieName);
+                if (cookie) {
+                    url.searchParams.append('_um', cookie);
+                    target.setAttribute('href', url.toString());
+                }
+            }
+        });
+
+        this.logger.debug('Cross-domain linking initialized');
+    }
+
+    private findClosestLink(element: HTMLElement | null): HTMLAnchorElement | null {
+        while (element && element.tagName !== 'A') {
+            element = element.parentElement;
+        }
+        return element as HTMLAnchorElement;
+    }
+
     private initializeTransport(config: Config): Transport {
         if (config.useBeaconApi && navigator.sendBeacon) {
             return new BeaconTransport(config.trackingHost);
@@ -98,7 +135,21 @@ export class UsermavenClient {
         let id = this.cookieManager.get(cookieName);
 
         if (!id) {
-            id = generateId();
+            if (this.config.crossDomainLinking) {
+                const urlParams = new URLSearchParams(window.location.search);
+                const queryId = urlParams.get('_um');
+
+                const urlHash = window.location.hash.substring(1);
+                const hashedValues = urlHash.split("~");
+                const fragmentId = hashedValues.length > 1 ? hashedValues[1] : undefined;
+
+                id = queryId || fragmentId;
+            }
+
+            if (!id) {
+                id = generateId();
+            }
+
             // Set cookie for 10 years
             const tenYearsInDays = 365 * 10;
             this.cookieManager.set(cookieName, id, tenYearsInDays, true, false);
@@ -106,7 +157,6 @@ export class UsermavenClient {
 
         return id;
     }
-
 
     public async id(userData: UserProps, doNotSendEvent: boolean = false): Promise<void> {
         if (!isObject(userData)) {
@@ -295,5 +345,14 @@ export class UsermavenClient {
         }
 
         this.logger.debug(`Property unset: ${propertyName}`, `Event type: ${eventType || 'global'}`);
+    }
+
+    private manageCrossDomainLinking(options: {
+        cross_domain_linking?: boolean;
+        domains?: string[];
+        cookiePolicy?: Policy;
+    }): boolean {
+        // ... implementation
+        return true
     }
 }

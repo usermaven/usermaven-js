@@ -1,5 +1,3 @@
-// src/persistence/local-storage.ts
-
 export class LocalStoragePersistence {
     private storage: Record<string, any> = {};
     private prefix: string;
@@ -11,6 +9,7 @@ export class LocalStoragePersistence {
 
     set(key: string, value: any): void {
         this.storage[key] = value;
+        this.save();
     }
 
     get(key: string): any {
@@ -19,9 +18,15 @@ export class LocalStoragePersistence {
 
     remove(key: string): void {
         delete this.storage[key];
+        this.save();
     }
 
-    save(): void {
+    clear(): void {
+        this.storage = {};
+        this.save();
+    }
+
+    private save(): void {
         try {
             localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {
@@ -38,10 +43,5 @@ export class LocalStoragePersistence {
         } catch (error) {
             console.error('Error loading from localStorage:', error);
         }
-    }
-
-    clear(): void {
-        this.storage = {};
-        localStorage.removeItem(this.prefix + 'data');
     }
 }
