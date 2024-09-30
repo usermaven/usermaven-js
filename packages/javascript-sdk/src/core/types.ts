@@ -20,3 +20,10 @@ export interface UserProps {
 
 
 export type Policy = 'strict' | 'keep' | 'comply';
+
+export interface CompanyProps {
+    id: string;
+    name: string;
+    created_at: string;
+    [key: string]: any;
+}

@@ -1,5 +1,8 @@
+// src/core/config.ts
+
 import { LogLevel } from '../utils/logger';
-import { Policy } from './types';
+
+export type Policy = 'strict' | 'keep' | 'comply';
 
 export interface Config {
     apiKey: string;
@@ -31,8 +34,6 @@ export interface Config {
     namespace?: string;
     crossDomainLinking?: boolean;
     domains?: string;
-    compatMode?: boolean;
-    fetch?: any;
 }
 
 export const defaultConfig: Partial<Config> = {
@@ -56,5 +57,4 @@ export const defaultConfig: Partial<Config> = {
     propertiesStringMaxLength: null,
     propertyBlacklist: [],
     crossDomainLinking: true,
-    compatMode: false,
 };

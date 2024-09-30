@@ -20,7 +20,6 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
     const client = new UsermavenClient(mergedConfig);
 
     // Initialize extensions
-    new RageClick(client);
     new ScrollDepth(client);
 
     return client;
@@ -55,7 +54,6 @@ function initFromScript(script: HTMLScriptElement) {
         namespace: script.getAttribute('data-namespace') || undefined,
         crossDomainLinking: script.getAttribute('data-cross-domain-linking') !== 'false',
         domains: script.getAttribute('data-domains') || undefined,
-        compatMode: script.getAttribute('data-compat-mode') === 'true',
     };
 
     console.log('config', config);

@@ -30,3 +30,11 @@ export function parseQueryString(queryString: string): Record<string, string> {
 
     return params;
 }
+
+export function isString(value: any): boolean {
+    return typeof value === 'string' || value instanceof String;
+}
+
+export function isObject(value: any): boolean {
+    return value && typeof value === 'object' && value.constructor === Object;
+}

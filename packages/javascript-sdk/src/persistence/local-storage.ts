@@ -1,35 +1,47 @@
+// src/persistence/local-storage.ts
+
 export class LocalStoragePersistence {
+    private storage: Record<string, any> = {};
     private prefix: string;
 
     constructor(apiKey: string) {
         this.prefix = `usermaven_${apiKey}_`;
+        this.load();
     }
 
     set(key: string, value: any): void {
+        this.storage[key] = value;
+    }
+
+    get(key: string): any {
+        return this.storage[key];
+    }
+
+    remove(key: string): void {
+        delete this.storage[key];
+    }
+
+    save(): void {
         try {
-            localStorage.setItem(this.prefix + key, JSON.stringify(value));
+            localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
     }
 
-    get(key: string): any {
+    private load(): void {
         try {
-            const value = localStorage.getItem(this.prefix + key);
-            return value ? JSON.parse(value) : null;
+            const data = localStorage.getItem(this.prefix + 'data');
+            if (data) {
+                this.storage = JSON.parse(data);
+            }
         } catch (error) {
-            console.error('Error retrieving from localStorage:', error);
-            return null;
+            console.error('Error loading from localStorage:', error);
         }
     }
 
-    remove(key: string): void {
-        localStorage.removeItem(this.prefix + key);
-    }
-
     clear(): void {
-        Object.keys(localStorage)
-            .filter(key => key.startsWith(this.prefix))
-            .forEach(key => localStorage.removeItem(key));
+        this.storage = {};
+        localStorage.removeItem(this.prefix + 'data');
     }
 }

@@ -1,7 +1,7 @@
 // src/core/client.ts
 
 import { Config } from './config';
-import { UserProps, EventPayload, Transport } from './types';
+import {UserProps, EventPayload, Transport, CompanyProps} from './types';
 import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
 import { AutoCapture } from '../tracking/autocapture';
@@ -12,7 +12,7 @@ import { FetchTransport } from '../transport/fetch';
 import { XhrTransport } from '../transport/xhr';
 import { LocalStoragePersistence } from '../persistence/local-storage';
 import { MemoryPersistence } from '../persistence/memory';
-import { generateId, parseQueryString } from '../utils/helpers';
+import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
 import { RetryQueue } from '../utils/queue';
 
 export class UsermavenClient {
@@ -31,7 +31,7 @@ export class UsermavenClient {
         this.config = config;
         this.logger = getLogger();
         this.cookieManager = new CookieManager(config.cookieDomain);
-        this.transport = this.initializeTransport();
+        this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(this.transport, config.maxSendAttempts, config.minSendTimeout);
         this.anonymousId = this.getOrCreateAnonymousId();
@@ -51,11 +51,11 @@ export class UsermavenClient {
         this.logger.info('Usermaven client initialized');
     }
 
-    public init(config: Partial<Config>): void {
+    public init(config: Config): void {
         this.config = { ...this.config, ...config };
         this.logger = getLogger();
         this.cookieManager = new CookieManager(this.config.cookieDomain);
-        this.transport = this.initializeTransport();
+        this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(this.transport, this.config.maxSendAttempts, this.config.minSendTimeout);
         this.anonymousId = this.getOrCreateAnonymousId();
@@ -75,13 +75,13 @@ export class UsermavenClient {
         this.logger.info('Usermaven client reinitialized');
     }
 
-    private initializeTransport(): Transport {
-        if (this.config.useBeaconApi && navigator.sendBeacon) {
-            return new BeaconTransport(this.config.trackingHost);
-        } else if (this.config.forceUseFetch || !window?.XMLHttpRequest) {
-            return new FetchTransport(this.config.trackingHost);
+    private initializeTransport(config: Config): Transport {
+        if (config.useBeaconApi && navigator.sendBeacon) {
+            return new BeaconTransport(config.trackingHost);
+        } else if (config.forceUseFetch || !window.XMLHttpRequest) {
+            return new FetchTransport(config.trackingHost);
         } else {
-            return new XhrTransport(this.config.trackingHost);
+            return new XhrTransport(config.trackingHost);
         }
     }
 
@@ -107,29 +107,95 @@ export class UsermavenClient {
         return id;
     }
 
-    public identify(userProps: UserProps): void {
-        const userId = userProps.id || generateId();
+
+    public async id(userData: UserProps, doNotSendEvent: boolean = false): Promise<void> {
+        if (!isObject(userData)) {
+            this.logger.error('User data must be an object');
+            return;
+        }
+
+        if (userData.email && !isValidEmail(userData.email)) {
+            this.logger.error('Invalid email provided');
+            return;
+        }
+
+        if (!userData.id || !isString(userData.id)) {
+            this.logger.error('User ID must be a string');
+            return;
+        }
+
+        const userId = userData.id || generateId();
         this.persistence.set('userId', userId);
-        this.persistence.set('userProps', userProps);
-        this.track('identify', userProps);
+        this.persistence.set('userProps', userData);
+
+        if (!doNotSendEvent) {
+            const identifyPayload = {
+                ...userData,
+                anonymous_id: this.anonymousId,
+            };
+
+            await this.track('user_identify', identifyPayload);
+        }
+
+        this.logger.info('User identified:', userData);
     }
 
-    public track(eventName: string, eventProps?: EventPayload): void {
-        const payload = this.createEventPayload(eventName, eventProps);
-        this.retryQueue.add(payload);
+    public async track(typeName: string, payload?: EventPayload): Promise<void> {
+        if (!isString(typeName)) {
+            this.logger.error('Event name must be a string');
+            return;
+        }
+
+        if (payload && !isObject(payload)) {
+            this.logger.error('Event payload must be an object');
+            return;
+        }
+
+        const eventPayload = this.createEventPayload(typeName, payload);
+
+        try {
+            await this.transport.send(eventPayload);
+            this.logger.debug(`Event tracked: ${typeName}`, eventPayload);
+        } catch (error) {
+            this.logger.error(`Failed to track event: ${typeName}`, error);
+        }
+    }
+
+    public async group(props: CompanyProps, doNotSendEvent: boolean = false): Promise<void> {
+        if (!isObject(props)) {
+            this.logger.error('Company properties must be an object');
+            return;
+        }
+
+        if (!props.id || !props.name || !props.created_at) {
+            this.logger.error('Company properties must include id, name, and created_at');
+            return;
+        }
+
+        this.persistence.set('companyProps', props);
+
+        if (!doNotSendEvent) {
+            await this.track('group', props);
+        }
+
+        this.logger.info('Company identified:', props);
     }
 
     private createEventPayload(eventName: string, eventProps?: EventPayload): any {
         const userProps = this.persistence.get('userProps') || {};
+        const companyProps = this.persistence.get('companyProps') || {};
         const userId = this.persistence.get('userId');
+        const globalProps = this.persistence.get('global_props') || {};
+        const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
 
         return {
-            event_id: "",
+            event_id: generateId(),
             user: {
                 anonymous_id: this.anonymousId,
                 id: userId,
                 ...userProps
             },
+            company: companyProps,
             ids: this.getThirdPartyIds(),
             utc_time: new Date().toISOString(),
             local_tz_offset: new Date().getTimezoneOffset(),
@@ -149,6 +215,8 @@ export class UsermavenClient {
             api_key: this.config.apiKey,
             src: "usermaven",
             event_type: eventName,
+            ...globalProps,
+            ...eventTypeProps,
             ...eventProps
         };
     }
@@ -197,27 +265,15 @@ export class UsermavenClient {
         return this.logger;
     }
 
-    public reset(resetAnonymousId: boolean = false): void {
+    public async reset(resetAnonId: boolean = false): Promise<void> {
         this.persistence.clear();
-        if (resetAnonymousId) {
-            const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
-            this.cookieManager.delete(cookieName);
+
+        if (resetAnonId) {
+            this.cookieManager.delete(this.config.cookieName || `__eventn_id_${this.config.apiKey}`);
             this.anonymousId = this.getOrCreateAnonymousId();
         }
-        this.logger.info('Client reset');
-    }
 
-    public set(properties: Record<string, any>, options?: { eventType?: string, persist?: boolean }): void {
-        const eventType = options?.eventType;
-        const persist = options?.persist ?? true;
-
-        if (eventType) {
-            let current = this.persistence.get(`props_${eventType}`) || {};
-            this.persistence.set(`props_${eventType}`, { ...current, ...properties });
-        } else {
-            let current = this.persistence.get('global_props') || {};
-            this.persistence.set('global_props', { ...current, ...properties });
-        }
+        this.logger.info('Client state reset', { resetAnonId });
     }
 
     public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {
@@ -233,5 +289,11 @@ export class UsermavenClient {
             delete props[propertyName];
             this.persistence.set('global_props', props);
         }
+
+        if (persist) {
+            this.persistence.save();
+        }
+
+        this.logger.debug(`Property unset: ${propertyName}`, `Event type: ${eventType || 'global'}`);
     }
 }

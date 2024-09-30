@@ -1,19 +1,25 @@
+// src/persistence/memory.ts
+
 export class MemoryPersistence {
-    private storage: Map<string, any> = new Map();
+    private storage: Record<string, any> = {};
 
     set(key: string, value: any): void {
-        this.storage.set(key, value);
+        this.storage[key] = value;
     }
 
     get(key: string): any {
-        return this.storage.get(key);
+        return this.storage[key];
     }
 
     remove(key: string): void {
-        this.storage.delete(key);
+        delete this.storage[key];
+    }
+
+    save(): void {
+        // No-op for memory persistence
     }
 
     clear(): void {
-        this.storage.clear();
+        this.storage = {};
     }
 }
