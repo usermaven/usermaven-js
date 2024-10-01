@@ -5,37 +5,83 @@ export class ScrollDepth {
     private client: UsermavenClient;
     private maxScrollDepth: number = 0;
     private milestones: number[] = [25, 50, 75, 90];
+    private lastScrollDepth: number = 0;
+    private documentElement: HTMLElement;
 
     constructor(client: UsermavenClient) {
         this.client = client;
+        this.documentElement = document.documentElement;
         this.initializeEventListener();
     }
 
     private initializeEventListener(): void {
         window.addEventListener('scroll', debounce(this.handleScroll.bind(this), 250));
+        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
     }
 
-    private handleScroll(): void {
-        const scrollPercentage = this.getScrollPercentage();
+    public track(): void {
+        const scrollDepth = this.getScrollDepth();
 
-        if (scrollPercentage > this.maxScrollDepth) {
-            this.maxScrollDepth = scrollPercentage;
-            this.checkMilestones(scrollPercentage);
+        if (scrollDepth > this.lastScrollDepth) {
+            this.lastScrollDepth = scrollDepth;
+            this.checkMilestones(scrollDepth);
         }
     }
 
-    private getScrollPercentage(): number {
-        const windowHeight = window.innerHeight;
-        const documentHeight = document.documentElement.scrollHeight;
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        return Math.round((scrollTop / (documentHeight - windowHeight)) * 100);
+    public send(eventType = "$scroll"): void {
+        const props = {
+            percent: this.lastScrollDepth,
+            window_height: this.getWindowHeight(),
+            document_height: this.getDocumentHeight(),
+            scroll_distance: this.getScrollDistance()
+        };
+
+        this.client.track(eventType, props);
+    }
+
+    private handleScroll(): void {
+        this.track();
+    }
+
+    private handleVisibilityChange(): void {
+        if (document.visibilityState === 'hidden') {
+            this.send();
+        }
+    }
+
+    private getScrollDepth(): number {
+        const windowHeight = this.getWindowHeight();
+        const docHeight = this.getDocumentHeight();
+        const scrollTop = this.getScrollDistance();
+        const trackLength = docHeight - windowHeight;
+
+        return Math.min(100, Math.floor(scrollTop / trackLength * 100));
+    }
+
+    private getWindowHeight(): number {
+        return window.innerHeight || this.documentElement.clientHeight || document.body.clientHeight || 0;
+    }
+
+    private getDocumentHeight(): number {
+        return Math.max(
+            document.body.scrollHeight || 0,
+            this.documentElement.scrollHeight || 0,
+            document.body.offsetHeight || 0,
+            this.documentElement.offsetHeight || 0,
+            document.body.clientHeight || 0,
+            this.documentElement.clientHeight || 0
+        );
+    }
+
+    private getScrollDistance(): number {
+        return window.pageYOffset || this.documentElement.scrollTop || document.body.scrollTop || 0;
     }
 
     private checkMilestones(scrollPercentage: number): void {
         const reachedMilestones = this.milestones.filter(milestone => scrollPercentage >= milestone);
 
         reachedMilestones.forEach(milestone => {
-            this.client.track('scroll_depth', { depth: milestone });
+            this.send();
             this.milestones = this.milestones.filter(m => m !== milestone);
         });
     }

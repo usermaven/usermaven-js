@@ -54,6 +54,8 @@ function initFromScript(script: HTMLScriptElement) {
         namespace: script.getAttribute('data-namespace') || undefined,
         crossDomainLinking: script.getAttribute('data-cross-domain-linking') !== 'false',
         domains: script.getAttribute('data-domains') || undefined,
+        maskAllText: script.getAttribute('data-mask-all-text') === 'true',
+        maskAllElementAttributes: script.getAttribute('data-mask-all-element-attributes') === 'true',
     };
 
     console.log('config', config);

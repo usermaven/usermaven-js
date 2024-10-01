@@ -3,7 +3,7 @@ import { Config } from './config';
 import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
 import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
-import { AutoCapture } from '../tracking/autocapture';
+import AutoCapture from '../tracking/autocapture';
 import { FormTracking } from '../tracking/form-tracking';
 import { PageviewTracking } from '../tracking/pageviews';
 import { BeaconTransport } from '../transport/beacon';
@@ -41,8 +41,10 @@ export class UsermavenClient {
         );
         this.anonymousId = this.getOrCreateAnonymousId();
 
-        if (config.autocapture) {
-            this.autoCapture = new AutoCapture(this);
+        if (config.autocapture && AutoCapture.enabledForProject(config.apiKey)) {
+            this.autoCapture = new AutoCapture(this, config);
+            // Pass config to AutoCapture constructor
+            this.autoCapture.init();
         }
 
         if (config.formTracking) {

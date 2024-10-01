@@ -1,148 +1,304 @@
-// src/tracking/autocapture.ts
-import { UsermavenClient } from '../core/client';
-import { debounce } from '../utils/helpers';
+import {
+    _bind_instance_methods,
+    _each,
+    _extend,
+    _includes,
+    _isFunction,
+    _isUndefined,
+    _register_event,
+    _safewrap_instance_methods,
+    _trim
+} from '../utils/common';
+import {
+    getClassName,
+    getSafeText,
+    isElementNode,
+    isSensitiveElement,
+    isTag,
+    isTextNode,
+    shouldCaptureDomEvent,
+    shouldCaptureElement,
+    shouldCaptureValue,
+    usefulElements,
+    isAngularStyleAttr,
+    isDocumentFragment,
+} from '../utils/autocapture-utils';
+import { getLogger } from '../utils/logger';
+import {ScrollDepth} from "../extensions/scroll-depth";
+import {UsermavenClient} from "@/core/client";
+import {Config} from "@/core/config";
+import {RageClick} from "../extensions/rage-click";
+import {EventPayload} from "@/core/types";
 
-export class AutoCapture {
+class AutoCapture {
     private client: UsermavenClient;
-    private isListening: boolean = false;
+    private options: Config;
+    private scrollDepth: ScrollDepth | null = null;
+    private rageClick: RageClick | null = null;
 
-    constructor(client: UsermavenClient) {
+    // Constants for custom attributes
+    private static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
+    private static readonly PREVENT_CAPTURE_ATTR = 'data-um-no-capture';
+
+    constructor(client: UsermavenClient, options: Config) {
         this.client = client;
+        this.options = options;
+        this.rageClick = new RageClick(client);
+        this.scrollDepth = new ScrollDepth(client);
+        _bind_instance_methods(this);
+        _safewrap_instance_methods(this);
     }
 
-    public start(): void {
-        if (!this.isListening) {
-            this.initializeEventListeners();
-            this.isListening = true;
-        }
-    }
-
-    public stop(): void {
-        if (this.isListening) {
-            this.removeEventListeners();
-            this.isListening = false;
-        }
-    }
-
-    private initializeEventListeners(): void {
-        document.addEventListener('click', this.handleClick.bind(this), true);
-        document.addEventListener('change', this.handleChange.bind(this), true);
-        document.addEventListener('submit', this.handleSubmit.bind(this), true);
-        window.addEventListener('scroll', debounce(this.handleScroll.bind(this), 500), true);
-        window.addEventListener('popstate', this.handlePopState.bind(this));
-
-        // Optional: for visibility changes (in old code related to scroll-depth)
-        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    }
-
-    private removeEventListeners(): void {
-        document.removeEventListener('click', this.handleClick.bind(this), true);
-        document.removeEventListener('change', this.handleChange.bind(this), true);
-        document.removeEventListener('submit', this.handleSubmit.bind(this), true);
-        window.removeEventListener('scroll', debounce(this.handleScroll.bind(this), 500), true);
-        window.removeEventListener('popstate', this.handlePopState.bind(this));
-        document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    }
-
-
-
-    private getEventTarget(event: Event): HTMLElement | null {
-        return (event.target as HTMLElement) || null;
-    }
-
-    private shouldCaptureEvent(element: HTMLElement, event: Event): boolean {
-        // Exclude elements with 'um-no-capture' class or its parents
-        let currentElement = element;
-        while (currentElement) {
-            if (currentElement.classList.contains('um-no-capture')) {
-                return false;
-            }
-            currentElement = currentElement.parentElement as HTMLElement;
-        }
-
-
-        const config = this.client.getConfig();
-
-
-        if (config.exclude) {
-            const excludeList = config.exclude.split(',');
-            const currentUrl = window.location.href;
-            if (excludeList.some((pattern) => new RegExp(pattern).test(currentUrl))) {
-                return false; // Exclude the event if URL matches the exclude pattern
-            }
-        }
-
-        return true;
-    }
-
-
-    private captureEventData(element: HTMLElement, eventName: string): void {
-        if (!this.shouldCaptureEvent(element, new Event(eventName))) {
+    public init(): void {
+        if (!(document && document.body)) {
+            getLogger().debug('Document not ready yet, trying again in 500 milliseconds...');
+            setTimeout(() => this.init(), 500);
             return;
         }
 
-        const attributes = {
-            tag_name: element.tagName.toLowerCase(),
-            classes: Array.from(element.classList),
-            attr__id: element.id,
-            attr__class: element.className,
-            el_text: element.textContent?.trim().substring(0, this.client.getConfig().propertiesStringMaxLength || 50) || "",
-            event_type: '$autocapture',
-            ...(this.getFormFieldValues(element))
+        this.addDomEventHandlers();
+    }
+
+    private addDomEventHandlers(): void {
+        const handler = (e: Event) => {
+            e = e || window.event;
+            this.captureEvent(e);
         };
 
-        this.client.track('$autocapture', { autocapture_attributes: attributes });
+        _register_event(document, 'submit', handler, false, true);
+        _register_event(document, 'change', handler, false, true);
+        _register_event(document, 'click', handler, false, true);
+        _register_event(document, 'visibilitychange', handler, false, true);
+        _register_event(document, 'scroll', handler, false, true);
+        _register_event(window, 'popstate', handler, false, true);
     }
 
-
-    private handleClick(event: MouseEvent): void {
-        this.captureEventData(event.target as HTMLElement, 'click');
-    }
-
-    private handleChange(event: Event): void {
-        this.captureEventData(event.target as HTMLElement, 'change');
-    }
-
-
-    private handleSubmit(event: Event): void {
-        this.captureEventData(event.target as HTMLElement, 'submit');
-    }
-
-    private handleScroll(): void {
-        const scrollPercentage = Math.round(
-            (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
-        );
-
-        // Send Scroll Depth Event
-        this.client.track('$scroll', { percent: scrollPercentage });
-
-    }
-
-    private handlePopState(): void {
-        this.client.track('$popstate'); // consider pageview?
-    }
-
-    private handleVisibilityChange(): void {
-        if (document.visibilityState === 'hidden') {
-            this.handleScroll(); // Capture scroll depth when page becomes hidden
+    private captureEvent(e: Event): boolean | void {
+        let target = this.getEventTarget(e);
+        if (isTextNode(target)) {
+            target = (target.parentNode || null) as Element | null;
         }
-    }
 
-    private getFormFieldValues(element: HTMLElement) : Record<string, any> {
-        if (element.tagName.toLowerCase() === 'form') {
-            const form = element as HTMLFormElement;
-            const formData = new FormData(form);
-            const formFields: { [key: string]: string } = {};
+        if (e.type === 'scroll') {
+            this.scrollDepth?.track();
+            return true;
+        }
 
-            formData.forEach((value, key) => {
-                if (typeof value === 'string') {
-                    formFields[key] = value;
+        if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
+            this.scrollDepth?.send();
+            return true;
+        }
+
+        if (e.type === 'click' && e instanceof MouseEvent) {
+            this.rageClick?.click(e.clientX, e.clientY, new Date().getTime());
+        }
+
+        if (target && this.shouldCaptureElement(target, e)) {
+            const targetElementList = this.getElementList(target);
+            const elementsJson = this.getElementsJson(targetElementList, e);
+
+            const props = _extend(
+                this.getDefaultProperties(e.type),
+                {
+                    $elements: elementsJson,
                 }
-            });
+            );
 
-            return { form_fields: formFields };
+            this.client.track('$autocapture', props);
+            return true;
         }
-        return {}; // Return empty object for non-form elements
     }
 
+    private shouldCaptureElement(element: Element, event: Event): boolean {
+        // Check for force capture attribute
+        if (element.hasAttribute(AutoCapture.FORCE_CAPTURE_ATTR)) {
+            return true;
+        }
+
+        // Check for prevent capture attribute
+        if (element.hasAttribute(AutoCapture.PREVENT_CAPTURE_ATTR)) {
+            return false;
+        }
+
+        // Default capture logic
+        return shouldCaptureDomEvent(element, event);
+    }
+
+    private getEventTarget(e: Event): Element | null {
+        if (typeof e.target === 'undefined') {
+            return (e.srcElement as Element) || null;
+        } else {
+            if ((e.target as HTMLElement)?.shadowRoot) {
+                return (e.composedPath()[0] as Element) || null;
+            }
+            return (e.target as Element) || null;
+        }
+    }
+
+    private getElementList(target: Element): Element[] {
+        const elementList: Element[] = [target];
+        let curEl: Element | ParentNode = target;
+        while (curEl.parentNode && !isTag(curEl as Element, 'body')) {
+            if (isDocumentFragment(curEl.parentNode)) {
+                elementList.push((curEl.parentNode as any).host);
+                curEl = (curEl.parentNode as any).host;
+            } else {
+                elementList.push(curEl.parentNode as Element);
+                curEl = curEl.parentNode;
+            }
+        }
+        return elementList;
+    }
+
+    private getElementsJson(targetElementList: Element[], e: Event): any[] {
+        const elementsJson: any[] = [];
+        let href;
+
+        _each(targetElementList, (el) => {
+            if (isTag(el, 'a')) {
+                href = el.getAttribute('href');
+                href = shouldCaptureElement(el) && shouldCaptureValue(href) && href;
+            }
+
+            elementsJson.push(this.getPropertiesFromElement(el));
+        });
+
+        if (!this.options.maskAllText) {
+            elementsJson[0]['$el_text'] = this.sanitizeText(getSafeText(targetElementList[0]));
+        }
+
+        if (href) {
+            elementsJson[0]['attr__href'] = this.sanitizeUrl(href);
+        }
+
+        return elementsJson;
+    }
+
+    private getPropertiesFromElement(element: Element): any {
+        const props: any = {
+            tag_name: element.tagName.toLowerCase(),
+        };
+
+        if (usefulElements.indexOf(props.tag_name) > -1 && !this.options.maskAllText) {
+            props['$el_text'] = this.sanitizeText(getSafeText(element));
+        }
+
+        const classes = getClassName(element);
+        if (classes.length > 0) {
+            props['classes'] = classes.split(' ').filter((c) => c !== '');
+        }
+
+        _each(element.attributes, (attr: Attr) => {
+            if (isSensitiveElement(element) && ['name', 'id', 'class'].indexOf(attr.name) === -1) return;
+
+            if (!this.options.maskAllElementAttributes && shouldCaptureValue(attr.value) && !isAngularStyleAttr(attr.name)) {
+                props['attr__' + attr.name] = this.sanitizeAttributeValue(attr.name, attr.value);
+            }
+        });
+
+        let nthChild = 1;
+        let nthOfType = 1;
+        let currentElem: Element | null = element;
+        while ((currentElem = this.previousElementSibling(currentElem))) {
+            nthChild++;
+            if (currentElem.tagName === element.tagName) {
+                nthOfType++;
+            }
+        }
+        props['nth_child'] = nthChild;
+        props['nth_of_type'] = nthOfType;
+
+        return props;
+    }
+
+    private previousElementSibling(el: Element): Element | null {
+        if (el.previousElementSibling) {
+            return el.previousElementSibling;
+        } else {
+            do {
+                el = el.previousSibling as Element;
+            } while (el && !isElementNode(el));
+            return el;
+        }
+    }
+
+    private getDefaultProperties(eventType: string): EventPayload {
+        return {
+            $event_type: eventType,
+            $ce_version: 1,
+        };
+    }
+
+    // Input sanitization and XSS prevention methods
+
+    private sanitizeText(text: string): string {
+        // Remove any HTML tags
+        text = text.replace(/<[^>]*>/g, '');
+
+        // Encode special characters
+        text = this.encodeHtml(text);
+
+        // Truncate long strings
+        const maxLength = this.options.propertiesStringMaxLength || 255;
+        if (text.length > maxLength) {
+            text = text.substring(0, maxLength) + '...';
+        }
+
+        return text;
+    }
+
+    private sanitizeUrl(url: string): string {
+        try {
+            // Parse the URL
+            const parsedUrl = new URL(url);
+
+            // Only allow http and https protocols
+            if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+                return '';
+            }
+
+            // Encode the URL components
+            return encodeURI(parsedUrl.toString());
+        } catch (e) {
+            // If URL parsing fails, return an empty string
+            return '';
+        }
+    }
+
+    private sanitizeAttributeValue(name: string, value: string): string {
+        // Sanitize based on attribute name
+        switch (name.toLowerCase()) {
+            case 'href':
+            case 'src':
+                return this.sanitizeUrl(value);
+            default:
+                return this.encodeHtml(value);
+        }
+    }
+
+    private encodeHtml(str: string): string {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    public static enabledForProject(token: string, numBuckets: number = 10, numEnabledBuckets: number = 10): boolean {
+        if (!token) {
+            return false;
+        }
+        let charCodeSum = 0;
+        for (let i = 0; i < token.length; i++) {
+            charCodeSum += token.charCodeAt(i);
+        }
+        return charCodeSum % numBuckets < numEnabledBuckets;
+    }
+
+    public static isBrowserSupported(): boolean {
+        return _isFunction(document.querySelectorAll);
+    }
 }
+
+export default AutoCapture;

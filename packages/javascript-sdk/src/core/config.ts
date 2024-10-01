@@ -34,6 +34,8 @@ export interface Config {
     namespace?: string;
     crossDomainLinking?: boolean;
     domains?: string;
+    maskAllText?: boolean;
+    maskAllElementAttributes?: boolean;
 }
 
 export const defaultConfig: Partial<Config> = {
@@ -57,4 +59,6 @@ export const defaultConfig: Partial<Config> = {
     propertiesStringMaxLength: null,
     propertyBlacklist: [],
     crossDomainLinking: true,
+    maskAllText: false,
+    maskAllElementAttributes: false,
 };
