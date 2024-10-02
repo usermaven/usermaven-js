@@ -138,6 +138,11 @@ export class UsermavenClient {
     }
 
     private getOrCreateAnonymousId(): string {
+        if (this.config.privacyPolicy === 'strict' || this.config.cookiePolicy === 'strict') {
+            return this.generateFingerprint();
+        }
+
+
         const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
         let id = this.cookieManager.get(cookieName);
 
@@ -150,7 +155,7 @@ export class UsermavenClient {
                 const hashedValues = urlHash.split("~");
                 const fragmentId = hashedValues.length > 1 ? hashedValues[1] : undefined;
 
-                id = queryId || fragmentId;
+                id = queryId || fragmentId || generateId();
             }
 
             if (!id) {
@@ -163,6 +168,26 @@ export class UsermavenClient {
         }
 
         return id;
+    }
+
+    private generateFingerprint(): string {
+        const userAgent = navigator.userAgent;
+        const screenResolution = `${screen.width}x${screen.height}`;
+        const colorDepth = screen.colorDepth;
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        const fingerprintData = `${userAgent}|${screenResolution}|${colorDepth}|${timezone}`;
+        return this.hashString(fingerprintData);
+    }
+
+    private hashString(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return hash.toString(36);
     }
 
     public async id(userData: UserProps, doNotSendEvent: boolean = false): Promise<void> {

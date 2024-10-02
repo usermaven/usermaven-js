@@ -1,5 +1,3 @@
-// src/utils/cookie.ts
-
 export class CookieManager {
     constructor(private domain?: string) {
         if (!this.domain) {
