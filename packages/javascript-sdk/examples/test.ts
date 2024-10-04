@@ -9,17 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        console.log('Usermaven SDK loaded successfully');
+        console.log('Usermaven SDK loaded successfully', usermaven);
 
         // Test track event
         document.getElementById('trackEvent')?.addEventListener('click', () => {
-            usermaven.track('button_click', { buttonId: 'trackEvent' });
+            usermaven('track', 'button_click', { buttonId: 'trackEvent' });
             console.log('Track event sent');
         });
 
         // Test identify user
         document.getElementById('identifyUser')?.addEventListener('click', () => {
-            usermaven.id({ id: 'user123', email: 'test@example.com' });
+            usermaven('id', { id: 'user123', email: 'test@example.com' });
             console.log('User identified');
         });
 

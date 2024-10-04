@@ -1,4 +1,3 @@
-
 import { Config } from './config';
 import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
 import { Logger, getLogger } from '../utils/logger';
@@ -25,10 +24,12 @@ export class UsermavenClient {
     private pageviewTracking?: PageviewTracking;
     private retryQueue: RetryQueue;
     private anonymousId: string;
+    private namespace: string;
 
     constructor(config: Config) {
         this.config = config;
         this.logger = getLogger();
+        this.namespace = config.namespace || 'usermaven';
         this.cookieManager = new CookieManager(config.cookieDomain);
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
@@ -37,13 +38,12 @@ export class UsermavenClient {
             config.maxSendAttempts || 3,
             config.minSendTimeout || 1000,
             10,
-             500  // Reduced interval to .5 second
+            500  // Reduced interval to .5 second
         );
         this.anonymousId = this.getOrCreateAnonymousId();
 
         if (config.autocapture && AutoCapture.enabledForProject(config.apiKey)) {
             this.autoCapture = new AutoCapture(this, config);
-            // Pass config to AutoCapture constructor
             this.autoCapture.init();
         }
 
@@ -55,12 +55,13 @@ export class UsermavenClient {
             this.pageviewTracking = new PageviewTracking(this);
         }
 
-        this.logger.info('Usermaven client initialized');
+        this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
     }
 
     public init(config: Config): void {
         this.config = { ...this.config, ...config };
         this.logger = getLogger();
+        this.namespace = config.namespace || this.namespace;
         this.cookieManager = new CookieManager(this.config.cookieDomain);
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
@@ -68,7 +69,8 @@ export class UsermavenClient {
         this.anonymousId = this.getOrCreateAnonymousId();
 
         if (this.config.autocapture) {
-            this.autoCapture = new AutoCapture(this);
+            this.autoCapture = new AutoCapture(this, this.config);
+            this.autoCapture.init();
         }
 
         if (this.config.formTracking) {
@@ -79,7 +81,7 @@ export class UsermavenClient {
             this.pageviewTracking = new PageviewTracking(this);
         }
 
-        this.logger.info('Usermaven client reinitialized');
+        this.logger.info(`Usermaven client reinitialized for namespace: ${this.namespace}`);
     }
 
     private manageCrossDomainLinking(): void {
@@ -133,7 +135,7 @@ export class UsermavenClient {
         if (this.config.disableEventPersistence) {
             return new MemoryPersistence();
         } else {
-            return new LocalStoragePersistence(this.config.apiKey);
+            return new LocalStoragePersistence(`${this.namespace}_${this.config.apiKey}`);
         }
     }
 
@@ -142,8 +144,7 @@ export class UsermavenClient {
             return this.generateFingerprint();
         }
 
-
-        const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
         let id = this.cookieManager.get(cookieName);
 
         if (!id) {
@@ -298,6 +299,7 @@ export class UsermavenClient {
             src: "usermaven",
             event_type: eventName,
             event_attributes: eventProps || {},
+            namespace: this.namespace,
             ...globalProps,
             ...eventTypeProps,
         };
@@ -351,11 +353,12 @@ export class UsermavenClient {
         this.persistence.clear();
 
         if (resetAnonId) {
-            this.cookieManager.delete(this.config.cookieName || `__eventn_id_${this.config.apiKey}`);
+            const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
+            this.cookieManager.delete(cookieName);
             this.anonymousId = this.getOrCreateAnonymousId();
         }
 
-        this.logger.info('Client state reset', { resetAnonId });
+        this.logger.info('Client state reset', { resetAnonId, namespace: this.namespace });
     }
 
     public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {

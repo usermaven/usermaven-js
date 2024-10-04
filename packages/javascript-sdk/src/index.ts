@@ -1,8 +1,6 @@
 import { UsermavenClient } from './core/client';
 import { defaultConfig } from './core/config';
 import type { Config } from './core/config';
-import { RageClick } from './extensions/rage-click';
-import { ScrollDepth } from './extensions/scroll-depth';
 import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload } from './core/types';
 
@@ -17,9 +15,7 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
         throw new Error('Tracking host is required');
     }
 
-    const client = new UsermavenClient(mergedConfig);
-
-    return client;
+    return new UsermavenClient(mergedConfig);
 }
 
 function initFromScript(script: HTMLScriptElement) {
@@ -58,9 +54,81 @@ function initFromScript(script: HTMLScriptElement) {
     console.log('config', config);
 
     const client = createUsermavenClient(config);
+    const namespace = config.namespace || 'usermaven';
 
-    // Expose the client globally
-    (window as any).usermaven = client;
+    initializeNamespacedClient(namespace, client);
+}
+
+function initializeNamespacedClient(namespace: string, client: UsermavenClient) {
+    let isReady = false;
+    const queue: any[][] = [];
+    const onLoadCallbacks: (() => void)[] = [];
+
+    function processQueue() {
+        while (queue.length > 0) {
+            const item = queue.shift();
+            if (item) {
+                (window as any)[namespace].apply(null, item);
+            }
+        }
+    }
+
+    function executeOnLoadCallbacks() {
+        onLoadCallbacks.forEach(callback => callback());
+        onLoadCallbacks.length = 0;
+    }
+
+    (window as any)[namespace] = function(...args: any[]) {
+        const method = args[0];
+
+        if (method === 'onLoad') {
+            if (typeof args[1] === 'function') {
+                if (isReady) {
+                    args[1]();
+                } else {
+                    onLoadCallbacks.push(args[1]);
+                }
+            }
+            return;
+        }
+
+        if (!isReady) {
+            queue.push(args);
+            return;
+        }
+
+        if (typeof client[method] === 'function') {
+            return client[method].apply(client, args.slice(1));
+        } else {
+            console.error(`Method ${method} not found on UsermavenClient`);
+        }
+    };
+
+    // Initialize queue processing
+    const queueName = `${namespace}Q`;
+    const existingQueue = (window as any)[queueName] || [];
+    (window as any)[queueName] = existingQueue;
+
+    existingQueue.push = function(...args: any[]) {
+        (window as any)[namespace].apply(null, args);
+        return Array.prototype.push.apply(this, args);
+    };
+
+    // Set client as ready and process any queued items
+    setTimeout(() => {
+        isReady = true;
+        processQueue();
+        executeOnLoadCallbacks();
+        console.log(`Usermaven client for namespace ${namespace} is ready`);
+    }, 0);
+
+    // Process any existing queue items
+    while (existingQueue.length > 0) {
+        const item = existingQueue.shift();
+        if (item) {
+            queue.push(item);
+        }
+    }
 }
 
 // Wrap the initialization in an IIFE
@@ -88,4 +156,3 @@ function initFromScript(script: HTMLScriptElement) {
 })(document, window);
 
 export { createUsermavenClient, Config, UserProps, EventPayload, LogLevel };
-
