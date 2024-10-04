@@ -19,9 +19,6 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
 
     const client = new UsermavenClient(mergedConfig);
 
-    // Initialize extensions
-    new ScrollDepth(client);
-
     return client;
 }
 

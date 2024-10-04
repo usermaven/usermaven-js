@@ -16,7 +16,6 @@ export class ScrollDepth {
 
     private initializeEventListener(): void {
         window.addEventListener('scroll', debounce(this.handleScroll.bind(this), 250));
-        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
     }
 
     public track(): void {
@@ -41,12 +40,6 @@ export class ScrollDepth {
 
     private handleScroll(): void {
         this.track();
-    }
-
-    private handleVisibilityChange(): void {
-        if (document.visibilityState === 'hidden') {
-            this.send();
-        }
     }
 
     private getScrollDepth(): number {
