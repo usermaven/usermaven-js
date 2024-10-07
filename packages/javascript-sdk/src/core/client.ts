@@ -263,8 +263,8 @@ export class UsermavenClient {
             throw new Error('Event name must be a string');
         }
 
-        if (payload !== undefined && !isObject(payload)) {
-            throw new Error('Event payload must be an object');
+        if (payload !== undefined && (typeof payload !== 'object' || payload === null || Array.isArray(payload))) {
+            throw new Error('Event payload must be a non-null object and not an array');
         }
 
         const eventPayload = this.createEventPayload(typeName, payload);

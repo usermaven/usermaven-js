@@ -15,8 +15,8 @@ describe('UsermavenClient', () => {
             if (typeof typeName !== 'string') {
                 throw new Error('Event name must be a string');
             }
-            if (payload !== undefined && (typeof payload !== 'object' || payload === null)) {
-                throw new Error('Event payload must be an object');
+            if (payload !== undefined && (typeof payload !== 'object' || payload === null || Array.isArray(payload))) {
+                throw new Error('Event payload must be a non-null object and not an array');
             }
         });
         vi.spyOn(client['retryQueue'], 'add').mockImplementation(() => {});
@@ -59,11 +59,41 @@ describe('UsermavenClient', () => {
         });
 
         it('should throw an error for non-object payloads', () => {
-            expect(() => client.track('test_event', 'invalid_payload' as any)).toThrow('Event payload must be an object');
+            expect(() => client.track('test_event', 'invalid_payload' as any)).toThrow('Event payload must be a non-null object and not an array');
         });
 
         it('should not throw an error when payload is undefined', () => {
             expect(() => client.track('test_event')).not.toThrow();
+        });
+
+        it('should throw an error for null payload', () => {
+            expect(() => client.track('test_event', null as any)).toThrow('Event payload must be a non-null object and not an array');
+        });
+
+        it('should throw an error for array payload', () => {
+            expect(() => client.track('test_event', [] as any)).toThrow('Event payload must be a non-null object and not an array');
+        });
+
+        it('should not throw an error for empty object payload', () => {
+            expect(() => client.track('test_event', {})).not.toThrow();
+        });
+
+        it('should not throw an error for complex nested object payload', () => {
+            const complexPayload = {
+                user: {
+                    id: 1,
+                    name: 'John Doe',
+                    preferences: {
+                        theme: 'dark',
+                        notifications: true
+                    }
+                },
+                items: [
+                    { id: 1, name: 'Item 1' },
+                    { id: 2, name: 'Item 2' }
+                ]
+            };
+            expect(() => client.track('test_event', complexPayload)).not.toThrow();
         });
     });
 
