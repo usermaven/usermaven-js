@@ -12,7 +12,6 @@ import { LocalStoragePersistence } from '../persistence/local-storage';
 import { MemoryPersistence } from '../persistence/memory';
 import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
 import { RetryQueue } from '../utils/queue';
-import {r} from "vitest/dist/types-94cfe4b4";
 import {isWindowAvailable} from "../utils/common";
 
 export class UsermavenClient {
