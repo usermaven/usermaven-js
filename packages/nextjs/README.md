@@ -15,7 +15,7 @@ First, create or update your `_app.js` following this code
 ```jsx
 import { createClient, UsermavenProvider } from "@usermaven/nextjs";
 
-// initialize Usermaven client
+// initialize Usermaven core
 const usermavenClient = createClient({
   tracking_host: "__USERMAVEN_HOST__",
   key: "__API_KET__",
@@ -62,7 +62,7 @@ user loads a new page. This hook relies on [NextJS Router](https://nextjs.org/do
 ```jsx
 import { createClient, UsermavenProvider } from "@usermaven/nextjs";
 
-// initialize Usermaven client
+// initialize Usermaven core
 const usermavenClient = createClient({
   tracking_host: "__USERMAVEN_HOST__",
   key: "__API_KET__",
@@ -97,7 +97,7 @@ For manual tracking you need to initialize Usermaven client
 ```javascript
 import { createClient } from "@usermaven/nextjs";
 
-// initialize Usermaven client
+// initialize Usermaven core
 const usermavenClient = createClient({
   tracking_host: "__USERMAVEN_HOST__",
   key: "__API_KET__",

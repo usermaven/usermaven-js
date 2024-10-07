@@ -19,7 +19,7 @@ Import and configure Usermaven SDK Provider
 //...
 import { createClient, UsermavenProvider } from "@usermaven/react";
 
-// initialize Usermaven client
+// initialize Usermaven core
 const usermavenClient = createClient({
   tracking_host: "__USERMAVEN_HOST__",
   key: "__API_KET__",

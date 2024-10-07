@@ -231,21 +231,18 @@ export class UsermavenClient {
 
     public async id(userData: UserProps, doNotSendEvent: boolean = false): Promise<void> {
         if (!isObject(userData)) {
-            this.logger.error('User data must be an object');
-            return;
+            throw new Error('User data must be an object');
         }
 
         if (userData.email && !isValidEmail(userData.email)) {
-            this.logger.error('Invalid email provided');
-            return;
+            throw new Error('Invalid email provided');
         }
 
         if (!userData.id || !isString(userData.id)) {
-            this.logger.error('User ID must be a string');
-            return;
+            throw new Error('User ID must be a string');
         }
 
-        const userId = userData.id || generateId();
+        const userId = userData.id;
         this.persistence.set('userId', userId);
         this.persistence.set('userProps', userData);
 
@@ -261,15 +258,13 @@ export class UsermavenClient {
         this.logger.info('User identified:', userData);
     }
 
-    public async track(typeName: string, payload?: EventPayload): Promise<void> {
+    public track(typeName: string, payload?: EventPayload): void {
         if (!isString(typeName)) {
-            this.logger.error('Event name must be a string');
-            return;
+            throw new Error('Event name must be a string');
         }
 
-        if (payload && !isObject(payload)) {
-            this.logger.error('Event payload must be an object');
-            return;
+        if (payload !== undefined && !isObject(payload)) {
+            throw new Error('Event payload must be an object');
         }
 
         const eventPayload = this.createEventPayload(typeName, payload);
@@ -279,18 +274,18 @@ export class UsermavenClient {
             this.logger.debug(`Event tracked: ${typeName}`, [eventPayload]);
         } catch (error) {
             this.logger.error(`Failed to track event: ${typeName}`, error);
+            throw new Error(`Failed to track event: ${typeName}`);
         }
     }
 
+
     public async group(props: CompanyProps, doNotSendEvent: boolean = false): Promise<void> {
         if (!isObject(props)) {
-            this.logger.error('Company properties must be an object');
-            return;
+            throw new Error('Company properties must be an object');
         }
 
         if (!props.id || !props.name || !props.created_at) {
-            this.logger.error('Company properties must include id, name, and created_at');
-            return;
+            throw new Error('Company properties must include id, name, and created_at');
         }
 
         this.persistence.set('companyProps', props);
@@ -396,7 +391,7 @@ export class UsermavenClient {
             this.anonymousId = this.getOrCreateAnonymousId();
         }
 
-        this.logger.info('Client state reset', { resetAnonId, namespace: this.namespace });
+        this.logger.info('core state reset', { resetAnonId, namespace: this.namespace });
     }
 
     public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {

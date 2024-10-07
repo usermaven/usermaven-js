@@ -116,7 +116,7 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
         return Array.prototype.push.apply(this, args);
     };
 
-    // Set client as ready and process any queued items
+    // Set core as ready and process any queued items
     setTimeout(() => {
         isReady = true;
         processQueue();

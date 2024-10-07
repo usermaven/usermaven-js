@@ -1,6 +1,6 @@
 import {createClient, UsermavenProvider, usePageView} from "@usermaven/nextjs";
 
-// initialize Usermaven client
+// initialize Usermaven core
 const usermavenClient = createClient({
     tracking_host: "https://events.usermaven.com",
     key: "UMXLIktQsI",
