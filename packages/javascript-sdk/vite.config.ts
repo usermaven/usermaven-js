@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite';
-import path from 'path';
-import { resolve } from 'path'
-
+import { resolve } from 'path';
 
 export default defineConfig({
     build: {
@@ -11,7 +9,6 @@ export default defineConfig({
             formats: ['es', 'umd'],
             fileName: (format) => `usermaven-js-sdk.${format}.js`,
         },
-        watch: {},
         rollupOptions: {
             external: [],  // Add external dependencies here if needed
             output: {

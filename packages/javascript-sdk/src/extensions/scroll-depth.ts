@@ -7,15 +7,17 @@ export class ScrollDepth {
     private milestones: number[] = [25, 50, 75, 90];
     private lastScrollDepth: number = 0;
     private documentElement: HTMLElement;
+    private debouncedHandleScroll: () => void;
 
     constructor(client: UsermavenClient) {
         this.client = client;
         this.documentElement = document.documentElement;
+        this.debouncedHandleScroll = debounce(this.handleScroll.bind(this), 250);
         this.initializeEventListener();
     }
 
     private initializeEventListener(): void {
-        window.addEventListener('scroll', debounce(this.handleScroll.bind(this), 250));
+        window.addEventListener('scroll', this.debouncedHandleScroll);
     }
 
     public track(): void {

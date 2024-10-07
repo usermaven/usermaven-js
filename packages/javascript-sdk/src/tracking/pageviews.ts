@@ -16,10 +16,10 @@ export class PageviewTracking {
     private initializePageviewTracking(): void {
         window.addEventListener('popstate', this.handlePageview.bind(this));
         const originalPushState = history.pushState;
-        history.pushState = function() {
-            originalPushState.apply(this, arguments);
+        history.pushState = (...args: Parameters<typeof history.pushState>) => {
+            originalPushState.apply(history, args);
             this.handlePageview();
-        }.bind(this);
+        };
     }
 
     private handlePageview(): void {

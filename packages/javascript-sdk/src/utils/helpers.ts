@@ -1,3 +1,5 @@
+import {LogLevel} from "../utils/logger";
+
 export function generateId(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -10,9 +12,12 @@ export function isValidEmail(email: string): boolean {
     return re.test(String(email).toLowerCase());
 }
 
-export function debounce(func: Function, wait: number): Function {
-    let timeout: NodeJS.Timeout;
-    return function executedFunction(...args: any[]) {
+export function debounce<T extends (...args: P) => any, P extends any[]>(
+    func: T,
+    wait: number
+): (...args: P) => void {
+    let timeout: ReturnType<typeof setTimeout>;
+    return function (...args: P): void {
         const later = () => {
             clearTimeout(timeout);
             func(...args);
@@ -54,4 +59,14 @@ export function isString(value: any): boolean {
 
 export function isObject(value: any): boolean {
     return value && typeof value === 'object' && value.constructor === Object;
+}
+
+
+export function parseLogLevel(value: string | null): LogLevel {
+    if (value === null) {
+        return LogLevel.WARN; // Default value
+    }
+
+    const upperValue = value.toUpperCase();
+    return (LogLevel[upperValue as keyof typeof LogLevel] as LogLevel) || LogLevel.WARN;
 }

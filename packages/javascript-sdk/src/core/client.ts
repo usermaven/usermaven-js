@@ -76,7 +76,7 @@ export class UsermavenClient {
 
         // recursively merge objects
         Object.keys(defaultConfig).forEach((key) => {
-            if (isObject(defaultConfig[key])) {
+            if (isObject(defaultConfig[key as keyof Config])) {
                 newConfig[key] = this.mergeConfig(config[key], defaultConfig[key]);
             }
         });

@@ -28,7 +28,7 @@ export class LocalStoragePersistence {
         this.save();
     }
 
-    private save(): void {
+    save(): void {
         try {
             localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {

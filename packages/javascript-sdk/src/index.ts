@@ -3,6 +3,7 @@ import { defaultConfig } from './core/config';
 import type { Config } from './core/config';
 import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload } from './core/types';
+import {parseLogLevel} from "./utils/helpers";
 
 function createUsermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
@@ -26,7 +27,7 @@ function initFromScript(script: HTMLScriptElement) {
     const config: Partial<Config> = {
         apiKey: script.getAttribute('data-key') || undefined,
         trackingHost: script.getAttribute('data-tracking-host') || 'https://events.usermaven.com',
-        logLevel: (script.getAttribute('data-log-level') as LogLevel) || LogLevel.WARN,
+        logLevel: parseLogLevel(script.getAttribute('data-log-level')),
         autocapture: script.getAttribute('data-autocapture') === 'true',
         formTracking: script.getAttribute('data-form-tracking') === 'true' ? 'all' : false,
         autoPageview: script.getAttribute('data-auto-pageview') === 'true',
