@@ -42,6 +42,7 @@ export const defaultConfig: Partial<Config> = {
     logLevel: LogLevel.WARN,
     useBeaconApi: false,
     forceUseFetch: false,
+    trackingHost: 't.usermaven.com',
     autocapture: false,
     formTracking: false,
     autoPageview: false,

@@ -5,7 +5,10 @@ import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload } from './core/types';
 
 function createUsermavenClient(config: Partial<Config>): UsermavenClient {
-    const mergedConfig: Config = { ...defaultConfig, ...config } as Config;
+    const cleanConfig = JSON.parse(JSON.stringify(config));
+
+
+    const mergedConfig: Config = { ...defaultConfig, ...cleanConfig } as Config;
 
     if (!mergedConfig.apiKey) {
         throw new Error('API key is required');

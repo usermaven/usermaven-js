@@ -1,19 +1,28 @@
-
 import { Transport } from '../core/types';
 import { getLogger } from '../utils/logger';
+import { isWindowAvailable, generateRandom } from "../utils/common";
+import { Config } from '@/core/config';
 
 export class FetchTransport implements Transport {
-    constructor(private trackingHost: string) {}
+    private config: Config;
+
+    constructor(private trackingHost: string, config: Config) {
+        this.config = config;
+    }
 
     async send(payloads: any[]): Promise<void> {
-        const url = `${this.trackingHost}/api/v1/event`;
+        const apiKey = this.config.apiKey;
+        const url = this.constructUrl(apiKey);
         const body = JSON.stringify(payloads);
+
+        const headers = {
+            'Content-Type': 'application/json',
+            ...this.getCustomHeaders()
+        };
 
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
             body: body,
         });
 
@@ -22,5 +31,34 @@ export class FetchTransport implements Transport {
         }
 
         getLogger().debug(`Successfully sent ${payloads.length} event(s)`);
+
+        // Post-handling
+        this.postHandle(response.status, await response.text());
+    }
+
+    private constructUrl(apiKey: string): string {
+        const cookiePolicy = this.config.cookiePolicy !== "keep" ? `&cookie_policy=${this.config.cookiePolicy}` : "";
+        const ipPolicy = this.config.ipPolicy !== "keep" ? `&ip_policy=${this.config.ipPolicy}` : "";
+        const urlPrefix = isWindowAvailable() ? "/api/v1/event" : "/api/v1/s2s/event";
+
+        if (this.config.randomizeUrl) {
+            return `${this.trackingHost}/api.${generateRandom()}?p_${generateRandom()}=${apiKey}${cookiePolicy}${ipPolicy}`;
+        } else {
+            return `${this.trackingHost}${urlPrefix}?token=${apiKey}${cookiePolicy}${ipPolicy}`;
+        }
+    }
+
+    private getCustomHeaders(): Record<string, string> {
+        if (typeof this.config.customHeaders === 'function') {
+            return this.config.customHeaders();
+        } else if (this.config.customHeaders) {
+            return this.config.customHeaders;
+        }
+        return {};
+    }
+
+    private postHandle(code: number, body: string): void {
+        // Implement post-handling logic if needed
+        getLogger().debug(`Response received. Status: ${code}, Body: ${body}`);
     }
 }

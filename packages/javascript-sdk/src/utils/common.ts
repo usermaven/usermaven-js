@@ -309,3 +309,16 @@ export function _cleanObject(obj: Record<string, any>) {
     }
     return obj;
 }
+
+export function isWindowAvailable() {
+    const windowAvailable = !!window && window.location && window.document
+    if (!windowAvailable) {
+        getLogger().error('window is not available')
+    }
+    return windowAvailable
+}
+
+
+export function  generateRandom(): string {
+    return Math.random().toString(36).substring(2, 7)
+}

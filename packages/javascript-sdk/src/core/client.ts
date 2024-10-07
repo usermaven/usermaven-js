@@ -1,4 +1,4 @@
-import { Config } from './config';
+import {Config, defaultConfig} from './config';
 import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
 import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
@@ -12,6 +12,8 @@ import { LocalStoragePersistence } from '../persistence/local-storage';
 import { MemoryPersistence } from '../persistence/memory';
 import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
 import { RetryQueue } from '../utils/queue';
+import {r} from "vitest/dist/types-94cfe4b4";
+import {isWindowAvailable} from "../utils/common";
 
 export class UsermavenClient {
     private config: Config;
@@ -27,35 +29,61 @@ export class UsermavenClient {
     private namespace: string;
 
     constructor(config: Config) {
-        this.config = config;
+        this.config = this.mergeConfig(config, defaultConfig);
         this.logger = getLogger();
         this.namespace = config.namespace || 'usermaven';
-        this.cookieManager = new CookieManager(config.cookieDomain);
-        this.transport = this.initializeTransport(config);
+        this.cookieManager = new CookieManager(this.config.cookieDomain);
+        this.transport = this.initializeTransport(this.config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(
             this.transport,
-            config.maxSendAttempts || 3,
-            config.minSendTimeout || 1000,
+            this.config.maxSendAttempts || 3,
+            this.config.minSendTimeout || 1000,
             10,
             500  // Reduced interval to .5 second
         );
         this.anonymousId = this.getOrCreateAnonymousId();
 
-        if (config.autocapture && AutoCapture.enabledForProject(config.apiKey)) {
-            this.autoCapture = new AutoCapture(this, config);
+        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
+            this.autoCapture = new AutoCapture(this, this.config);
             this.autoCapture.init();
         }
 
-        if (config.formTracking) {
+        if (this.config.formTracking) {
             this.formTracking = new FormTracking(this);
         }
 
-        if (config.autoPageview) {
+        if (this.config.autoPageview) {
             this.pageviewTracking = new PageviewTracking(this);
         }
 
+        if (this.config.crossDomainLinking) {
+            this.manageCrossDomainLinking();
+        }
+
         this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
+    }
+
+    /**
+     * Recursively merge the provided configuration with the existing defaultConfig
+     * @param config
+     * @param defaultConfig
+     */
+    mergeConfig(config: Partial<Config>, defaultConfig: Partial<Config>): Config {
+        // remove undefined values from the config
+        const cleanConfig = JSON.parse(JSON.stringify(config));
+        let newConfig = {...defaultConfig, ...cleanConfig};
+
+        // recursively merge objects
+        Object.keys(defaultConfig).forEach((key) => {
+            if (isObject(defaultConfig[key])) {
+                newConfig[key] = this.mergeConfig(config[key], defaultConfig[key]);
+            }
+        });
+
+
+        return newConfig as Config;
+
     }
 
     public init(config: Config): void {
@@ -90,7 +118,9 @@ export class UsermavenClient {
         }
 
         const domains = this.config.domains.split(',').map(d => d.trim());
-        const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+        // const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
+        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
+
 
         document.addEventListener('click', (event) => {
             const target = this.findClosestLink(event.target as HTMLElement);
@@ -122,14 +152,23 @@ export class UsermavenClient {
     }
 
     private initializeTransport(config: Config): Transport {
-        if (config.useBeaconApi && navigator.sendBeacon) {
-            return new BeaconTransport(config.trackingHost);
-        } else if (config.forceUseFetch || !window.XMLHttpRequest) {
-            return new FetchTransport(config.trackingHost);
+        const isXhrAvailable = isWindowAvailable() && 'XMLHttpRequest' in window;
+        const isFetchAvailable = typeof fetch !== 'undefined';
+        const isBeaconAvailable = isWindowAvailable() && typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
+
+        if (config.useBeaconApi && isBeaconAvailable) {
+            return new BeaconTransport(config.trackingHost, config);
+        } else if (config.forceUseFetch && isFetchAvailable) {
+            return new FetchTransport(config.trackingHost, config);
+        } else if (isXhrAvailable) {
+            return new XhrTransport(config.trackingHost, config);
+        } else if (isFetchAvailable) {
+            return new FetchTransport(config.trackingHost, config);
         } else {
-            return new XhrTransport(config.trackingHost);
+            throw new Error('No suitable transport method available');
         }
     }
+
 
     private initializePersistence(): LocalStoragePersistence | MemoryPersistence {
         if (this.config.disableEventPersistence) {
