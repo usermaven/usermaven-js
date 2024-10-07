@@ -1,12 +1,13 @@
-// src/utils/queue.ts
-
-import { getLogger } from '../utils/logger';
 import { Transport } from '../core/types';
+import { getLogger } from '../utils/logger';
+import { LocalStoragePersistence } from '../persistence/local-storage';
 
 export class RetryQueue {
     private queue: QueueItem[] = [];
     private processing: boolean = false;
     private batchTimeoutId: number | null = null;
+    private persistence: LocalStoragePersistence;
+    private isOnline: boolean = navigator.onLine;
 
     constructor(
         private transport: Transport,
@@ -15,11 +16,26 @@ export class RetryQueue {
         private batchSize: number = 10,
         private batchInterval: number = 1000
     ) {
+        this.persistence = new LocalStoragePersistence('offline_queue');
+        this.loadQueueFromStorage();
+        this.initNetworkListeners();
         this.scheduleBatch();
     }
 
     add(payload: any): void {
-        this.queue.push({ payload, retries: 0 });
+        const item = { payload, retries: 0, timestamp: Date.now() };
+        this.queue.push(item);
+        this.saveQueueToStorage();
+    }
+
+    private initNetworkListeners(): void {
+        window.addEventListener('online', () => {
+            this.isOnline = true;
+            this.processBatch();
+        });
+        window.addEventListener('offline', () => {
+            this.isOnline = false;
+        });
     }
 
     private scheduleBatch(): void {
@@ -31,7 +47,7 @@ export class RetryQueue {
     }
 
     private async processBatch(): Promise<void> {
-        if (this.processing || this.queue.length === 0) {
+        if (!this.isOnline || this.processing || this.queue.length === 0) {
             this.scheduleBatch();
             return;
         }
@@ -43,6 +59,7 @@ export class RetryQueue {
         try {
             await this.transport.send(payloads);
             getLogger().debug(`Successfully sent batch of ${batch.length} payloads`);
+            this.saveQueueToStorage();
         } catch (error) {
             getLogger().error('Failed to send batch', error);
             await this.handleBatchFailure(batch);
@@ -63,11 +80,24 @@ export class RetryQueue {
             }
         }
 
+        this.saveQueueToStorage();
         await new Promise(resolve => setTimeout(resolve, this.retryInterval));
+    }
+
+    private loadQueueFromStorage(): void {
+        const storedQueue = this.persistence.get('queue');
+        if (storedQueue) {
+            this.queue = JSON.parse(storedQueue);
+        }
+    }
+
+    private saveQueueToStorage(): void {
+        this.persistence.set('queue', JSON.stringify(this.queue));
     }
 }
 
 interface QueueItem {
     payload: any;
     retries: number;
+    timestamp: number;
 }
