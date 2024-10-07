@@ -52,6 +52,16 @@ app.post('/api/v1/event', (req, res) => {
     }, 200);
 });
 
+app.post('/api/v1/s2s/event', (req, res) => {
+    logger.info(colors.magenta('Received event:'));
+    logger.info(JSON.stringify(req.body, null, 2));
+
+    // Simulate processing delay
+    setTimeout(() => {
+        res.status(200).json({ success: true, message: 'Server Side Event received and processed' });
+    }, 200);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     logger.error(colors.red('Error:'), err.message);
