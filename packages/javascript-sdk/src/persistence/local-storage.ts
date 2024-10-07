@@ -1,3 +1,5 @@
+import {getLogger} from "../utils/logger";
+
 export class LocalStoragePersistence {
     private storage: Record<string, any> = {};
     private prefix: string;
@@ -30,7 +32,7 @@ export class LocalStoragePersistence {
         try {
             localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {
-            console.error('Error saving to localStorage:', error);
+            getLogger().error('Error saving to localStorage:', error);
         }
     }
 
@@ -41,7 +43,7 @@ export class LocalStoragePersistence {
                 this.storage = JSON.parse(data);
             }
         } catch (error) {
-            console.error('Error loading from localStorage:', error);
+            getLogger().error('Error loading from localStorage:', error);
         }
     }
 }

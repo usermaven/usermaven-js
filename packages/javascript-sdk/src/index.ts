@@ -22,7 +22,6 @@ function createUsermavenClient(config: Partial<Config>): UsermavenClient {
 }
 
 function initFromScript(script: HTMLScriptElement) {
-    console.log('script', script);
 
     const config: Partial<Config> = {
         apiKey: script.getAttribute('data-key') || undefined,
@@ -54,7 +53,6 @@ function initFromScript(script: HTMLScriptElement) {
         maskAllElementAttributes: script.getAttribute('data-mask-all-element-attributes') === 'true',
     };
 
-    console.log('config', config);
 
     const client = createUsermavenClient(config);
     const namespace = config.namespace || 'usermaven';

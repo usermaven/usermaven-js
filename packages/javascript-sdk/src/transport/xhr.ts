@@ -44,7 +44,6 @@ export class XhrTransport implements Transport {
     }
 
     private constructUrl(apiKey: string): string {
-        console.log('this.config', this.config);
         const cookiePolicy = this.config.cookiePolicy !== "keep" ? `&cookie_policy=${this.config.cookiePolicy}` : "";
         const ipPolicy = this.config.ipPolicy !== "keep" ? `&ip_policy=${this.config.ipPolicy}` : "";
         const urlPrefix = isWindowAvailable() ? "/api/v1/event" : "/api/v1/s2s/event";
