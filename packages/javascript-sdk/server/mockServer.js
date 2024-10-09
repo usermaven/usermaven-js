@@ -4,9 +4,20 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const winston = require('winston');
 const colors = require('colors/safe');
+const fs = require('fs');
 
 const app = express();
 const port = 3000;
+const logFilename = 'mock-server.log';
+
+// Function to clear the log file
+function clearLogFile() {
+    fs.writeFileSync(logFilename, '');
+    console.log(colors.yellow(`Cleared ${logFilename}`));
+}
+
+// Clear the log file on server start
+clearLogFile();
 
 // Configure Winston logger
 const logger = winston.createLogger({
@@ -24,7 +35,7 @@ const logger = winston.createLogger({
     ),
     transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ filename: 'mock-server.log' })
+        new winston.transports.File({ filename: logFilename })
     ]
 });
 
