@@ -4,11 +4,10 @@ import type { Config } from './core/config';
 import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload } from './core/types';
 import {parseLogLevel} from "./utils/helpers";
+import {isWindowAvailable} from "./utils/common";
 
-function createUsermavenClient(config: Partial<Config>): UsermavenClient {
+function usermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
-
-
     const mergedConfig: Config = { ...defaultConfig, ...cleanConfig } as Config;
 
     if (!mergedConfig.apiKey) {
@@ -55,7 +54,7 @@ function initFromScript(script: HTMLScriptElement) {
     };
 
 
-    const client = createUsermavenClient(config);
+    const client = usermavenClient(config);
     const namespace = config.namespace || 'usermaven';
 
     initializeNamespacedClient(namespace, client);
@@ -133,28 +132,39 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
     }
 }
 
+if (isWindowAvailable()) {
+    // Browser-specific initialization
 // Wrap the initialization in an IIFE
-(function (document, window) {
-    // Capture the current scripts
-    const currentScript = document.currentScript as HTMLScriptElement;
+    (function (document, window) {
+        // Capture the current scripts
+        const currentScript = document.currentScript as HTMLScriptElement;
 
-    function initialize() {
-        if (currentScript) {
-            initFromScript(currentScript);
-        } else {
-            console.error('Unable to find Usermaven scripts tag');
+        function initialize() {
+            if (currentScript) {
+                initFromScript(currentScript);
+            } else {
+                console.error('Unable to find Usermaven scripts tag');
+            }
         }
-    }
 
-    // Check if we're in a browser environment
-    if (typeof window !== 'undefined') {
-        // If the scripts is loaded with defer or async, we need to wait for the DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initialize);
-        } else {
-            initialize();
+        // Check if we're in a browser environment
+        if (typeof window !== 'undefined') {
+            // If the scripts is loaded with defer or async, we need to wait for the DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initialize);
+            } else {
+                initialize();
+            }
         }
-    }
-})(document, window);
+    })(document, window);
+}
 
-export { createUsermavenClient, Config, UserProps, EventPayload, LogLevel };
+export { usermavenClient, Config, UserProps, EventPayload, LogLevel };
+
+// Export for CommonJS
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+    Object.assign(module.exports, {
+        usermavenClient,
+        LogLevel,
+    });
+}

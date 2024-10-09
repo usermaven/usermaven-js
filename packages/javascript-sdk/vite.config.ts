@@ -6,14 +6,14 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'src/index.ts'),
             name: 'Usermaven',
-            formats: ['es', 'umd'],
+            formats: ['es', 'cjs', 'umd'],
             fileName: (format) => `usermaven-js-sdk.${format}.js`,
         },
         rollupOptions: {
             external: [],  // Add external dependencies here if needed
             output: {
                 globals: {
-                    // Define any global dependencies here
+                    module: 'module',
                 },
             },
         },

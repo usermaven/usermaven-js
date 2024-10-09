@@ -310,12 +310,15 @@ export function _cleanObject(obj: Record<string, any>) {
     return obj;
 }
 
-export function isWindowAvailable() {
-    const windowAvailable = !!window && window.location && window.document
-    if (!windowAvailable) {
+export function isWindowAvailable(): boolean {
+    try {
+        return typeof window !== 'undefined' &&
+            window.document !== undefined &&
+            window.document.createElement !== undefined;
+    } catch (e) {
         getLogger().error('window is not available')
+        return false;
     }
-    return windowAvailable
 }
 
 

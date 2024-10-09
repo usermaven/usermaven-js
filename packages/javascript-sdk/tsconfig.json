@@ -31,7 +31,8 @@
     "src/**/*.d.ts",
     "test/**/*.ts",
     "test/**/*.d.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "src/global.d.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

@@ -14,6 +14,7 @@ import {generateId, isObject, isString, isValidEmail, parseQueryString} from '..
 import { RetryQueue } from '../utils/queue';
 import {isWindowAvailable} from "../utils/common";
 import {RageClick} from "../extensions/rage-click";
+import {HttpsTransport} from "../transport/https";
 
 export class UsermavenClient {
     private config: Config;
@@ -45,27 +46,29 @@ export class UsermavenClient {
         );
         this.anonymousId = this.getOrCreateAnonymousId();
 
-        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
-            this.autoCapture = new AutoCapture(this, this.config);
-            this.autoCapture.init();
-        }
+        if (isWindowAvailable()) {
+            // Initialize browser-specific features
+            if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
+                this.autoCapture = new AutoCapture(this, this.config);
+                this.autoCapture.init();
+            }
 
-        if (this.config.formTracking) {
-            this.formTracking = new FormTracking(this);
-        }
+            if (this.config.formTracking) {
+                this.formTracking = new FormTracking(this);
+            }
 
-        if (this.config.autoPageview) {
-            this.pageviewTracking = new PageviewTracking(this);
-        }
+            if (this.config.autoPageview) {
+                this.pageviewTracking = new PageviewTracking(this);
+            }
 
-        if (this.config.crossDomainLinking) {
-            this.manageCrossDomainLinking();
-        }
+            if (this.config.crossDomainLinking) {
+                this.manageCrossDomainLinking();
+            }
 
-        if (this.config.rageClick) {
-            this.rageClick = new RageClick(this);
+            if (this.config.rageClick) {
+                this.rageClick = new RageClick(this);
+            }
         }
-
         this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
     }
 
@@ -98,28 +101,37 @@ export class UsermavenClient {
         this.cookieManager = new CookieManager(this.config.cookieDomain);
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
-        this.retryQueue = new RetryQueue(this.transport, this.config.maxSendAttempts, this.config.minSendTimeout);
+        this.retryQueue = new RetryQueue(
+            this.transport,
+            this.config.maxSendAttempts || 3,
+            this.config.minSendTimeout || 1000,
+            10,
+            500  // Reduced interval to .5 second
+        );
         this.anonymousId = this.getOrCreateAnonymousId();
 
-        if (this.config.autocapture) {
-            this.autoCapture = new AutoCapture(this, this.config);
-            this.autoCapture.init();
-        }
+        if (isWindowAvailable()) {
+            // Initialize browser-specific features
+            if (this.config.autocapture) {
+                this.autoCapture = new AutoCapture(this, this.config);
+                this.autoCapture.init();
+            }
 
-        if (this.config.formTracking) {
-            this.formTracking = new FormTracking(this);
-        }
+            if (this.config.formTracking) {
+                this.formTracking = new FormTracking(this);
+            }
 
-        if (this.config.autoPageview) {
-            this.pageviewTracking = new PageviewTracking(this);
-        }
+            if (this.config.autoPageview) {
+                this.pageviewTracking = new PageviewTracking(this);
+            }
 
-        if (this.config.crossDomainLinking) {
-            this.manageCrossDomainLinking();
-        }
+            if (this.config.crossDomainLinking) {
+                this.manageCrossDomainLinking();
+            }
 
-        if (this.config.rageClick) {
-            this.rageClick = new RageClick(this);
+            if (this.config.rageClick) {
+                this.rageClick = new RageClick(this);
+            }
         }
 
         this.logger.info(`Usermaven client reinitialized for namespace: ${this.namespace}`);
@@ -165,9 +177,13 @@ export class UsermavenClient {
     }
 
     private initializeTransport(config: Config): Transport {
-        const isXhrAvailable = isWindowAvailable() && 'XMLHttpRequest' in window;
+        if (!isWindowAvailable()) {
+            return new HttpsTransport(config.trackingHost, config);
+        }
+
+        const isXhrAvailable = 'XMLHttpRequest' in window;
         const isFetchAvailable = typeof fetch !== 'undefined';
-        const isBeaconAvailable = isWindowAvailable() && typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
+        const isBeaconAvailable = typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
 
         if (config.useBeaconApi && isBeaconAvailable) {
             return new BeaconTransport(config.trackingHost, config);
@@ -192,6 +208,10 @@ export class UsermavenClient {
     }
 
     private getOrCreateAnonymousId(): string {
+        if (!isWindowAvailable()) {
+            return generateId(); // Use a function to generate a unique ID for server-side
+        }
+
         if (this.config.privacyPolicy === 'strict' || this.config.cookiePolicy === 'strict') {
             return this.generateFingerprint();
         }
@@ -381,6 +401,11 @@ export class UsermavenClient {
     }
 
     public pageview(): void {
+        if (!isWindowAvailable()) {
+            this.logger.warn('Pageview tracking is not available in server-side environments');
+            return;
+        }
+
         this.track('pageview', {
             url: window.location.href,
             referrer: document.referrer,
