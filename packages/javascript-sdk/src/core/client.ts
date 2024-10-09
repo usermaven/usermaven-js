@@ -28,13 +28,12 @@ export class UsermavenClient {
     private retryQueue: RetryQueue;
     private anonymousId: string;
     private namespace: string;
-    private rageClick: RageClick | null = null;
+    private rageClick?: RageClick;
 
     constructor(config: Config) {
         this.config = this.mergeConfig(config, defaultConfig);
         this.logger = getLogger();
         this.namespace = config.namespace || 'usermaven';
-        this.cookieManager = new CookieManager(this.config.cookieDomain);
         this.transport = this.initializeTransport(this.config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(
@@ -44,10 +43,11 @@ export class UsermavenClient {
             10,
             500  // Reduced interval to .5 second
         );
-        this.anonymousId = this.getOrCreateAnonymousId();
 
         if (isWindowAvailable()) {
             // Initialize browser-specific features
+            this.cookieManager = new CookieManager(this.config.cookieDomain);
+
             if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
                 this.autoCapture = new AutoCapture(this, this.config);
                 this.autoCapture.init();
@@ -69,6 +69,10 @@ export class UsermavenClient {
                 this.rageClick = new RageClick(this);
             }
         }
+
+        this.anonymousId = this.getOrCreateAnonymousId();
+
+
         this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
     }
 
@@ -98,7 +102,6 @@ export class UsermavenClient {
         this.config = { ...this.config, ...config };
         this.logger = getLogger();
         this.namespace = config.namespace || this.namespace;
-        this.cookieManager = new CookieManager(this.config.cookieDomain);
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(
@@ -108,10 +111,11 @@ export class UsermavenClient {
             10,
             500  // Reduced interval to .5 second
         );
-        this.anonymousId = this.getOrCreateAnonymousId();
 
         if (isWindowAvailable()) {
             // Initialize browser-specific features
+            this.cookieManager = new CookieManager(this.config.cookieDomain);
+
             if (this.config.autocapture) {
                 this.autoCapture = new AutoCapture(this, this.config);
                 this.autoCapture.init();
@@ -133,6 +137,8 @@ export class UsermavenClient {
                 this.rageClick = new RageClick(this);
             }
         }
+
+        this.anonymousId = this.getOrCreateAnonymousId();
 
         this.logger.info(`Usermaven client reinitialized for namespace: ${this.namespace}`);
     }
@@ -338,7 +344,7 @@ export class UsermavenClient {
         const globalProps = this.persistence.get('global_props') || {};
         const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
 
-        return {
+        const payload: any = {
             event_id: generateId(),
             user: {
                 anonymous_id: this.anonymousId,
@@ -349,19 +355,6 @@ export class UsermavenClient {
             ids: this.getThirdPartyIds(),
             utc_time: new Date().toISOString(),
             local_tz_offset: new Date().getTimezoneOffset(),
-            referer: document.referrer,
-            url: window.location.href,
-            page_title: document.title,
-            doc_path: window.location.pathname,
-            doc_host: window.location.hostname,
-            doc_search: window.location.search,
-            screen_resolution: `${window.screen.width}x${window.screen.height}`,
-            vp_size: `${window.innerWidth}x${window.innerHeight}`,
-            user_agent: navigator.userAgent,
-            user_language: navigator.language,
-            doc_encoding: document.characterSet,
-            utm: this.getUtmParams(),
-            click_id: {},
             api_key: this.config.apiKey,
             src: "usermaven",
             event_type: eventName,
@@ -370,19 +363,37 @@ export class UsermavenClient {
             ...globalProps,
             ...eventTypeProps,
         };
+
+        if (isWindowAvailable()) {
+            payload.referer = document.referrer;
+            payload.url = window.location.href;
+            payload.page_title = document.title;
+            payload.doc_path = window.location.pathname;
+            payload.doc_host = window.location.hostname;
+            payload.doc_search = window.location.search;
+            payload.screen_resolution = `${window.screen.width}x${window.screen.height}`;
+            payload.vp_size = `${window.innerWidth}x${window.innerHeight}`;
+            payload.user_agent = navigator.userAgent;
+            payload.user_language = navigator.language;
+            payload.doc_encoding = document.characterSet;
+            payload.utm = this.getUtmParams();
+        }
+
+        return payload;
     }
 
     public getCookie(name: string): string | null {
-        return this.cookieManager.get(name);
+        return this.cookieManager?.get(name) || null;
     }
 
     private getThirdPartyIds(): Record<string, string> {
         const thirdPartyIds: Record<string, string> = {};
-        const fbpCookie = this.getCookie('_fbp');
-        if (fbpCookie) {
-            thirdPartyIds['fbp'] = fbpCookie;
+        if (isWindowAvailable()) {
+            const fbpCookie = this.getCookie('_fbp');
+            if (fbpCookie) {
+                thirdPartyIds['fbp'] = fbpCookie;
+            }
         }
-        // Add more third-party IDs as needed
         return thirdPartyIds;
     }
 
@@ -401,16 +412,15 @@ export class UsermavenClient {
     }
 
     public pageview(): void {
-        if (!isWindowAvailable()) {
+        if (isWindowAvailable()) {
+            this.track('pageview', {
+                url: window.location.href,
+                referrer: document.referrer,
+                title: document.title,
+            });
+        } else {
             this.logger.warn('Pageview tracking is not available in server-side environments');
-            return;
         }
-
-        this.track('pageview', {
-            url: window.location.href,
-            referrer: document.referrer,
-            title: document.title,
-        });
     }
 
     public getConfig(): Config {
