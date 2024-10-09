@@ -26,15 +26,13 @@ import {
 import { getLogger } from '../utils/logger';
 import {ScrollDepth} from "../extensions/scroll-depth";
 import {UsermavenClient} from "@/core/client";
-import {Config} from "@/core/config";
-import {RageClick} from "../extensions/rage-click";
-import {EventPayload} from "@/core/types";
+import {Config} from "../core/config";
+import {EventPayload} from "../core/types";
 
 class AutoCapture {
     private client: UsermavenClient;
     private options: Config;
     private scrollDepth: ScrollDepth | null = null;
-    private rageClick: RageClick | null = null;
 
     // Constants for custom attributes
     private static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
@@ -43,7 +41,6 @@ class AutoCapture {
     constructor(client: UsermavenClient, options: Config) {
         this.client = client;
         this.options = options;
-        this.rageClick = new RageClick(client);
         this.scrollDepth = new ScrollDepth(client);
         _bind_instance_methods(this);
         _safewrap_instance_methods(this);
@@ -87,10 +84,6 @@ class AutoCapture {
         if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
             this.scrollDepth?.send();
             return true;
-        }
-
-        if (e.type === 'click' && e instanceof MouseEvent) {
-            this.rageClick?.click(e.clientX, e.clientY, new Date().getTime());
         }
 
         if (target && this.shouldCaptureElement(target, e)) {

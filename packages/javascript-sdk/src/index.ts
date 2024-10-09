@@ -135,20 +135,20 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
 
 // Wrap the initialization in an IIFE
 (function (document, window) {
-    // Capture the current script
+    // Capture the current scripts
     const currentScript = document.currentScript as HTMLScriptElement;
 
     function initialize() {
         if (currentScript) {
             initFromScript(currentScript);
         } else {
-            console.error('Unable to find Usermaven script tag');
+            console.error('Unable to find Usermaven scripts tag');
         }
     }
 
     // Check if we're in a browser environment
     if (typeof window !== 'undefined') {
-        // If the script is loaded with defer or async, we need to wait for the DOM to be ready
+        // If the scripts is loaded with defer or async, we need to wait for the DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initialize);
         } else {

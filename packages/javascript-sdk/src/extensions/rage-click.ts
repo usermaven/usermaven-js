@@ -5,7 +5,7 @@ export class RageClick {
     private client: UsermavenClient;
     private clicks: { x: number; y: number; timestamp: number }[] = [];
     private threshold = 3;
-    private timeWindow = 1000;
+    private timeWindow = 2000; // 2 seconds
     private distanceThreshold = 30;
 
     constructor(client: UsermavenClient) {
@@ -18,22 +18,34 @@ export class RageClick {
         document.addEventListener('click', this.handleClick.bind(this));
     }
 
+    private handleClick(event: MouseEvent): void {
+        const element = event.target as Element;
+        if (this.shouldCaptureElement(element)) {
+            this.click(event.clientX, event.clientY, Date.now());
+        }
+    }
+
+    private shouldCaptureElement(element: Element): boolean {
+        return !element.closest('.um-no-capture');
+    }
+
     public click(x: number, y: number, timestamp: number): void {
         const click = { x, y, timestamp };
-
-        this.clicks = this.clicks.filter(c => timestamp - c.timestamp < this.timeWindow);
         this.clicks.push(click);
+
+        // Remove old clicks outside the time window
+        this.clicks = this.clicks.filter(c => timestamp - c.timestamp < this.timeWindow);
 
         if (this.clicks.length >= this.threshold) {
             this.checkRageClick();
         }
     }
 
-    private handleClick(event: MouseEvent): void {
-        this.click(event.clientX, event.clientY, Date.now());
-    }
-
     private checkRageClick(): void {
+        const firstClick = this.clicks[0];
+        const lastClick = this.clicks[this.clicks.length - 1];
+        const totalTime = (lastClick.timestamp - firstClick.timestamp) / 1000; // in seconds
+
         const isRageClick = this.clicks.every((c, i) => {
             if (i === 0) return true;
             const prev = this.clicks[i - 1];
@@ -42,53 +54,21 @@ export class RageClick {
         });
 
         if (isRageClick) {
-            this.sendRageClickEvent();
+            this.sendRageClickEvent(totalTime);
         }
     }
 
-    private sendRageClickEvent(): void {
+    private sendRageClickEvent(totalTime: number): void {
         const lastClick = this.clicks[this.clicks.length - 1];
         const element = document.elementFromPoint(lastClick.x, lastClick.y);
 
-        this.client.track('$rage_click', {
-            clicks: this.clicks,
-            element: element ? this.getElementInfo(element) : null,
-        });
-
-        this.clicks = [];
-    }
-
-    private getElementInfo(element: Element): object {
-        return {
-            tag_name: element.tagName.toLowerCase(),
-            id: element.id,
-            class_name: element.className,
-            text_content: this.sanitizeText(element.textContent || ''),
-        };
-    }
-
-    private sanitizeText(text: string): string {
-        // Remove any HTML tags
-        text = text.replace(/<[^>]*>/g, '');
-
-        // Encode special characters
-        text = this.encodeHtml(text);
-
-        // Truncate long strings
-        const maxLength = 255;
-        if (text.length > maxLength) {
-            text = text.substring(0, maxLength) + '...';
+        if (element) {
+            this.client.track('$rage_click', {
+                no_of_clicks: this.clicks.length,
+                time: totalTime.toFixed(2)
+            });
         }
 
-        return text;
-    }
-
-    private encodeHtml(str: string): string {
-        return str
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        this.clicks = []; // Reset clicks after sending the event
     }
 }

@@ -13,6 +13,7 @@ import { MemoryPersistence } from '../persistence/memory';
 import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
 import { RetryQueue } from '../utils/queue';
 import {isWindowAvailable} from "../utils/common";
+import {RageClick} from "../extensions/rage-click";
 
 export class UsermavenClient {
     private config: Config;
@@ -26,6 +27,7 @@ export class UsermavenClient {
     private retryQueue: RetryQueue;
     private anonymousId: string;
     private namespace: string;
+    private rageClick: RageClick | null = null;
 
     constructor(config: Config) {
         this.config = this.mergeConfig(config, defaultConfig);
@@ -58,6 +60,10 @@ export class UsermavenClient {
 
         if (this.config.crossDomainLinking) {
             this.manageCrossDomainLinking();
+        }
+
+        if (this.config.rageClick) {
+            this.rageClick = new RageClick(this);
         }
 
         this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
@@ -106,6 +112,14 @@ export class UsermavenClient {
 
         if (this.config.autoPageview) {
             this.pageviewTracking = new PageviewTracking(this);
+        }
+
+        if (this.config.crossDomainLinking) {
+            this.manageCrossDomainLinking();
+        }
+
+        if (this.config.rageClick) {
+            this.rageClick = new RageClick(this);
         }
 
         this.logger.info(`Usermaven client reinitialized for namespace: ${this.namespace}`);

@@ -13,6 +13,7 @@ export interface Config {
     useBeaconApi?: boolean;
     forceUseFetch?: boolean;
     autocapture?: boolean;
+    rageClick?: boolean;
     formTracking?: boolean | 'all' | 'tagged' | 'none';
     autoPageview?: boolean;
     disableEventPersistence?: boolean;
@@ -44,6 +45,7 @@ export const defaultConfig: Partial<Config> = {
     forceUseFetch: false,
     trackingHost: 't.usermaven.com',
     autocapture: false,
+    rageClick: false,
     formTracking: false,
     autoPageview: false,
     disableEventPersistence: false,

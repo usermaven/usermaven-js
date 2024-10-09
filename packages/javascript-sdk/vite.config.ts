@@ -20,5 +20,12 @@ export default defineConfig({
     },
     server: {
         open: '/examples/index.html',
+        watch: {
+            usePolling: true,
+            ignored: ['!**/dist/**']
+        },
+    },
+    optimizeDeps: {
+        exclude: ['@usermaven/sdk-js'],
     },
 });

@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('User identified');
         });
 
-        console.log('Usermaven SDK test script loaded');
+        console.log('Usermaven SDK test scripts loaded');
     };
 
     checkUsermavenLoaded();

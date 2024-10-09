@@ -149,7 +149,7 @@ export const _register_event = (function () {
         return function (event: Event): boolean | void {
             event = event || fixEvent(window.event)
 
-            // this basically happens in firefox whenever another script
+            // this basically happens in firefox whenever another scripts
             // overwrites the onload callback and doesn't pass the event
             // object to previously defined callbacks.  All the browsers
             // that don't define window.event implement addEventListener

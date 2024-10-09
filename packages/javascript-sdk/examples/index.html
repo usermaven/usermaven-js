@@ -9,6 +9,9 @@
 <h1>Usermaven SDK Test</h1>
 <button id="trackEvent">Track Event</button>
 <button id="identifyUser">Identify User</button>
+<button class="your-class um-no-capture">
+    This button will not be captured
+</button>
 
 <!-- Load the SDK -->
 <script src="/dist/usermaven-js-sdk.umd.js"
@@ -19,7 +22,7 @@
         data-form-tracking="true"
         data-auto-pageview="true"></script>
 
-<!-- Load the test script -->
+<!-- Load the test scripts -->
 <script src="./test.ts"></script>
 </body>
 </html>
