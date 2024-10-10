@@ -24,6 +24,14 @@ export default defineConfig({
             },
         },
     },
+    plugins: [
+        dts({
+            insertTypesEntry: true,
+            include: ['src/**/*.ts'],
+            exclude: ['test', 'node_modules'],
+            outDir: 'dist', // Changed from outputDir to outDir
+        }),
+    ],
     server: {
         open: '/examples/index.html',
         watch: {

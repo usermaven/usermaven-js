@@ -4,6 +4,7 @@
   "description": "Usermaven JavaScript SDK",
   "main": "dist/lib.js",
   "module": "dist/usermaven.es.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
