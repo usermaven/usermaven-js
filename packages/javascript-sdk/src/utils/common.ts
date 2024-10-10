@@ -133,6 +133,7 @@ export const _register_event = (function () {
         }
 
         if (element.addEventListener && !oldSchool) {
+            // @ts-ignore
             element.addEventListener(type, handler, !!useCapture)
         } else {
             const ontype = 'on' + type

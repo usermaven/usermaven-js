@@ -3,7 +3,6 @@ import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types'
 import { Logger, getLogger } from '../utils/logger';
 import { CookieManager } from '../utils/cookie';
 import AutoCapture from '../tracking/autocapture';
-import { FormTracking } from '../tracking/form-tracking';
 import { PageviewTracking } from '../tracking/pageviews';
 import { BeaconTransport } from '../transport/beacon';
 import { FetchTransport } from '../transport/fetch';
@@ -15,11 +14,12 @@ import { RetryQueue } from '../utils/queue';
 import {isWindowAvailable} from "../utils/common";
 import {RageClick} from "../extensions/rage-click";
 import {HttpsTransport} from "../transport/https";
+import FormTracking from "../tracking/form-tracking";
 
 export class UsermavenClient {
     private config: Config;
     private logger: Logger;
-    private cookieManager: CookieManager;
+    private cookieManager?: CookieManager;
     private transport: Transport;
     private persistence: LocalStoragePersistence | MemoryPersistence;
     private autoCapture?: AutoCapture;
@@ -45,35 +45,44 @@ export class UsermavenClient {
         );
 
         if (isWindowAvailable()) {
-            // Initialize browser-specific features
-            this.cookieManager = new CookieManager(this.config.cookieDomain);
-
-            if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
-                this.autoCapture = new AutoCapture(this, this.config);
-                this.autoCapture.init();
-            }
-
-            if (this.config.formTracking) {
-                this.formTracking = new FormTracking(this);
-            }
-
-            if (this.config.autoPageview) {
-                this.pageviewTracking = new PageviewTracking(this);
-            }
-
-            if (this.config.crossDomainLinking) {
-                this.manageCrossDomainLinking();
-            }
-
-            if (this.config.rageClick) {
-                this.rageClick = new RageClick(this);
-            }
+            this.initializeBrowserFeatures();
         }
 
         this.anonymousId = this.getOrCreateAnonymousId();
 
 
         this.logger.info(`Usermaven client initialized for namespace: ${this.namespace}`);
+    }
+
+    private initializeBrowserFeatures(): void {
+        this.cookieManager = new CookieManager(this.config.cookieDomain);
+
+        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
+            this.autoCapture = new AutoCapture(this, this.config);
+            this.autoCapture.init();
+        }
+
+        if (this.config.formTracking) {
+            const trackingType = this.config.formTracking === true ? 'all' : this.config.formTracking;
+            this.formTracking = FormTracking.getInstance(this, trackingType || "none", {
+                trackFieldChanges: false,
+            });
+        }
+
+        if (this.config.autoPageview) {
+            this.pageviewTracking = new PageviewTracking(this);
+        }
+
+        if (this.config.crossDomainLinking) {
+            this.manageCrossDomainLinking();
+        }
+
+        if (this.config.rageClick) {
+            this.rageClick = new RageClick(this);
+        }
+
+        // Setup page leave tracking
+        this.setupPageLeaveTracking();
     }
 
     /**
@@ -113,29 +122,7 @@ export class UsermavenClient {
         );
 
         if (isWindowAvailable()) {
-            // Initialize browser-specific features
-            this.cookieManager = new CookieManager(this.config.cookieDomain);
-
-            if (this.config.autocapture) {
-                this.autoCapture = new AutoCapture(this, this.config);
-                this.autoCapture.init();
-            }
-
-            if (this.config.formTracking) {
-                this.formTracking = new FormTracking(this);
-            }
-
-            if (this.config.autoPageview) {
-                this.pageviewTracking = new PageviewTracking(this);
-            }
-
-            if (this.config.crossDomainLinking) {
-                this.manageCrossDomainLinking();
-            }
-
-            if (this.config.rageClick) {
-                this.rageClick = new RageClick(this);
-            }
+            this.initializeBrowserFeatures();
         }
 
         this.anonymousId = this.getOrCreateAnonymousId();
@@ -164,7 +151,7 @@ export class UsermavenClient {
             if (url.hostname === window.location.hostname) return;
 
             if (domains.includes(url.hostname)) {
-                const cookie = this.cookieManager.get(cookieName);
+                const cookie = this.cookieManager?.get(cookieName);
                 if (cookie) {
                     url.searchParams.append('_um', cookie);
                     target.setAttribute('href', url.toString());
@@ -223,7 +210,7 @@ export class UsermavenClient {
         }
 
         const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
-        let id = this.cookieManager.get(cookieName);
+        let id = this.cookieManager?.get(cookieName);
 
         if (!id) {
             if (this.config.crossDomainLinking) {
@@ -243,7 +230,7 @@ export class UsermavenClient {
 
             // Set cookie for 10 years
             const tenYearsInDays = 365 * 10;
-            this.cookieManager.set(cookieName, id, tenYearsInDays, true, false);
+            this.cookieManager?.set(cookieName, id, tenYearsInDays, true, false);
         }
 
         return id;
@@ -423,6 +410,42 @@ export class UsermavenClient {
         }
     }
 
+    private setupPageLeaveTracking(): void {
+        if (!isWindowAvailable()) return;
+
+        let isLeaving = false;
+
+        const trackPageLeave = () => {
+            if (!isLeaving) {
+                isLeaving = true;
+                this.track('$pageleave', {
+                    url: window.location.href,
+                    referrer: document.referrer,
+                    title: document.title,
+                });
+            }
+        };
+
+        // Track on beforeunload event
+        window.addEventListener('beforeunload', trackPageLeave);
+
+        // Track on visibilitychange event (when the page becomes hidden)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                trackPageLeave();
+            }
+        });
+
+        // For Single Page Applications, track when the user navigates away
+        const originalPushState = history.pushState;
+        history.pushState = (...args) => {
+            trackPageLeave();
+            originalPushState.apply(history, args);
+        };
+
+        window.addEventListener('popstate', trackPageLeave);
+    }
+
     public getConfig(): Config {
         return this.config;
     }
@@ -434,7 +457,7 @@ export class UsermavenClient {
     public async reset(resetAnonId: boolean = false): Promise<void> {
         this.persistence.clear();
 
-        if (resetAnonId) {
+        if (resetAnonId && this.cookieManager) {
             const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
             this.cookieManager.delete(cookieName);
             this.anonymousId = this.getOrCreateAnonymousId();

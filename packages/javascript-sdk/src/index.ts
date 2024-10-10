@@ -57,6 +57,11 @@ function initFromScript(script: HTMLScriptElement) {
     const client = usermavenClient(config);
     const namespace = config.namespace || 'usermaven';
 
+    // if browser environment, send the first pageview
+    if (isWindowAvailable()) {
+        client.pageview();
+    }
+
     initializeNamespacedClient(namespace, client);
 }
 
