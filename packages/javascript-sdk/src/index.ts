@@ -164,12 +164,13 @@ if (isWindowAvailable()) {
     })(document, window);
 }
 
-export { usermavenClient, Config, UserProps, EventPayload, LogLevel };
+export { usermavenClient, UsermavenClient, Config as UsermavenOptions, UserProps, EventPayload, LogLevel };
 
 // Export for CommonJS
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     Object.assign(module.exports, {
         usermavenClient,
+        UsermavenClient,
         LogLevel,
     });
 }
