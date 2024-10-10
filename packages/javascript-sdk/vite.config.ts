@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
     build: {
@@ -7,7 +8,12 @@ export default defineConfig({
             entry: resolve(__dirname, 'src/index.ts'),
             name: 'Usermaven',
             formats: ['es', 'cjs', 'umd'],
-            fileName: (format) => `usermaven-js-sdk.${format}.js`,
+            fileName: (format) => {
+                if (format === 'umd') {
+                    return 'lib.js';
+                }
+                return `usermaven.${format}.js`;
+            },
         },
         rollupOptions: {
             external: [],  // Add external dependencies here if needed

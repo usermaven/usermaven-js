@@ -2,9 +2,8 @@
   "name": "@usermaven/sdk-js",
   "version": "0.1.0",
   "description": "Usermaven JavaScript SDK",
-  "main": "dist/usermaven-js-sdk.umd.js",
-  "module": "dist/usermaven-js-sdk.es.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/lib.js",
+  "module": "dist/usermaven.es.js",
   "files": [
     "dist"
   ],
@@ -47,6 +46,7 @@
     "prettier": "^2.8.7",
     "typescript": "^5.0.3",
     "vite": "^5.4.8",
+    "vite-plugin-dts": "^4.2.3",
     "vitest": "^2.1.2",
     "winston": "^3.14.2"
   }
