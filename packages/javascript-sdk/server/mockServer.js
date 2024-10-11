@@ -3,12 +3,20 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const winston = require('winston');
-const colors = require('colors/safe');
+const colors = require('colors'); // Ensure you're using 'colors' and not 'colors/safe'
 const fs = require('fs');
 
 const app = express();
 const port = 3000;
 const logFilename = 'mock-server.log';
+
+// Define an array of properties to highlight with their respective colors
+const propertiesToHighlight = [
+    { name: 'event_type', color: colors.green },
+    { name: 'user_id', color: colors.blue },
+    { name: 'email', color: colors.cyan },
+    // Add more properties as needed
+];
 
 // Function to clear the log file
 function clearLogFile() {
@@ -19,23 +27,42 @@ function clearLogFile() {
 // Clear the log file on server start
 clearLogFile();
 
-// Configure Winston logger
+// Define separate formats for console and file
+const consoleFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ level, message, timestamp }) => {
+        let coloredMessage = message;
+
+        // Iterate over each property to highlight
+        propertiesToHighlight.forEach(({ name, color }) => {
+            // Create a dynamic regex for each property
+            const regex = new RegExp(`("${name}"\\s*:\\s*)"([^"]+)"`, 'g');
+            // Replace the matched value with colored value
+            coloredMessage = coloredMessage.replace(regex, (match, p1, p2) => {
+                return `${p1}${color(`"${p2}"`)}`;
+            });
+        });
+
+        return `${colors.gray(timestamp)} [${colors.blue(level)}]: ${coloredMessage}`;
+    })
+);
+
+const fileFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+);
+
+// Configure Winston logger with separate formats for console and file
 const logger = winston.createLogger({
     level: 'info',
-    format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.printf(({ level, message, timestamp }) => {
-            const coloredLevel = level === 'info'
-                ? colors.blue(level)
-                : level === 'warn'
-                    ? colors.yellow(level)
-                    : colors.red(level);
-            return `${colors.gray(timestamp)} [${coloredLevel}]: ${message}`;
-        })
-    ),
     transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({ filename: logFilename })
+        new winston.transports.Console({
+            format: consoleFormat
+        }),
+        new winston.transports.File({
+            filename: logFilename,
+            format: fileFormat
+        })
     ]
 });
 
@@ -47,15 +74,18 @@ app.use(morgan('dev'));
 // Custom middleware to log request body
 app.use((req, res, next) => {
     if (req.method === 'POST') {
-        logger.info(`${colors.green('Request Body:')} ${JSON.stringify(req.body, null, 2)}`);
+        // Serialize the request body to JSON with indentation
+        const jsonString = JSON.stringify(req.body, null, 2);
+        logger.info(`Request Body:\n${jsonString}`);
     }
     next();
 });
 
 // Mock endpoint for event tracking
 app.post('/api/v1/event', (req, res) => {
-    logger.info(colors.magenta('Received event:'));
-    logger.info(JSON.stringify(req.body, null, 2));
+    // Serialize the request body to JSON with indentation
+    const jsonString = JSON.stringify(req.body, null, 2);
+    logger.info(`Received event:\n${jsonString}`);
 
     // Simulate processing delay
     setTimeout(() => {
@@ -64,8 +94,9 @@ app.post('/api/v1/event', (req, res) => {
 });
 
 app.post('/api/v1/s2s/event', (req, res) => {
-    logger.info(colors.magenta('Received event:'));
-    logger.info(JSON.stringify(req.body, null, 2));
+    // Serialize the request body to JSON with indentation
+    const jsonString = JSON.stringify(req.body, null, 2);
+    logger.info(`Received server-side event:\n${jsonString}`);
 
     // Simulate processing delay
     setTimeout(() => {
@@ -75,19 +106,19 @@ app.post('/api/v1/s2s/event', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    logger.error(colors.red('Error:'), err.message);
+    logger.error(`Error: ${err.message}`);
     res.status(500).json({ error: 'Internal server error' });
 });
 
 // Start the server
 app.listen(port, () => {
-    logger.info(colors.green(`Mock server running at http://localhost:${port}`));
+    logger.info(`Mock server running at http://localhost:${port}`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-    logger.info(colors.yellow('SIGTERM signal received: closing HTTP server'));
+    logger.info('SIGTERM signal received: closing HTTP server');
     app.close(() => {
-        logger.info(colors.yellow('HTTP server closed'));
+        logger.info('HTTP server closed');
     });
 });
