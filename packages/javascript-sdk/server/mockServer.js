@@ -28,6 +28,8 @@ function clearLogFile() {
 clearLogFile();
 
 // Define separate formats for console and file
+
+// Console Format: Colorize specific properties
 const consoleFormat = winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf(({ level, message, timestamp }) => {
@@ -47,9 +49,11 @@ const consoleFormat = winston.format.combine(
     })
 );
 
+// File Format: Pretty-print JSON with indentation
 const fileFormat = winston.format.combine(
     winston.format.timestamp(),
-    winston.format.json()
+    winston.format.json({ space: 2 })
+    // Alternatively, use the custom printf format as shown in Option B below
 );
 
 // Configure Winston logger with separate formats for console and file

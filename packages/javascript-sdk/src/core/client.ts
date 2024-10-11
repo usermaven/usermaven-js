@@ -409,7 +409,7 @@ export class UsermavenClient {
                 url: window.location.href,
                 referrer: document.referrer,
                 title: document.title,
-            }, true);
+            });
         } else {
             this.logger.warn('Pageview tracking is not available in server-side environments');
         }

@@ -17,10 +17,10 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "mock": "node server/mockServer.js",
+    "mock": "wait-on dist/lib.js && node server/mockServer.js",
     "example:build": "tsc examples/test.ts --outDir examples",
-    "example:serve": "vite --config vite.config.ts",
-    "start": "concurrently \"npm run example:serve\" \"npm run mock\" \"npm run dev\""
+    "example:serve": "wait-on dist/lib.js && vite --config vite.config.ts",
+    "start": "concurrently \"npm run dev\" \"npm run example:serve\" \"npm run mock\" "
   },
   "keywords": [
     "usermaven",
@@ -49,6 +49,7 @@
     "vite": "^5.4.8",
     "vite-plugin-dts": "^4.2.3",
     "vitest": "^2.1.2",
+    "wait-on": "^8.0.1",
     "winston": "^3.14.2"
   }
 }
