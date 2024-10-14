@@ -5,7 +5,7 @@ import { Config } from '../../../src/core/config';
 describe('UsermavenClient', () => {
     let client: UsermavenClient;
     const mockConfig: Config = {
-        apiKey: 'test-api-key',
+        key: 'test-api-key',
         trackingHost: 'https://test.usermaven.com',
     };
 

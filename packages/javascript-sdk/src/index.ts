@@ -10,12 +10,14 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
     const mergedConfig: Config = { ...defaultConfig, ...cleanConfig } as Config;
 
-    if (!mergedConfig.apiKey) {
-        throw new Error('API key is required');
+    if (!mergedConfig.key) {
+        console.error(mergedConfig);
+        console.error(config);
+        throw new Error('API key is required!');
     }
 
     if (!mergedConfig.trackingHost) {
-        throw new Error('Tracking host is required');
+        throw new Error('Tracking host is required!');
     }
 
     return new UsermavenClient(mergedConfig);
@@ -24,7 +26,7 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
 function initFromScript(script: HTMLScriptElement) {
 
     const config: Partial<Config> = {
-        apiKey: script.getAttribute('data-key') || undefined,
+        key: script.getAttribute('data-key') || undefined,
         trackingHost: script.getAttribute('data-tracking-host') || 'https://events.usermaven.com',
         logLevel: parseLogLevel(script.getAttribute('data-log-level')),
         autocapture: script.getAttribute('data-autocapture') === 'true',
@@ -145,10 +147,8 @@ if (isWindowAvailable()) {
         const currentScript = document.currentScript as HTMLScriptElement;
 
         function initialize() {
-            if (currentScript) {
+            if (currentScript && currentScript.src.includes('lib.js')) {
                 initFromScript(currentScript);
-            } else {
-                console.error('Unable to find Usermaven scripts tag');
             }
         }
 
@@ -165,12 +165,3 @@ if (isWindowAvailable()) {
 }
 
 export { usermavenClient, UsermavenClient, Config as UsermavenOptions, UserProps, EventPayload, LogLevel, ClientProperties };
-
-// Export for CommonJS
-if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    Object.assign(module.exports, {
-        usermavenClient,
-        UsermavenClient,
-        LogLevel,
-    });
-}

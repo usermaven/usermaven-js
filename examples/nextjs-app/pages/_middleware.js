@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 const usermaven = createClient({
   tracking_host: "https://events.usermaven.com",
-  key: "UMXLIktQsI"
+  key: "UMXktPfqmG"
 })
 
 export function middleware(req, ev) {

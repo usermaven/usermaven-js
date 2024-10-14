@@ -57,7 +57,7 @@ export class UsermavenClient {
     private initializeBrowserFeatures(): void {
         this.cookieManager = new CookieManager(this.config.cookieDomain);
 
-        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.apiKey)) {
+        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.key)) {
             this.autoCapture = new AutoCapture(this, this.config);
             this.autoCapture.init();
         }
@@ -136,8 +136,8 @@ export class UsermavenClient {
         }
 
         const domains = this.config.domains.split(',').map(d => d.trim());
-        // const cookieName = this.config.cookieName || `__eventn_id_${this.config.apiKey}`;
-        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
+        // const cookieName = this.config.cookieName || `__eventn_id_${this.config.key}`;
+        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
 
 
         document.addEventListener('click', (event) => {
@@ -193,10 +193,10 @@ export class UsermavenClient {
 
 
     private initializePersistence(): LocalStoragePersistence | MemoryPersistence {
-        if (this.config.disableEventPersistence) {
+        if (this.config.disableEventPersistence || !isWindowAvailable()) {
             return new MemoryPersistence();
         } else {
-            return new LocalStoragePersistence(`${this.namespace}_${this.config.apiKey}`);
+            return new LocalStoragePersistence(`${this.namespace}_${this.config.key}`);
         }
     }
 
@@ -209,7 +209,7 @@ export class UsermavenClient {
             return this.generateFingerprint();
         }
 
-        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
+        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
         let id = this.cookieManager?.get(cookieName);
 
         if (!id) {
@@ -279,13 +279,17 @@ export class UsermavenClient {
                 anonymous_id: this.anonymousId,
             };
 
-            await this.track('user_identify', identifyPayload);
+            await this.trackInternal('user_identify', identifyPayload);
         }
 
         this.logger.info('User identified:', userData);
     }
 
     public track(typeName: string, payload?: EventPayload, directSend: boolean = false): void {
+        this.trackInternal(typeName, payload, directSend);
+    }
+
+    private trackInternal(typeName: string, payload?: EventPayload, directSend: boolean = false): void {
         if (!isString(typeName)) {
             throw new Error('Event name must be a string');
         }
@@ -355,7 +359,7 @@ export class UsermavenClient {
             ids: this.getThirdPartyIds(),
             utc_time: new Date().toISOString(),
             local_tz_offset: new Date().getTimezoneOffset(),
-            api_key: this.config.apiKey,
+            api_key: this.config.key,
             src: "usermaven",
             event_type: eventName,
             event_attributes: eventProps || {},
@@ -487,7 +491,7 @@ export class UsermavenClient {
         this.persistence.clear();
 
         if (resetAnonId && this.cookieManager) {
-            const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.apiKey}`;
+            const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
             this.cookieManager.delete(cookieName);
             this.anonymousId = this.getOrCreateAnonymousId();
         }

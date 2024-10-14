@@ -1,13 +1,14 @@
 import { Transport } from '../core/types';
 import { getLogger } from '../utils/logger';
 import { LocalStoragePersistence } from '../persistence/local-storage';
+import { isWindowAvailable } from '../utils/common';
 
 export class RetryQueue {
     private queue: QueueItem[] = [];
     private processing: boolean = false;
     private batchTimeoutId: number | null = null;
     private persistence: LocalStoragePersistence;
-    private isOnline: boolean = navigator.onLine;
+    private isOnline: boolean = true; // Default to true for server-side
 
     constructor(
         private transport: Transport,
@@ -17,28 +18,39 @@ export class RetryQueue {
         private batchInterval: number = 1000
     ) {
         this.persistence = new LocalStoragePersistence('offline_queue');
-        this.loadQueueFromStorage();
-        this.initNetworkListeners();
-        this.scheduleBatch();
+        if (isWindowAvailable()) {
+            this.isOnline = navigator.onLine;
+            this.loadQueueFromStorage();
+            this.initNetworkListeners();
+            this.scheduleBatch();
+        }
     }
 
     add(payload: any): void {
         const item = { payload, retries: 0, timestamp: Date.now() };
         this.queue.push(item);
-        this.saveQueueToStorage();
+        if (isWindowAvailable()) {
+            this.saveQueueToStorage();
+        } else {
+            this.processBatch(); // Immediately process on server-side
+        }
     }
 
     private initNetworkListeners(): void {
-        window.addEventListener('online', () => {
-            this.isOnline = true;
-            this.processBatch();
-        });
-        window.addEventListener('offline', () => {
-            this.isOnline = false;
-        });
+        if (isWindowAvailable()) {
+            window.addEventListener('online', () => {
+                this.isOnline = true;
+                this.processBatch();
+            });
+            window.addEventListener('offline', () => {
+                this.isOnline = false;
+            });
+        }
     }
 
     private scheduleBatch(): void {
+        if (!isWindowAvailable()) return;
+
         if (this.batchTimeoutId !== null) {
             clearTimeout(this.batchTimeoutId);
         }
@@ -47,26 +59,28 @@ export class RetryQueue {
     }
 
     private async processBatch(): Promise<void> {
-        if (!this.isOnline || this.processing || this.queue.length === 0) {
+        if ((!isWindowAvailable() || this.isOnline) && !this.processing && this.queue.length > 0) {
+            this.processing = true;
+            const batch = this.queue.splice(0, this.batchSize);
+            const payloads = batch.map(item => item.payload);
+
+            try {
+                await this.transport.send(payloads);
+                getLogger().debug(`Successfully sent batch of ${batch.length} payloads`);
+                if (isWindowAvailable()) {
+                    this.saveQueueToStorage();
+                }
+            } catch (error) {
+                getLogger().error('Failed to send batch', error);
+                await this.handleBatchFailure(batch);
+            }
+
+            this.processing = false;
+        }
+
+        if (isWindowAvailable()) {
             this.scheduleBatch();
-            return;
         }
-
-        this.processing = true;
-        const batch = this.queue.splice(0, this.batchSize);
-        const payloads = batch.map(item => item.payload);
-
-        try {
-            await this.transport.send(payloads);
-            getLogger().debug(`Successfully sent batch of ${batch.length} payloads`);
-            this.saveQueueToStorage();
-        } catch (error) {
-            getLogger().error('Failed to send batch', error);
-            await this.handleBatchFailure(batch);
-        }
-
-        this.processing = false;
-        this.scheduleBatch();
     }
 
     private async handleBatchFailure(batch: QueueItem[]): Promise<void> {
@@ -80,19 +94,25 @@ export class RetryQueue {
             }
         }
 
-        this.saveQueueToStorage();
-        await new Promise(resolve => setTimeout(resolve, this.retryInterval));
+        if (isWindowAvailable()) {
+            this.saveQueueToStorage();
+            await new Promise(resolve => setTimeout(resolve, this.retryInterval));
+        }
     }
 
     private loadQueueFromStorage(): void {
-        const storedQueue = this.persistence.get('queue');
-        if (storedQueue) {
-            this.queue = JSON.parse(storedQueue);
+        if (isWindowAvailable()) {
+            const storedQueue = this.persistence.get('queue');
+            if (storedQueue) {
+                this.queue = JSON.parse(storedQueue);
+            }
         }
     }
 
     private saveQueueToStorage(): void {
-        this.persistence.set('queue', JSON.stringify(this.queue));
+        if (isWindowAvailable()) {
+            this.persistence.set('queue', JSON.stringify(this.queue));
+        }
     }
 }
 

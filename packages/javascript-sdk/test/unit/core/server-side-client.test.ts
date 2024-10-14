@@ -8,7 +8,7 @@ describe('UsermavenClient (Server-side)', () => {
     let client: UsermavenClient;
     let trackSpy: ReturnType<typeof vi.fn>;
     const mockConfig: Config = {
-        apiKey: 'test-api-key',
+        key: 'test-api-key',
         trackingHost: 'https://test.usermaven.com',
     };
 

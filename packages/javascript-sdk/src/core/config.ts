@@ -5,7 +5,7 @@ import { LogLevel } from '../utils/logger';
 export type Policy = 'strict' | 'keep' | 'comply';
 
 export interface Config {
-    apiKey: string;
+    key: string;
     trackingHost: string;
     cookieDomain?: string;
     cookieName?: string;

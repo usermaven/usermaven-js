@@ -13,7 +13,7 @@ export class XhrTransport implements Transport {
     send(payloads: any[]): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
-            const apiKey = this.config.apiKey;
+            const apiKey = this.config.key;
 
             const url = this.constructUrl(apiKey);
 

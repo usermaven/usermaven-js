@@ -1,25 +1,29 @@
-import {createClient, UsermavenProvider, usePageView} from "@usermaven/nextjs";
+import { createClient, UsermavenProvider } from "@usermaven/nextjs";
+import { usePageView } from "@usermaven/nextjs";  // Import usePageView from the package
 
-// initialize Usermaven core
+// Initialize Usermaven core
 const usermavenClient = createClient({
-    tracking_host: "https://events.usermaven.com",
-    key: "UMXLIktQsI",
+    trackingHost: "https://events.usermaven.com",
+    key: "UMXktPfqmG",
     autocapture: true
 });
 
-// wrap our app with Usermaven provider
-function MyApp({Component, pageProps}) {
-    // Use the layout defined at the page level, if available
+function MyApp({ Component, pageProps }) {
     const getLayout = Component.getLayout || ((page) => page);
-
-    usePageView(usermavenClient); // this hook will send pageview track event on router change
 
     return (
         <UsermavenProvider client={usermavenClient}>
-            {getLayout(<Component {...pageProps} />)}
+            <AppWrapper>
+                {getLayout(<Component {...pageProps} />)}
+            </AppWrapper>
         </UsermavenProvider>
     )
 }
 
+// Move AppWrapper to a separate functional component
+const AppWrapper = ({ children }) => {
+    // usePageView(usermavenClient); // Now this hook is called inside a functional component
+    return <>{children}</>;
+}
 
-export default MyApp
+export default MyApp;

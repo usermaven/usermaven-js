@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import useUsermaven from "./useUsermaven";
-import { EventPayload, UsermavenClient } from "@usermaven/sdk-js";
+import useUsermaven, {UsermavenClient} from "./useUsermaven";
+import { EventPayload } from "@usermaven/sdk-js";
 
 // Custom hook to track URL changes
 function useUrlChange() {

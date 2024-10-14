@@ -8,8 +8,8 @@ import { BrowserRouter } from "react-router-dom";
 
 // initialize Jitsu core
 const usermavenClient = createClient({
-    tracking_host: "https://events.usermaven.com",
-    key: "UMXLIktQsI"
+    trackingHost: "https://events.usermaven.com",
+    key: "UMXktPfqmG"
 });
 
 // wrap our app with Jitsu provider

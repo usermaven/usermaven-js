@@ -3,12 +3,12 @@ import { Link } from "react-router-dom";
 import { useUsermaven } from "@usermaven/react";
 
 const Main = () => {
-  const { id, track, trackPageView } = useUsermaven(); // import methods from useJitsu hook
+  const { id, track } = useUsermaven(); // import methods from useJitsu hook
 
   useEffect(() => {
     id({id: '123456', email: 'test@email.com'}); // identify current user for all track events
     track('custom_event', {test: true}); // send custom event with payload
-  }, [id, trackPageView, track])
+  }, [id, track])
 
   const clickHandler = (btnName) => {
     track("my_button_click", {btn: btnName}); // send my_button_click event with button name payload on click

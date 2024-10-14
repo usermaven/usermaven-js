@@ -11,7 +11,7 @@ export class BeaconTransport implements Transport {
     }
 
     async send(payloads: any[]): Promise<void> {
-        const apiKey = this.config.apiKey;
+        const apiKey = this.config.key;
         const url = this.constructUrl(apiKey);
         const blob = new Blob([JSON.stringify(payloads)], { type: 'application/json' });
 

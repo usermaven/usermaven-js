@@ -7,7 +7,9 @@
     "build:react": "pnpm --filter @usermaven/react build",
     "build": "pnpm build:javascript && pnpm build:nextjs && pnpm build:react",
     "dev:javascript": "pnpm --filter @usermaven/sdk-js start",
-    "dev": "pnpm dev:javascript"
+    "dev": "pnpm dev:javascript",
+    "dev:example-nextjs": "pnpm --filter @example/nextjs dev",
+    "dev:example-react": "pnpm --filter @example/react dev"
   },
   "workspaces": [
     "packages/*",
