@@ -1,14 +1,19 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import useUsermaven, {UsermavenClient} from "./useUsermaven";
 import { EventPayload } from "@usermaven/sdk-js";
 
 // Custom hook to track URL changes
 function useUrlChange() {
     const [url, setUrl] = useState(window.location.href);
+    const lastUrlRef = useRef(window.location.href);
 
     useEffect(() => {
         const handleUrlChange = () => {
-            setUrl(window.location.href);
+            const currentUrl = window.location.href;
+            if (currentUrl !== lastUrlRef.current) {
+                lastUrlRef.current = currentUrl;
+                setUrl(currentUrl);
+            }
         };
 
         window.addEventListener('popstate', handleUrlChange);
@@ -45,19 +50,23 @@ function usePageView(opts: {
 } = {}): UsermavenClient {
     const url = useUrlChange();
     const usermaven = useUsermaven();
+    const lastTrackedUrl = useRef('');
 
     const trackPageView = useCallback(() => {
-        if (opts.before) {
-            opts.before(usermaven);
+        if (url !== lastTrackedUrl.current) {
+            if (opts.before) {
+                opts.before(usermaven);
+            }
+            usermaven.track(opts?.typeName || 'pageview', {
+                ...opts.payload,
+                url: window.location.href,
+                path: window.location.pathname,
+                referrer: document.referrer,
+                title: document.title
+            });
+            lastTrackedUrl.current = url;
         }
-        usermaven.track(opts?.typeName || 'pageview', {
-            ...opts.payload,
-            url: window.location.href,
-            path: window.location.pathname,
-            referrer: document.referrer,
-            title: document.title
-        });
-    }, [usermaven, opts.before, opts.typeName, opts.payload]);
+    }, [usermaven, url, opts.before, opts.typeName, opts.payload]);
 
     useEffect(() => {
         trackPageView();
