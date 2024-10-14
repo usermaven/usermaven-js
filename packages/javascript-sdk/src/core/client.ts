@@ -431,9 +431,10 @@ export class UsermavenClient {
         if (!isWindowAvailable()) return;
 
         let isLeaving = false;
+        let isRefreshing = false;
 
         const trackPageLeave = () => {
-            if (!isLeaving) {
+            if (!isLeaving && !isRefreshing) {
                 isLeaving = true;
                 this.track('$pageleave', {
                     url: window.location.href,
@@ -443,28 +444,17 @@ export class UsermavenClient {
             }
         };
 
-        const isPageRefresh = (): boolean => {
-            if ('PerformanceNavigationTiming' in window) {
-                const perfEntries = performance.getEntriesByType('navigation');
-                if (perfEntries.length > 0) {
-                    const navEntry = perfEntries[0] as PerformanceNavigationTiming;
-                    return navEntry.type === 'reload';
-                }
-            }
-            // Fallback to the old API if PerformanceNavigationTiming is not supported
-            return (performance.navigation && performance.navigation.type === 1);
-        };
-
-        // Check for refresh and route changes
+        // Check for refresh
         window.addEventListener('beforeunload', (event) => {
-            if (!isPageRefresh()) {
-                trackPageLeave();
-            }
+            isRefreshing = true;
+            setTimeout(() => {
+                isRefreshing = false;
+            }, 100);
         });
 
         // Track on visibilitychange event (when the page becomes hidden)
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && !isPageRefresh()) {
+            if (document.visibilityState === 'hidden' && !isRefreshing) {
                 trackPageLeave();
             }
         });
