@@ -70,6 +70,18 @@ class AutoCapture {
         _register_event(window, 'popstate', handler, false, true);
     }
 
+    private isPageRefresh(): boolean {
+        if ('PerformanceNavigationTiming' in window) {
+            const perfEntries = performance.getEntriesByType('navigation');
+            if (perfEntries.length > 0) {
+                const navEntry = perfEntries[0] as PerformanceNavigationTiming;
+                return navEntry.type === 'reload';
+            }
+        }
+        // Fallback to the old API if PerformanceNavigationTiming is not supported
+        return (performance.navigation && performance.navigation.type === 1);
+    }
+
     private captureEvent(e: Event): boolean | void {
         let target = this.getEventTarget(e);
         if (isTextNode(target)) {
@@ -82,7 +94,9 @@ class AutoCapture {
         }
 
         if ((e.type === 'visibilitychange' && document.visibilityState === 'hidden') || e.type === 'popstate') {
-            this.scrollDepth?.send();
+            if (!this.isPageRefresh()) {
+                this.scrollDepth?.send();
+            }
             return true;
         }
 

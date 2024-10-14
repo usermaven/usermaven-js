@@ -75,15 +75,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 
-// Custom middleware to log request body
-app.use((req, res, next) => {
-    if (req.method === 'POST') {
-        // Serialize the request body to JSON with indentation
-        const jsonString = JSON.stringify(req.body, null, 2);
-        logger.info(`Request Body:\n${jsonString}`);
-    }
-    next();
-});
 
 // Mock endpoint for event tracking
 app.post('/api/v1/event', (req, res) => {

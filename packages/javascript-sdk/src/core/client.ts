@@ -409,7 +409,7 @@ export class UsermavenClient {
                 url: window.location.href,
                 referrer: document.referrer,
                 title: document.title,
-            });
+            }, true);
         } else {
             this.logger.warn('Pageview tracking is not available in server-side environments');
         }
@@ -419,10 +419,9 @@ export class UsermavenClient {
         if (!isWindowAvailable()) return;
 
         let isLeaving = false;
-        let isRefreshing = false;
 
         const trackPageLeave = () => {
-            if (!isLeaving && !isRefreshing) {
+            if (!isLeaving) {
                 isLeaving = true;
                 this.track('$pageleave', {
                     url: window.location.href,
@@ -432,17 +431,28 @@ export class UsermavenClient {
             }
         };
 
-        // Check for refresh
+        const isPageRefresh = (): boolean => {
+            if ('PerformanceNavigationTiming' in window) {
+                const perfEntries = performance.getEntriesByType('navigation');
+                if (perfEntries.length > 0) {
+                    const navEntry = perfEntries[0] as PerformanceNavigationTiming;
+                    return navEntry.type === 'reload';
+                }
+            }
+            // Fallback to the old API if PerformanceNavigationTiming is not supported
+            return (performance.navigation && performance.navigation.type === 1);
+        };
+
+        // Check for refresh and route changes
         window.addEventListener('beforeunload', (event) => {
-            isRefreshing = true;
-            setTimeout(() => {
-                isRefreshing = false;
-            }, 100);
+            if (!isPageRefresh()) {
+                trackPageLeave();
+            }
         });
 
         // Track on visibilitychange event (when the page becomes hidden)
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && !isRefreshing) {
+            if (document.visibilityState === 'hidden' && !isPageRefresh()) {
                 trackPageLeave();
             }
         });
