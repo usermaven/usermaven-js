@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ClientProperties } from "@usermaven/sdk-js/src/interface";
+import { ClientProperties } from "@usermaven/sdk-js";
 import { serialize, CookieSerializeOptions } from 'cookie'
 
 function middlewareEnv(req: NextRequest, res: NextResponse, opts: { disableCookies?: boolean } = {}) {

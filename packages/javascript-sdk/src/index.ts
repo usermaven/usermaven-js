@@ -2,7 +2,7 @@ import { UsermavenClient } from './core/client';
 import { defaultConfig } from './core/config';
 import type { Config } from './core/config';
 import { LogLevel } from './utils/logger';
-import type { UserProps, EventPayload } from './core/types';
+import type { UserProps, EventPayload, ClientProperties } from './core/types';
 import {parseLogLevel} from "./utils/helpers";
 import {isWindowAvailable} from "./utils/common";
 
@@ -164,7 +164,7 @@ if (isWindowAvailable()) {
     })(document, window);
 }
 
-export { usermavenClient, UsermavenClient, Config as UsermavenOptions, UserProps, EventPayload, LogLevel };
+export { usermavenClient, UsermavenClient, Config as UsermavenOptions, UserProps, EventPayload, LogLevel, ClientProperties };
 
 // Export for CommonJS
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {

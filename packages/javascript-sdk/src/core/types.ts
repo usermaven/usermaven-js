@@ -27,3 +27,22 @@ export interface CompanyProps {
     created_at: string;
     [key: string]: any;
 }
+
+/**
+ * Environment where the event have happened.
+ */
+export type ClientProperties = {
+    screen_resolution: string        //screen resolution
+    user_agent: string               //user
+    referer: string                  //document referer
+    url: string                      //current url
+    page_title: string               //page title
+                                     //see UTM_TYPES for all supported utm tags
+    doc_path: string                 //document path
+    doc_host: string                 //document host
+    doc_search: string               //document search string
+
+    vp_size: string                  //viewport size
+    user_language: string            //user language
+    doc_encoding: string
+}

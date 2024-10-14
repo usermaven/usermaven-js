@@ -2,17 +2,16 @@
   "name": "usermaven-website-monorepo",
   "private": true,
   "scripts": {
-    "build:javascript": "yarn workspace @usermaven/sdk-js build",
-    "build:nextjs": "yarn workspace @usermaven/nextjs build",
-    "build:react": "yarn workspace @usermaven/react build",
-    "build": "yarn build:javascript && yarn build:nextjs && yarn build:react",
-    "dev:javascript": "yarn workspace javascript-sdk dev",
-    "dev": "yarn dev:javascript"
+    "build:javascript": "pnpm --filter @usermaven/sdk-js build",
+    "build:nextjs": "pnpm --filter @usermaven/nextjs build",
+    "build:react": "pnpm --filter @usermaven/react build",
+    "build": "pnpm build:javascript && pnpm build:nextjs && pnpm build:react",
+    "dev:javascript": "pnpm --filter @usermaven/sdk-js start",
+    "dev": "pnpm dev:javascript"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
-  "devDependencies": {
-
-  }
+  "packageManager": "pnpm@8.6.10"
 }

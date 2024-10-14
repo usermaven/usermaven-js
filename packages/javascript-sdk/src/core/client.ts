@@ -310,6 +310,14 @@ export class UsermavenClient {
         }
     }
 
+    public rawTrack(payload: any): void {
+        if (!isObject(payload)) {
+            throw new Error('Event payload must be an object');
+        }
+
+        this.track('raw', payload);
+    }
+
 
     public async group(props: CompanyProps, doNotSendEvent: boolean = false): Promise<void> {
         if (!isObject(props)) {
@@ -485,6 +493,35 @@ export class UsermavenClient {
         }
 
         this.logger.info('core state reset', { resetAnonId, namespace: this.namespace });
+    }
+
+    public set(properties: Record<string, any>, opts?: { eventType?: string, persist?: boolean }): void {
+        if (!isObject(properties)) {
+            throw new Error('Properties must be an object');
+        }
+
+        const eventType = opts?.eventType;
+        const persist = opts?.persist ?? true;
+
+        if (eventType) {
+            let props = this.persistence.get(`props_${eventType}`) || {};
+            props = { ...props, ...properties };
+            this.persistence.set(`props_${eventType}`, props);
+        } else {
+            let globalProps = this.persistence.get('global_props') || {};
+            globalProps = { ...globalProps, ...properties };
+            this.persistence.set('global_props', globalProps);
+        }
+
+        if (persist) {
+            this.persistence.save();
+        }
+
+        this.logger.debug(`Properties set`, {
+            properties,
+            eventType: eventType || 'global',
+            persist
+        });
     }
 
     public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {
