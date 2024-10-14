@@ -343,10 +343,12 @@ export class UsermavenClient {
 
     private createEventPayload(eventName: string, eventProps?: EventPayload): any {
         const userProps = this.persistence.get('userProps') || {};
-        const companyProps = this.persistence.get('companyProps') || {};
+        const companyProps = this.persistence.get('companyProps') || undefined;
         const userId = this.persistence.get('userId');
         const globalProps = this.persistence.get('global_props') || {};
         const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
+
+        let processedProps = eventProps || {};
 
         const payload: any = {
             event_id: generateId(),
@@ -355,18 +357,31 @@ export class UsermavenClient {
                 id: userId,
                 ...userProps
             },
-            company: companyProps,
+            ...(companyProps && { company: companyProps }),
             ids: this.getThirdPartyIds(),
             utc_time: new Date().toISOString(),
             local_tz_offset: new Date().getTimezoneOffset(),
             api_key: this.config.key,
             src: "usermaven",
             event_type: eventName,
-            event_attributes: eventProps || {},
             namespace: this.namespace,
             ...globalProps,
             ...eventTypeProps,
         };
+
+        // Process autocapture attributes if it's an autocapture event
+        if (eventName === '$autocapture') {
+            const autocaptureAttributes = this.processAutocaptureAttributes(eventProps || {});
+            payload.autocapture_attributes = autocaptureAttributes;
+        } else {
+            // Apply property blacklist for non-autocapture events
+            if (Array.isArray(this.config.propertyBlacklist)) {
+                this.config.propertyBlacklist.forEach(prop => {
+                    delete processedProps[prop];
+                });
+            }
+            payload.event_attributes = processedProps;
+        }
 
         if (isWindowAvailable()) {
             payload.referer = document.referrer;
@@ -384,6 +399,29 @@ export class UsermavenClient {
         }
 
         return payload;
+    }
+
+    private processAutocaptureAttributes(eventProps: any): any {
+        let attributes: any = {};
+        const elements = eventProps['$elements'] || [];
+        if (elements.length) {
+            attributes = { ...elements[0] };
+        }
+
+        attributes["el_text"] = attributes["$el_text"] || "";
+        attributes["event_type"] = eventProps["$event_type"] || "";
+
+        // Remove properties that should not be included
+        ['$ce_version', "$event_type", "$initial_referrer", "$initial_referring_domain", "$referrer", "$referring_domain", "$elements"].forEach((key) => {
+            delete attributes[key];
+        });
+
+        // Remove additional properties as per the old code
+        delete attributes["$el_text"];
+        delete attributes["nth_child"];
+        delete attributes["nth_of_type"];
+
+        return attributes;
     }
 
     public getCookie(name: string): string | null {
