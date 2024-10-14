@@ -1,0 +1,10 @@
+{
+  "level": "info",
+  "message": "Mock server running at http://localhost:3000",
+  "timestamp": "2024-10-14T05:46:49.059Z"
+}
+{
+  "level": "info",
+  "message": "Received event:\n{\n  \"event_id\": \"1prk948b6n\",\n  \"user\": {\n    \"anonymous_id\": \"685ebh4m4u\",\n    \"id\": \"user123\",\n    \"email\": \"test@example.com\"\n  },\n  \"company\": {},\n  \"ids\": {},\n  \"utc_time\": \"2024-10-14T05:46:50.075Z\",\n  \"local_tz_offset\": -300,\n  \"api_key\": \"test-api-key\",\n  \"src\": \"usermaven\",\n  \"event_type\": \"pageview\",\n  \"event_attributes\": {\n    \"url\": \"http://localhost:5173/examples/index.html\",\n    \"referrer\": \"\",\n    \"title\": \"Usermaven SDK Test\"\n  },\n  \"namespace\": \"usermaven\",\n  \"referer\": \"\",\n  \"url\": \"http://localhost:5173/examples/index.html\",\n  \"page_title\": \"Usermaven SDK Test\",\n  \"doc_path\": \"/examples/index.html\",\n  \"doc_host\": \"localhost\",\n  \"doc_search\": \"\",\n  \"screen_resolution\": \"1920x1080\",\n  \"vp_size\": \"1920x968\",\n  \"user_agent\": \"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0\",\n  \"user_language\": \"en-US\",\n  \"doc_encoding\": \"UTF-8\",\n  \"utm\": {}\n}",
+  "timestamp": "2024-10-14T05:46:50.098Z"
+}

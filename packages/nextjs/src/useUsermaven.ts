@@ -17,7 +17,7 @@ export type UsermavenClient = {
 function useUsermaven(): UsermavenClient {
     const client = useContext(UsermavenContext)
     if (!client) {
-        throw new Error("Before calling useUsermaven() hook, please wrap your component into <JitsuProvider />. Read more in http://jitsu.com/docs/sending-data/js-sdk/react")
+        throw new Error("Before calling useUsermaven() hook, please wrap your component into <UsermavenProvider />. Read more in http://jitsu.com/docs/sending-data/js-sdk/react")
     }
 
     const id = useCallback(

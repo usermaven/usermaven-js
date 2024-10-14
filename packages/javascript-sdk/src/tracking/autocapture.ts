@@ -35,8 +35,8 @@ class AutoCapture {
     private scrollDepth: ScrollDepth | null = null;
 
     // Constants for custom attributes
-    private static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
-    private static readonly PREVENT_CAPTURE_ATTR = 'data-um-no-capture';
+    static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
+    static readonly PREVENT_CAPTURE_ATTR = 'data-um-no-capture';
 
     constructor(client: UsermavenClient, options: Config) {
         this.client = client;

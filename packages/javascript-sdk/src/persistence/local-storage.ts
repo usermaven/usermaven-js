@@ -1,4 +1,5 @@
 import {getLogger} from "../utils/logger";
+import {isWindowAvailable} from "../utils/common";
 
 export class LocalStoragePersistence {
     private storage: Record<string, any> = {};
@@ -29,6 +30,10 @@ export class LocalStoragePersistence {
     }
 
     save(): void {
+        if (!isWindowAvailable()) {
+            getLogger().warn('localStorage is not available in this environment');
+            return;
+        }
         try {
             localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {
@@ -37,6 +42,10 @@ export class LocalStoragePersistence {
     }
 
     private load(): void {
+        if (!isWindowAvailable()) {
+            getLogger().warn('localStorage is not available in this environment');
+            return;
+        }
         try {
             const data = localStorage.getItem(this.prefix + 'data');
             if (data) {
