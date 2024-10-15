@@ -7,6 +7,7 @@ import * as helpers from '../../../src/utils/helpers';
 describe('UsermavenClient (Server-side)', () => {
     let client: UsermavenClient;
     let trackSpy: ReturnType<typeof vi.fn>;
+    let trackInternalSpy: ReturnType<typeof vi.fn>;
     const mockConfig: Config = {
         key: 'test-api-key',
         trackingHost: 'https://test.usermaven.com',
@@ -16,14 +17,16 @@ describe('UsermavenClient (Server-side)', () => {
         vi.spyOn(commonUtils, 'isWindowAvailable').mockReturnValue(false);
         vi.spyOn(helpers, 'generateId').mockReturnValue('mocked-id');
 
-        // Create a spy for the track method
+        // Create spies for both track and trackInternal methods
         trackSpy = vi.fn();
+        trackInternalSpy = vi.fn();
 
         // Create the client instance
         client = new UsermavenClient(mockConfig);
 
-        // Replace the track method with our spy
+        // Replace both track and trackInternal methods with our spies
         client.track = trackSpy;
+        (client as any).trackInternal = trackInternalSpy;
     });
 
     afterEach(() => {
@@ -49,10 +52,14 @@ describe('UsermavenClient (Server-side)', () => {
         expect(trackSpy).toHaveBeenCalledWith(eventName, eventPayload);
     });
 
+
     it('should identify users on server-side', async () => {
         const userData = { id: 'server_user_123', email: 'server@example.com' };
         await client.id(userData);
-        expect(trackSpy).toHaveBeenCalledWith('user_identify', expect.objectContaining(userData));
+        expect(trackInternalSpy).toHaveBeenCalledWith('user_identify', expect.objectContaining({
+            ...userData,
+            anonymous_id: 'mocked-id'
+        }));
     });
 
     it('should handle group method on server-side', async () => {

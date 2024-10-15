@@ -19,6 +19,7 @@ describe('UsermavenClient', () => {
                 throw new Error('Event payload must be a non-null object and not an array');
             }
         });
+        vi.spyOn(client, 'trackInternal').mockImplementation(() => Promise.resolve()); // Add this line
         vi.spyOn(client['retryQueue'], 'add').mockImplementation(() => {});
     });
 
@@ -31,14 +32,14 @@ describe('UsermavenClient', () => {
             const userData = { id: 'user123', email: 'test@example.com' };
             await client.id(userData);
 
-            expect(client.track).toHaveBeenCalledWith('user_identify', expect.objectContaining(userData));
+            expect(client.trackInternal).toHaveBeenCalledWith('user_identify', expect.objectContaining(userData));
         });
 
         it('should not send event when doNotSendEvent is true', async () => {
             const userData = { id: 'user123', email: 'test@example.com' };
             await client.id(userData, true);
 
-            expect(client.track).not.toHaveBeenCalled();
+            expect(client.trackInternal).not.toHaveBeenCalled();
         });
 
         it('should throw an error for invalid email', () => {
@@ -126,7 +127,7 @@ describe('UsermavenClient', () => {
                 url: expect.any(String),
                 referrer: expect.any(String),
                 title: expect.any(String),
-            }));
+            }), true);
         });
     });
 
