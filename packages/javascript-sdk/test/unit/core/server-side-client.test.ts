@@ -56,7 +56,7 @@ describe('UsermavenClient (Server-side)', () => {
     it('should identify users on server-side', async () => {
         const userData = { id: 'server_user_123', email: 'server@example.com' };
         await client.id(userData);
-        expect(trackInternalSpy).toHaveBeenCalledWith('user_identify', expect.objectContaining({
+        expect(trackSpy).toHaveBeenCalledWith('user_identify', expect.objectContaining({
             ...userData,
             anonymous_id: 'mocked-id'
         }));

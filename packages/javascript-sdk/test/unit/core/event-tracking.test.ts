@@ -151,7 +151,7 @@ describe('UsermavenClient Event Tracking', () => {
         vi.spyOn(client as any, 'trackInternal');
         await client.id(userData);
 
-        expect(client['trackInternal']).toHaveBeenCalledWith('user_identify', expect.objectContaining({
+        expect(client['track']).toHaveBeenCalledWith('user_identify', expect.objectContaining({
             ...userData,
             anonymous_id: expect.any(String)
         }));

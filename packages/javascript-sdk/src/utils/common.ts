@@ -326,3 +326,28 @@ export function isWindowAvailable(): boolean {
 export function  generateRandom(): string {
     return Math.random().toString(36).substring(2, 7)
 }
+
+export function toCamelCase(str: string): string {
+    return str.replace(/([-_][a-z])/g, group =>
+        group.toUpperCase()
+            .replace('-', '')
+            .replace('_', '')
+    );
+}
+
+export function convertKeysToCamelCase(obj: Record<string, any>): Record<string, any> {
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(convertKeysToCamelCase);
+    }
+
+    return Object.keys(obj).reduce((result, key) => {
+        const camelKey = toCamelCase(key);
+        result[camelKey] = convertKeysToCamelCase(obj[key]);
+        return result;
+    }, {} as Record<string, any>);
+}
+

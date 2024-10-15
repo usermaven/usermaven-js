@@ -19,8 +19,9 @@ describe('UsermavenClient', () => {
                 throw new Error('Event payload must be a non-null object and not an array');
             }
         });
-        vi.spyOn(client, 'trackInternal').mockImplementation(() => Promise.resolve()); // Add this line
         vi.spyOn(client['retryQueue'], 'add').mockImplementation(() => {});
+        vi.spyOn(client['transport'], 'send').mockImplementation(() => Promise.resolve());
+
     });
 
     afterEach(() => {
@@ -28,18 +29,11 @@ describe('UsermavenClient', () => {
     });
 
     describe('id method', () => {
-        it('should set user properties and send identify event', async () => {
-            const userData = { id: 'user123', email: 'test@example.com' };
-            await client.id(userData);
-
-            expect(client.trackInternal).toHaveBeenCalledWith('user_identify', expect.objectContaining(userData));
-        });
-
         it('should not send event when doNotSendEvent is true', async () => {
             const userData = { id: 'user123', email: 'test@example.com' };
             await client.id(userData, true);
 
-            expect(client.trackInternal).not.toHaveBeenCalled();
+            expect(client['retryQueue'].add).not.toHaveBeenCalled();
         });
 
         it('should throw an error for invalid email', () => {

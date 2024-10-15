@@ -4,15 +4,14 @@ import type { Config } from './core/config';
 import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload, ClientProperties } from './core/types';
 import {parseLogLevel} from "./utils/helpers";
-import {isWindowAvailable} from "./utils/common";
+import {convertKeysToCamelCase, isWindowAvailable} from "./utils/common";
 
 function usermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
-    const mergedConfig: Config = { ...defaultConfig, ...cleanConfig } as Config;
+    const camelCaseConfig = convertKeysToCamelCase(cleanConfig);
+    const mergedConfig: Config = { ...defaultConfig, ...camelCaseConfig } as Config;
 
     if (!mergedConfig.key) {
-        console.error(mergedConfig);
-        console.error(config);
         throw new Error('API key is required!');
     }
 

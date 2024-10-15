@@ -118,7 +118,7 @@ export class UsermavenClient {
             this.config.maxSendAttempts || 3,
             this.config.minSendTimeout || 1000,
             10,
-            500  // Reduced interval to .5 second
+            250  // Reduced interval to .25 second
         );
 
         if (isWindowAvailable()) {
@@ -279,7 +279,7 @@ export class UsermavenClient {
                 anonymous_id: this.anonymousId,
             };
 
-            await this.trackInternal('user_identify', identifyPayload);
+            await this.track('user_identify', identifyPayload);
         }
 
         this.logger.info('User identified:', userData);
