@@ -32,7 +32,7 @@ jobs:
       run: yarn install
 
     - name: Ignore Workspace root check
-      run: yarn global add npm-cli-login --ignore-workspace-root-check  
+      run: yarn global add npm-cli-login --ignore-workspace-root-check
 
     - name: add yarn typescript
       run: yarn add typescript@latest --ignore-workspace-root-check
@@ -44,7 +44,7 @@ jobs:
     - name: Deploy to BunnyCDN
       uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
       with:
-        source: "packages/javascript-sdk/dist/web"
+        source: "packages/javascript-sdk/dist"
         destination: ""
         storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
         storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
@@ -62,7 +62,7 @@ jobs:
       contents: read
       attestations: write
       id-token: write
-    steps:      
+    steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -72,13 +72,13 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.repository_owner }}
         password: ${{ secrets.PAT }}
-  
+
     - name: Extract metadata for Docker
       id: meta
       uses: docker/metadata-action@v4
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-   
+
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
@@ -88,22 +88,22 @@ jobs:
         push: true
         tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         labels: ${{ steps.meta.outputs.labels }}
-  
+
   update-k8s-manifest:
     needs: dev-publish-docker
     runs-on: ubuntu-latest
-      
+
     steps:
     - name: Checkout kubernetes manifests repository
       uses: actions/checkout@v4
       with:
         repository: usermaven/kubernetes-manifests-staging
         token: ${{ secrets.PAT }}
-    
+
     - name: Update Kubernetes deployment
       run: |
         sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
-    
+
     - name: Commit and push changes
       run: |
         git config --local user.email "action@github.com"

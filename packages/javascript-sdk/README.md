@@ -1,51 +1,164 @@
-# Usermaven JavaScript SDK (usermaven.js)
+# Usermaven SDK
 
-Usermaven.js is a JavaScript SDK for [Usermaven](https://usermaven.com).
+Usermaven SDK is a powerful and flexible JavaScript/TypeScript library for tracking user behavior and events in web applications. It supports both client-side and server-side usage, with a focus on privacy, configurability, and robustness.
 
-## Capabilities
+## Features
 
-- Autocapturing via `autocapture`, `capture_pageview`, `properties_string_max_length` and `property_blacklist` options.
+- Cross-platform compatibility (browser and server-side)
+- Flexible event tracking with custom payloads
+- Automatic tracking of page views, form submissions, and user interactions
+- Privacy-focused with configurable data sanitization
+- Robust error handling and retry mechanisms
+- Extensible architecture for custom tracking features
+- Performance optimizations including event batching and debouncing
 
-## Maintainers Guide
+## Installation
 
-This section is indented only for package maintainers.
+### NPM or Yarn
 
-### Building and local debug
-
- * _**ATTENTION**_: Use `yarn` for everything except publishing
- * To spin off a local development server run `yarn devserver`, then open [http://localhost:8081](http://localhost:8081)
-   * The server listens to all changes to src and rebuilds npm and `lib.js` automatically. Open test cases HTML files to see
-     usermaven in action
-     * http://localhost:8081/test-case/embed.html - embedded Usermaven
-      - * <http://localhost:8081/test-case/embed_strict_mode.html> - embedded strict mode for Usermaven
-     * http://localhost:8081/test-case/autocapture.html - embedded Usermaven with autocapturing events
- * `yarn test` runs [Playwright](https://playwright.dev/) test
- * `yarn build` builds both npm package and `lib.js` browser bundle
- * `npm publish --public` to publish the package (change version in `package.json` manually). You need to run `npm login` with your personal
-npmjs account beforehand (make sure you have access to Usermaven team)
- * In order to check usermaven sdk locally. 
-    * `cd dist/npm` --- navigate to npm directory
-    * `npm link` --- creates a symbolic link to be accessed globally
-    * `cd ../../__tests__/sdk/` --- navigate to sdk test project
-    * `npm i` --- install npm dependencies
-    * `npm link @usermaven/sdk-js` --- use npm package locally whose symlink is just published
-    * `npm start` --- start the application and monitor events
-
-### Checking Cross Domain Session locally
-Setup a custom domain and sub-domain locally to test cross domain session persistence.
+You can install the Usermaven SDK using npm:
 
 ```bash
-sudo nano /etc/hosts
+npm install @usermaven/sdk-js
 ```
-Add the following lines in the hosts file
+
+Or using yarn:
+
 ```bash
-127.0.0.1       localhost.com
-127.0.0.1       app.localhost.com
+yarn add @usermaven/sdk-js
 ```
 
-You will be able to access the domains at [localhost domain](http://localhost.com:8081/test-case/embed.html) and [localhost sub-domain](http://app.localhost.com:8081/test-case/embed.html)
+### UMD (Universal Module Definition)
 
-### Publishing new version
+For quick integration without a module bundler, you can include the SDK directly in your HTML using a script tag:
 
- * Login with your *personal* credentials with `npm login`
- * Run `yarn install && yarn build && yarn test && npm publish --access public`
+```html
+<script src="https://cdn.usermaven.com/sdk/v1/lib.js"
+        data-key="your-api-key"
+        data-tracking-host="https://events.yourdomain.com"
+        data-log-level="debug"
+        data-autocapture="true"
+        data-form-tracking="true"
+        data-auto-pageview="true"></script>
+```
+
+Replace `https://cdn.usermaven.com/sdk/v1/lib.js` with the actual URL where the Usermaven SDK is hosted.
+
+## Basic Usage
+
+### Using as a module
+
+```javascript
+import { usermavenClient } from '@usermaven/sdk-js';
+
+const client = usermavenClient({
+  apiKey: 'your-api-key',
+  trackingHost: 'https://events.yourdomain.com',
+  // Add other configuration options as needed
+});
+
+// Track an event
+client.track('button_click', {
+  buttonId: 'submit-form',
+  pageUrl: window.location.href
+});
+
+// Identify a user
+client.id({
+  id: 'user123',
+  email: 'user@example.com',
+  name: 'John Doe'
+});
+
+// Track a page view
+client.pageview();
+```
+
+### Using via UMD
+
+When you include the SDK via a script tag, it automatically initializes with the configuration provided in the data attributes. You can then use the global `usermaven` function to interact with the SDK:
+
+```html
+<script>
+  // Track an event
+  usermaven('track', 'button_click', {
+    buttonId: 'submit-form',
+    pageUrl: window.location.href
+  });
+
+  // Identify a user
+  usermaven('id', {
+    id: 'user123',
+    email: 'user@example.com',
+    name: 'John Doe'
+  });
+
+  // Track a page view (if not set to automatic in the script tag)
+  usermaven('pageview');
+</script>
+```
+
+## Advanced Configuration
+
+The SDK supports various configuration options to customize its behavior. When using as a module:
+
+```javascript
+const client = usermavenClient({
+  apiKey: 'your-api-key',
+  trackingHost: 'https://events.yourdomain.com',
+  cookieDomain: '.yourdomain.com',
+  logLevel: 'DEBUG',
+  useBeaconApi: true,
+  autocapture: true,
+  formTracking: 'all',
+  autoPageview: true,
+  // ... other options
+});
+```
+
+When using via UMD, you can set these options using data attributes on the script tag:
+
+```html
+<script src="https://cdn.usermaven.com/sdk/v1/lib.js"
+        data-key="your-api-key"
+        data-tracking-host="https://events.yourdomain.com"
+        data-log-level="debug"
+        data-autocapture="true"
+        data-form-tracking="all"
+        data-auto-pageview="true"
+        data-use-beacon-api="true"
+        data-cookie-domain=".yourdomain.com"></script>
+```
+
+Refer to the `Config` interface in `src/core/config.ts` for a full list of configuration options.
+
+## Server-Side Usage
+
+The SDK can also be used in server-side environments:
+
+```javascript
+const { usermavenClient } = require('@usermaven/sdk-js');
+
+const client = usermavenClient({
+  apiKey: 'your-api-key',
+  trackingHost: 'https://events.yourdomain.com'
+});
+
+client.track('server_event', {
+  userId: 'user123',
+  action: 'item_purchased'
+});
+```
+
+## Development
+
+To set up the project for development:
+
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Run tests: `npm test`
+4. Build the project: `npm run build`
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines and code of conduct before submitting pull requests.

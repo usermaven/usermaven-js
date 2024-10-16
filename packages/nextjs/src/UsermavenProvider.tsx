@@ -3,13 +3,13 @@ import UsermavenContext from './UsermavenContext'
 import { UsermavenClient } from "@usermaven/sdk-js"
 import {PropsWithChildren} from "react";
 
-export interface JitsuProviderProps {
+export interface UsermavenProviderProps {
     client: UsermavenClient
 }
 
-const JitsuProvider: React.FC<PropsWithChildren<JitsuProviderProps>> = function ({children, client}) {
+const UsermavenProvider: React.FC<PropsWithChildren<UsermavenProviderProps>> = function ({children, client}) {
     const Context = UsermavenContext
     return <Context.Provider value={client}>{children}</Context.Provider>
 }
 
-export default JitsuProvider
+export default UsermavenProvider
