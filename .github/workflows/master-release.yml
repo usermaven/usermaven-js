@@ -4,7 +4,7 @@ on:
   pull_request:
     types: [ closed ]
     branches:
-      - master    
+      - master
 # on:
 #   push:
 #     branches:
@@ -23,4 +23,4 @@ jobs:
           bump_version_scheme: patch
           tag_prefix: ""
     outputs:
-      version: ${{ steps.release.outputs.version }}             
+      version: ${{ steps.release.outputs.version }}
