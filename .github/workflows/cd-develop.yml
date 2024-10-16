@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: usermaven-js-stage
-  DOCKERFILE_PATH: docker/Dockerfile
+  DOCKERFILE_PATH: packages/javascript-sdk/docker
 
 jobs:
   dev_publish:
@@ -92,8 +92,8 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
       with:
-        context: .
-        file: ${{ env.DOCKERFILE_PATH }}
+        context: ${{ env.DOCKERFILE_PATH }}
+        file: Dockerfile
         push: true
         tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         labels: ${{ steps.meta.outputs.labels }}
