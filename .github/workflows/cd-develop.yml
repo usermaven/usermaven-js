@@ -35,10 +35,10 @@ jobs:
       run: pnpm install
 
     - name: Ignore Workspace root check
-      run: pnpm global add npm-cli-login --ignore-workspace-root-check
+      run: pnpm add -g npm-cli-login
 
     - name: add pnpm typescript
-      run: pnpm add typescript@latest --ignore-workspace-root-check
+      run: pnpm add typescript@latest -w
 
     - name: Build project
       run: pnpm build
