@@ -1,20 +1,11 @@
-# Stage 1: Build the application
 FROM node:16.5.0-alpine AS builder
 WORKDIR /usr/src
 COPY . .
 RUN pnpm install && pnpm build
 
-# Stage 2: Set up Nginx to serve the built application
 FROM nginx:latest
-COPY --from=builder /usr/src/dist/lib.js /usr/share/nginx/html/
-
-# Remove default Nginx configurations
+COPY --from=builder /usr/src/dist/lib.js /usr/share/nginx/html
 RUN rm /etc/nginx/nginx.conf && rm /etc/nginx/conf.d/default.conf
-
-# Copy custom Nginx configurations
+RUN ls -al
 COPY packages/javascript-sdk/docker/nginx.conf /etc/nginx/nginx.conf
 COPY packages/javascript-sdk/docker/default.conf /etc/nginx/conf.d/default.conf
-
-# Optional: List directory contents for debugging
-RUN ls -al /etc/nginx
-RUN ls -al /usr/share/nginx/html
