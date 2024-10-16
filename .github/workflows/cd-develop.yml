@@ -11,6 +11,7 @@ env:
   IMAGE_NAME: usermaven-js-stage
   DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
 
+
 jobs:
   dev_publish:
     runs-on: ubuntu-latest
