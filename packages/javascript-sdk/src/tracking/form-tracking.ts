@@ -174,7 +174,30 @@ export default class FormTracking {
     }
 
     private _trim(value: string): string {
-        return value.trim().replace(/^\s+|\s+$/g, '');
+        // Use native trim if available
+        if (typeof String.prototype.trim === 'function') {
+            return value.trim();
+        }
+
+        // Custom implementation for browsers without native trim
+        let start = 0;
+        let end = value.length - 1;
+        const ws = [
+            ' ', '\n', '\r', '\t', '\f', '\v',
+            '\u00A0', '\u1680', '\u2000', '\u2001', '\u2002', '\u2003',
+            '\u2004', '\u2005', '\u2006', '\u2007', '\u2008', '\u2009',
+            '\u200A', '\u2028', '\u2029', '\u202F', '\u205F', '\u3000'
+        ].join('');
+
+        while (start <= end && ws.indexOf(value[start]) > -1) {
+            start++;
+        }
+
+        while (end >= start && ws.indexOf(value[end]) > -1) {
+            end--;
+        }
+
+        return value.slice(start, end + 1);
     }
 }
 

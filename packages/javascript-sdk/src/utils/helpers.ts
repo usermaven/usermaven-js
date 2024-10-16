@@ -1,7 +1,8 @@
 import {LogLevel} from "../utils/logger";
+import {generateRandom} from "../utils/common";
 
 export function generateId(): string {
-    return Math.random().toString(36).substring(2, 12);
+    return generateRandom(10);
 }
 
 export function isValidEmail(email: string): boolean {

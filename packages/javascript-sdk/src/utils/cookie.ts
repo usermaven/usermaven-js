@@ -56,8 +56,11 @@ export class CookieManager {
     }
 
     private extractTopLevelDomain(url: string): string {
-        const DOMAIN_MATCH_REGEX = /[a-z0-9][a-z0-9-]+\.[a-z.]{2,6}$/i;
+        // Use a non-backtracking regex
+        const DOMAIN_MATCH_REGEX = /(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+
         const matches = url.match(DOMAIN_MATCH_REGEX);
+
         return matches ? matches[0] : '';
     }
 
