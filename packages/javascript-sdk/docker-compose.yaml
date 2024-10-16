@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  server:
+    tty: true
+    container_name: "usermaven-tracker"
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - 9000:80
