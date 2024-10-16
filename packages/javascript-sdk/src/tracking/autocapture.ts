@@ -159,12 +159,19 @@ class AutoCapture {
 
     private getElementsJson(targetElementList: Element[], e: Event): any[] {
         const elementsJson: any[] = [];
-        let href;
+        let href: false | string | null = null;
+        let explicitNoCapture = false;
 
         _each(targetElementList, (el) => {
             if (isTag(el, 'a')) {
                 href = el.getAttribute('href');
                 href = shouldCaptureElement(el) && shouldCaptureValue(href) && href;
+            }
+
+            // Check for 'ph-no-capture' class
+            const classes = getClassName(el).split(' ');
+            if (_includes(classes, 'ph-no-capture')) {
+                explicitNoCapture = true;
             }
 
             elementsJson.push(this.getPropertiesFromElement(el));
@@ -178,7 +185,7 @@ class AutoCapture {
             elementsJson[0]['attr__href'] = this.sanitizeUrl(href);
         }
 
-        return elementsJson;
+        return explicitNoCapture ? [] : elementsJson;
     }
 
     private getPropertiesFromElement(element: Element): any {
