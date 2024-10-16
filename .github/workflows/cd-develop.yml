@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: usermaven-js-stage
-  DOCKERFILE_PATH: docker/Dockerfile
+  DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
 
 jobs:
   dev_publish:
@@ -76,13 +76,18 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.PAT }}
 
-
     - name: Extract metadata for Docker
       id: meta
       uses: docker/metadata-action@v4
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+    - name: List directory contents
+      run: |
+        echo "Root directory:"
+        ls -R
+        echo "packages/javascript-sdk directory:"
+        ls -R packages/javascript-sdk
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
