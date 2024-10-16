@@ -351,7 +351,7 @@ export class UsermavenClient {
         let processedProps = eventProps || {};
 
         const payload: any = {
-            event_id: generateId(),
+            event_id: '',
             user: {
                 anonymous_id: this.anonymousId,
                 id: userId,
