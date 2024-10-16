@@ -163,6 +163,7 @@ class AutoCapture {
         let explicitNoCapture = false;
 
         _each(targetElementList, (el) => {
+            // Check for 'a' tag and capture href
             if (isTag(el, 'a')) {
                 const hrefAttr = el.getAttribute('href');
                 if (hrefAttr !== null && shouldCaptureElement(el) && shouldCaptureValue(hrefAttr)) {
@@ -183,7 +184,8 @@ class AutoCapture {
             elementsJson[0]['$el_text'] = this.sanitizeText(getSafeText(targetElementList[0]));
         }
 
-        if (href) {
+        // Add href to the first element if it exists
+        if (href !== null) {
             elementsJson[0]['attr__href'] = this.sanitizeUrl(href);
         }
 
@@ -264,20 +266,16 @@ class AutoCapture {
     }
 
     private sanitizeUrl(url: string): string {
+        if (!url) return '';
         try {
-            // Parse the URL
-            const parsedUrl = new URL(url);
-
-            // Only allow http and https protocols
+            const parsedUrl = new URL(url, window.location.href);
             if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
                 return '';
             }
-
-            // Encode the URL components
             return encodeURI(parsedUrl.toString());
         } catch (e) {
-            // If URL parsing fails, return an empty string
-            return '';
+            // If URL parsing fails, return the original url after basic sanitization
+            return this.encodeHtml(url);
         }
     }
 
