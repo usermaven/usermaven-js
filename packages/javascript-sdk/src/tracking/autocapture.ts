@@ -240,7 +240,7 @@ class AutoCapture {
 
     private sanitizeText(text: string): string {
         // Remove any HTML tags
-        text = text.replace(/<[^>]*>/g, '');
+        text = text.replace(/<[^>]*?>/g, '');
 
         // Encode special characters
         text = this.encodeHtml(text);
