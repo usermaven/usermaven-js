@@ -76,12 +76,6 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.PAT }}
 
-    - name: List directory contents
-      run: |
-        echo "Root directory:"
-        ls -R
-        echo "packages/javascript-sdk directory:"
-        ls -R packages/javascript-sdk
 
     - name: Extract metadata for Docker
       id: meta
