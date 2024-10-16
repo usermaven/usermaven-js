@@ -323,8 +323,12 @@ export function isWindowAvailable(): boolean {
 }
 
 
-export function  generateRandom(): string {
-    return Math.random().toString(36).substring(2, 7)
+export function  generateRandom(length: number = 5): string {
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(36).padStart(2, '0'))
+        .join('')
+        .slice(0, length);
 }
 
 export function toCamelCase(str: string): string {

@@ -41,7 +41,7 @@ export class UsermavenClient {
             this.config.maxSendAttempts || 3,
             this.config.minSendTimeout || 1000,
             10,
-            500  // Reduced interval to .5 second
+            200  // Reduced interval to .2 second
         );
 
         if (isWindowAvailable()) {
