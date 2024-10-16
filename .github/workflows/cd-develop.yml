@@ -28,17 +28,20 @@ jobs:
         always-auth: true
         node-version: '20'
 
+    - name: Install pnpm
+      run: npm install -g pnpm
+
     - name: Install dependencies
-      run: yarn install
+      run: pnpm install
 
     - name: Ignore Workspace root check
-      run: yarn global add npm-cli-login --ignore-workspace-root-check
+      run: pnpm global add npm-cli-login --ignore-workspace-root-check
 
-    - name: add yarn typescript
-      run: yarn add typescript@latest --ignore-workspace-root-check
+    - name: add pnpm typescript
+      run: pnpm add typescript@latest --ignore-workspace-root-check
 
     - name: Build project
-      run: yarn build
+      run: pnpm build
 
 
     - name: Deploy to BunnyCDN
