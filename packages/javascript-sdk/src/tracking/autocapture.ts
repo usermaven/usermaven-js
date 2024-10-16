@@ -159,13 +159,15 @@ class AutoCapture {
 
     private getElementsJson(targetElementList: Element[], e: Event): any[] {
         const elementsJson: any[] = [];
-        let href: false | string | null = null;
+        let href: string | null = null;
         let explicitNoCapture = false;
 
         _each(targetElementList, (el) => {
             if (isTag(el, 'a')) {
-                href = el.getAttribute('href');
-                href = shouldCaptureElement(el) && shouldCaptureValue(href) && href;
+                const hrefAttr = el.getAttribute('href');
+                if (hrefAttr !== null && shouldCaptureElement(el) && shouldCaptureValue(hrefAttr)) {
+                    href = hrefAttr;
+                }
             }
 
             // Check for 'ph-no-capture' class
