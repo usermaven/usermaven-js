@@ -6,5 +6,5 @@ RUN pnpm install && pnpm build
 FROM nginx:latest
 COPY --from=builder /usr/src/dist/lib.js /usr/share/nginx/html
 RUN rm /etc/nginx/nginx.conf && rm /etc/nginx/conf.d/default.conf
-COPY packages/javascript-sdk/docker/nginx.conf /etc/nginx/nginx.conf
-COPY packages/javascript-sdk/docker/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/default.conf /etc/nginx/conf.d/default.conf
