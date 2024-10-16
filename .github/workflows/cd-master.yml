@@ -35,7 +35,7 @@ jobs:
       run: pnpm add -g npm-cli-login
 
     - name: add pnpm typescript
-      run: pnpm add typescript@latest -w
+      run: npm add typescript@latest -w
 
     - name: Build project
       run: pnpm build
