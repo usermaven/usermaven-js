@@ -5,6 +5,6 @@ services:
     container_name: "usermaven-tracker"
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: packages/javascript-sdk/docker/Dockerfile
     ports:
     - 9000:80
