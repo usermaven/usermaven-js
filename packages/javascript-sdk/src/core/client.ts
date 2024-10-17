@@ -1,16 +1,16 @@
 import {Config, defaultConfig} from './config';
-import {UserProps, EventPayload, Transport, CompanyProps, Policy} from './types';
-import { Logger, getLogger } from '../utils/logger';
-import { CookieManager } from '../utils/cookie';
+import {CompanyProps, EventPayload, Transport, UserProps} from './types';
+import {getLogger, Logger} from '../utils/logger';
+import {CookieManager} from '../utils/cookie';
 import AutoCapture from '../tracking/autocapture';
-import { PageviewTracking } from '../tracking/pageviews';
-import { BeaconTransport } from '../transport/beacon';
-import { FetchTransport } from '../transport/fetch';
-import { XhrTransport } from '../transport/xhr';
-import { LocalStoragePersistence } from '../persistence/local-storage';
-import { MemoryPersistence } from '../persistence/memory';
+import {PageviewTracking} from '../tracking/pageviews';
+import {BeaconTransport} from '../transport/beacon';
+import {FetchTransport} from '../transport/fetch';
+import {XhrTransport} from '../transport/xhr';
+import {LocalStoragePersistence} from '../persistence/local-storage';
+import {MemoryPersistence} from '../persistence/memory';
 import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
-import { RetryQueue } from '../utils/queue';
+import {RetryQueue} from '../utils/queue';
 import {isWindowAvailable} from "../utils/common";
 import {RageClick} from "../extensions/rage-click";
 import {HttpsTransport} from "../transport/https";
@@ -109,7 +109,7 @@ export class UsermavenClient {
     }
 
     public init(config: Config): void {
-        this.config = { ...this.config, ...config };
+        this.config = {...this.config, ...config};
         this.logger = getLogger(this.config.logLevel);
         this.namespace = config.namespace || this.namespace;
         this.transport = this.initializeTransport(config);
@@ -359,7 +359,7 @@ export class UsermavenClient {
                 id: userId,
                 ...userProps
             },
-            ...(companyProps && { company: companyProps }),
+            ...(companyProps && {company: companyProps}),
             ids: this.getThirdPartyIds(),
             utc_time: new Date().toISOString(),
             local_tz_offset: new Date().getTimezoneOffset(),
@@ -407,7 +407,7 @@ export class UsermavenClient {
         let attributes: any = {};
         const elements = eventProps['$elements'] || [];
         if (elements.length) {
-            attributes = { ...elements[0] };
+            attributes = {...elements[0]};
         }
 
         attributes["el_text"] = attributes["$el_text"] || "";
@@ -501,7 +501,7 @@ export class UsermavenClient {
 
         // For Single Page Applications, track when the user navigates away
         const originalPushState = history.pushState;
-        history.pushState = function() {
+        history.pushState = function () {
             trackPageLeave();
             return originalPushState.apply(this, arguments as any);
         };
@@ -526,7 +526,7 @@ export class UsermavenClient {
             this.anonymousId = this.getOrCreateAnonymousId();
         }
 
-        this.logger.info('core state reset', { resetAnonId, namespace: this.namespace });
+        this.logger.info('core state reset', {resetAnonId, namespace: this.namespace});
     }
 
     public set(properties: Record<string, any>, opts?: { eventType?: string, persist?: boolean }): void {
@@ -539,11 +539,11 @@ export class UsermavenClient {
 
         if (eventType) {
             let props = this.persistence.get(`props_${eventType}`) || {};
-            props = { ...props, ...properties };
+            props = {...props, ...properties};
             this.persistence.set(`props_${eventType}`, props);
         } else {
             let globalProps = this.persistence.get('global_props') || {};
-            globalProps = { ...globalProps, ...properties };
+            globalProps = {...globalProps, ...properties};
             this.persistence.set('global_props', globalProps);
         }
 
@@ -556,6 +556,18 @@ export class UsermavenClient {
             eventType: eventType || 'global',
             persist
         });
+    }
+
+    public setUserId(userId: string): void {
+        // update the user id in the persistence
+        this.persistence.set('userId', userId);
+
+        // also in the user props
+        let userProps = this.persistence.get('userProps') || {};
+        userProps['id'] = userId;
+        this.persistence.set('userProps', userProps);
+
+        this.persistence.save();
     }
 
     public unset(propertyName: string, options?: { eventType?: string, persist?: boolean }): void {
