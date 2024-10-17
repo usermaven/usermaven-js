@@ -6,7 +6,7 @@ import { Config } from '@/core/config';
 export class BeaconTransport implements Transport {
     private config: Config;
 
-    constructor(private trackingHost: string, config: Config) {
+    constructor(private trackingHost: string, config: Config, private logger = getLogger()) {
         this.config = config;
     }
 
@@ -16,7 +16,7 @@ export class BeaconTransport implements Transport {
         const blob = new Blob([JSON.stringify(payloads)], { type: 'application/json' });
 
         if (navigator.sendBeacon(url, blob)) {
-            getLogger().debug(`Successfully queued ${payloads.length} event(s) via Beacon API`);
+            this.logger.debug(`Successfully queued ${payloads.length} event(s) via Beacon API`);
         } else {
             throw new Error("Failed to queue events via Beacon API");
         }

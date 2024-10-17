@@ -40,7 +40,7 @@ export interface Config {
 }
 
 export const defaultConfig: Partial<Config> = {
-    logLevel: LogLevel.WARN,
+    logLevel: LogLevel.ERROR,
     useBeaconApi: false,
     forceUseFetch: false,
     trackingHost: 't.usermaven.com',

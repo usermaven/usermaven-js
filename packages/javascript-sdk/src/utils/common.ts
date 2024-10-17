@@ -317,7 +317,7 @@ export function isWindowAvailable(): boolean {
             window.document !== undefined &&
             window.document.createElement !== undefined;
     } catch (e) {
-        getLogger().error('window is not available')
+        getLogger().warn('window is not available')
         return false;
     }
 }

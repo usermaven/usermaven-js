@@ -1,5 +1,5 @@
 import { Transport } from '../core/types';
-import { getLogger } from '../utils/logger';
+import {getLogger, Logger} from '../utils/logger';
 import { LocalStoragePersistence } from '../persistence/local-storage';
 import { isWindowAvailable } from '../utils/common';
 
@@ -15,7 +15,8 @@ export class RetryQueue {
         private maxRetries: number = 3,
         private retryInterval: number = 1000,
         private batchSize: number = 10,
-        private batchInterval: number = 1000
+        private batchInterval: number = 1000,
+        private logger: Logger = getLogger()
     ) {
         this.persistence = new LocalStoragePersistence('offline_queue');
         if (isWindowAvailable()) {
@@ -66,12 +67,12 @@ export class RetryQueue {
 
             try {
                 await this.transport.send(payloads);
-                getLogger().debug(`Successfully sent batch of ${batch.length} payloads`);
+                this.logger.debug(`Successfully sent batch of ${batch.length} payloads`);
                 if (isWindowAvailable()) {
                     this.saveQueueToStorage();
                 }
             } catch (error) {
-                getLogger().error('Failed to send batch', error);
+                 this.logger.error('Failed to send batch', error);
                 await this.handleBatchFailure(batch);
             }
 
@@ -88,9 +89,9 @@ export class RetryQueue {
             if (item.retries < this.maxRetries) {
                 item.retries++;
                 this.queue.unshift(item);
-                getLogger().warn(`Retry attempt ${item.retries} for payload`);
+                 this.logger.warn(`Retry attempt ${item.retries} for payload`);
             } else {
-                getLogger().error('Max retries reached, discarding payload', item.payload);
+                 this.logger.error('Max retries reached, discarding payload', item.payload);
             }
         }
 

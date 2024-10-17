@@ -1,13 +1,15 @@
-import {getLogger} from "../utils/logger";
+import {getLogger, Logger} from "../utils/logger";
 import {isWindowAvailable} from "../utils/common";
 
 export class LocalStoragePersistence {
     private storage: Record<string, any> = {};
     private prefix: string;
+    private logger: Logger;
 
-    constructor(apiKey: string) {
+    constructor(apiKey: string, logger?: Logger) {
         this.prefix = `usermaven_${apiKey}_`;
         this.load();
+        this.logger = logger || getLogger();
     }
 
     set(key: string, value: any): void {
@@ -31,19 +33,19 @@ export class LocalStoragePersistence {
 
     save(): void {
         if (!isWindowAvailable()) {
-            getLogger().warn('localStorage is not available in this environment');
+            this.logger.warn('localStorage is not available in this environment');
             return;
         }
         try {
             localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
         } catch (error) {
-            getLogger().error('Error saving to localStorage:', error);
+            this.logger.error('Error saving to localStorage:', error);
         }
     }
 
     private load(): void {
         if (!isWindowAvailable()) {
-            getLogger().warn('localStorage is not available in this environment');
+            this.logger.warn('localStorage is not available in this environment');
             return;
         }
         try {
@@ -52,7 +54,7 @@ export class LocalStoragePersistence {
                 this.storage = JSON.parse(data);
             }
         } catch (error) {
-            getLogger().error('Error loading from localStorage:', error);
+            this.logger.error('Error loading from localStorage:', error);
         }
     }
 }
