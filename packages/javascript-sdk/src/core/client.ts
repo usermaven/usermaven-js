@@ -232,7 +232,7 @@ export class UsermavenClient {
 
             // Set cookie for 10 years
             const tenYearsInDays = 365 * 10;
-            this.cookieManager?.set(cookieName, id, tenYearsInDays, true, false);
+            this.cookieManager?.set(cookieName, id, tenYearsInDays, document.location.protocol !== "http:", false);
         }
 
         return id;
