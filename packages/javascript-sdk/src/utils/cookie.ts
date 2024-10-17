@@ -3,9 +3,11 @@ export class CookieManager {
 
     constructor(private domain?: string) {
         this.cookieDomain = this.getCookieDomain();
+        console.log(this.cookieDomain);
     }
 
     set(name: string, value: string, expirationDays: number = 365, secure: boolean = true, httpOnly: boolean = false): void {
+        console.log('Setting cookie', name, value, expirationDays, secure, httpOnly);
         const date = new Date();
         date.setTime(date.getTime() + expirationDays * 24 * 60 * 60 * 1000);
         const expires = `expires=${date.toUTCString()}`;
@@ -35,7 +37,7 @@ export class CookieManager {
         if (typeof window === 'undefined' || this.domain) {
             return this.domain || '';
         }
-        return '.' + this.extractRoot(window.location.hostname);
+        return this.extractRoot(window.location.hostname);
     }
 
     private extractRoot(url: string): string {
@@ -47,61 +49,23 @@ export class CookieManager {
             return url;
         }
 
-        let rootDomain = this.extractTopLevelDomain(url);
-        if (!rootDomain) { // If it's not a top level domain, use a fallback method
-            rootDomain = this.extractRootDomain(url);
+        // Handle localhost
+        if (url === 'localhost') {
+            return "." + url;
         }
 
-        return rootDomain;
-    }
-
-    private extractTopLevelDomain(url: string): string {
-        // Use a non-backtracking regex
-        const DOMAIN_MATCH_REGEX = /(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
-
-        const matches = url.match(DOMAIN_MATCH_REGEX);
-
-        return matches ? matches[0] : '';
-    }
-
-    private extractRootDomain(url: string): string {
-        let domain = this.extractHostname(url);
-        const splitArr = domain.split('.');
-        const arrLen = splitArr.length;
-
-        // extracting the root domain here
-        // if there is a subdomain
-        if (arrLen > 2) {
-            if (splitArr[arrLen - 1].length == 2) {
-                // likely a ccTLD
-                domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
-                // if the second level domain is also two letters (like co.uk), include the next part up
-                if (splitArr[arrLen - 2].length == 2) {
-                    domain = splitArr[arrLen - 3] + '.' + domain;
-                }
-            } else {
-                // likely a gTLD
-                domain = splitArr[arrLen - 2] + '.' + splitArr[arrLen - 1];
+        // Handle subdomains
+        if (domainLength > 2) {
+            // Check for country code top-level domains (ccTLDs)
+            const knownCcTLDs = ['co.uk', 'com.au', 'co.jp']; // Add more as needed
+            const lastTwoParts = domainParts.slice(-2).join('.');
+            if (knownCcTLDs.includes(lastTwoParts)) {
+                return '.' + domainParts.slice(-3).join('.');
             }
-        }
-        return domain;
-    }
-
-    private extractHostname(url: string): string {
-        let hostname: string;
-        //find & remove protocol (http, ftp, etc.) and get hostname
-
-        if (url.indexOf("//") > -1) {
-            hostname = url.split('/')[2];
-        } else {
-            hostname = url.split('/')[0];
+            return '.' + domainParts.slice(-2).join('.');
         }
 
-        //find & remove port number
-        hostname = hostname.split(':')[0];
-        //find & remove "?"
-        hostname = hostname.split('?')[0];
-
-        return hostname;
+        // Handle simple domains
+        return '.' + url;
     }
 }
