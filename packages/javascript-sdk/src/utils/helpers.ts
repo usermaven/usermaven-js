@@ -62,9 +62,16 @@ export function isObject(value: any): boolean {
 
 export function parseLogLevel(value: string | null): LogLevel {
     if (value === null) {
-        return LogLevel.WARN; // Default value
+        return LogLevel.ERROR; // Default value
     }
 
     const upperValue = value.toUpperCase();
-    return (LogLevel[upperValue as keyof typeof LogLevel] as LogLevel) || LogLevel.WARN;
+    const level = (LogLevel[upperValue as keyof typeof LogLevel] as LogLevel)
+
+    if (level || level === 0) {
+        return level
+    }
+
+    return LogLevel.ERROR;
+
 }

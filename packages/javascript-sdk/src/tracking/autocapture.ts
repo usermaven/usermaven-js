@@ -38,7 +38,9 @@ class AutoCapture {
     static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
     static readonly PREVENT_CAPTURE_ATTR = 'data-um-no-capture';
 
-    constructor(client: UsermavenClient, options: Config) {
+    constructor(client: UsermavenClient, options: Config,
+                private logger = getLogger()
+    ) {
         this.client = client;
         this.options = options;
         this.scrollDepth = new ScrollDepth(client);
@@ -48,7 +50,7 @@ class AutoCapture {
 
     public init(): void {
         if (!(document && document.body)) {
-            getLogger().debug('Document not ready yet, trying again in 500 milliseconds...');
+             this.logger.debug('Document not ready yet, trying again in 500 milliseconds...');
             setTimeout(() => this.init(), 500);
             return;
         }
@@ -117,6 +119,11 @@ class AutoCapture {
     }
 
     private shouldCaptureElement(element: Element, event: Event): boolean {
+
+        if (!element || typeof element.hasAttribute !== 'function') {
+            return false; // or handle this case as appropriate for your application
+        }
+
         // Check for force capture attribute
         if (element.hasAttribute(AutoCapture.FORCE_CAPTURE_ATTR)) {
             return true;
@@ -266,7 +273,6 @@ class AutoCapture {
     }
 
     private sanitizeUrl(url: string): string {
-        console.log('url', url);
         if (!url) return '';
         try {
             const parsedUrl = new URL(url, window.location.href);

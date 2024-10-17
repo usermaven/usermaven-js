@@ -1,12 +1,12 @@
 import { Transport } from '../core/types';
-import { getLogger } from '../utils/logger';
+import {getLogger, Logger} from '../utils/logger';
 import { isWindowAvailable, generateRandom } from "../utils/common";
 import { Config } from '@/core/config';
 
 export class FetchTransport implements Transport {
     private config: Config;
 
-    constructor(private trackingHost: string, config: Config) {
+    constructor(private trackingHost: string, config: Config, private logger: Logger = getLogger()) {
         this.config = config;
     }
 
@@ -30,7 +30,7 @@ export class FetchTransport implements Transport {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        getLogger().debug(`Successfully sent ${payloads.length} event(s)`);
+         this.logger.debug(`Successfully sent ${payloads.length} event(s)`);
 
         // Post-handling
         this.postHandle(response.status, await response.text());
@@ -59,6 +59,6 @@ export class FetchTransport implements Transport {
 
     private postHandle(code: number, body: string): void {
         // Implement post-handling logic if needed
-        getLogger().debug(`Response received. Status: ${code}, Body: ${body}`);
+         this.logger.debug(`Response received. Status: ${code}, Body: ${body}`);
     }
 }

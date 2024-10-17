@@ -33,6 +33,6 @@ export class Logger {
     }
 }
 
-export function getLogger(): Logger {
-    return new Logger(LogLevel.DEBUG);
+export function getLogger(level: LogLevel = LogLevel.DEBUG): Logger {
+    return new Logger(level);
 }

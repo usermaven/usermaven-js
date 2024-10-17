@@ -1,12 +1,15 @@
-import { Transport } from '../core/types';
-import { getLogger } from '../utils/logger';
-import { isWindowAvailable, generateRandom } from "../utils/common";
-import { Config } from '@/core/config';
+import {Transport} from '../core/types';
+import {getLogger} from '../utils/logger';
+import {generateRandom, isWindowAvailable} from "../utils/common";
+import {Config} from '@/core/config';
 
 export class XhrTransport implements Transport {
     private config: Config;
 
-    constructor(private trackingHost: string, config: Config) {
+    constructor(private trackingHost: string,
+                config: Config,
+                private logger = getLogger()
+    ) {
         this.config = config;
     }
 
@@ -28,7 +31,7 @@ export class XhrTransport implements Transport {
 
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    getLogger().debug(`Successfully sent ${payloads.length} event(s)`);
+                     this.logger.debug(`Successfully sent ${payloads.length} event(s)`);
                     resolve();
                 } else {
                     reject(new Error(`HTTP error! status: ${xhr.status}`));
@@ -66,6 +69,6 @@ export class XhrTransport implements Transport {
 
     private postHandle(code: number, body: string): void {
         // Implement post-handling logic if needed
-        getLogger().debug(`Response received. Status: ${code}, Body: ${body}`);
+         this.logger.debug(`Response received. Status: ${code}, Body: ${body}`);
     }
 }

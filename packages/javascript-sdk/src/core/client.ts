@@ -32,7 +32,7 @@ export class UsermavenClient {
 
     constructor(config: Config) {
         this.config = this.mergeConfig(config, defaultConfig);
-        this.logger = getLogger();
+        this.logger = getLogger(this.config.logLevel);
         this.namespace = config.namespace || 'usermaven';
         this.transport = this.initializeTransport(this.config);
         this.persistence = this.initializePersistence();
@@ -41,7 +41,8 @@ export class UsermavenClient {
             this.config.maxSendAttempts || 3,
             this.config.minSendTimeout || 1000,
             10,
-            200  // Reduced interval to .2 second
+            200,  // Reduced interval to .2 second
+            this.logger
         );
 
         if (isWindowAvailable()) {
@@ -58,7 +59,7 @@ export class UsermavenClient {
         this.cookieManager = new CookieManager(this.config.cookieDomain);
 
         if (this.config.autocapture && AutoCapture.enabledForProject(this.config.key)) {
-            this.autoCapture = new AutoCapture(this, this.config);
+            this.autoCapture = new AutoCapture(this, this.config, this.logger);
             this.autoCapture.init();
         }
 
@@ -109,7 +110,7 @@ export class UsermavenClient {
 
     public init(config: Config): void {
         this.config = { ...this.config, ...config };
-        this.logger = getLogger();
+        this.logger = getLogger(this.config.logLevel);
         this.namespace = config.namespace || this.namespace;
         this.transport = this.initializeTransport(config);
         this.persistence = this.initializePersistence();
@@ -118,7 +119,8 @@ export class UsermavenClient {
             this.config.maxSendAttempts || 3,
             this.config.minSendTimeout || 1000,
             10,
-            250  // Reduced interval to .25 second
+            250,  // Reduced interval to .25 second
+            this.logger
         );
 
         if (isWindowAvailable()) {
@@ -179,13 +181,13 @@ export class UsermavenClient {
         const isBeaconAvailable = typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
 
         if (config.useBeaconApi && isBeaconAvailable) {
-            return new BeaconTransport(config.trackingHost, config);
+            return new BeaconTransport(config.trackingHost, config, this.logger);
         } else if (config.forceUseFetch && isFetchAvailable) {
-            return new FetchTransport(config.trackingHost, config);
+            return new FetchTransport(config.trackingHost, config, this.logger);
         } else if (isXhrAvailable) {
-            return new XhrTransport(config.trackingHost, config);
+            return new XhrTransport(config.trackingHost, config, this.logger);
         } else if (isFetchAvailable) {
-            return new FetchTransport(config.trackingHost, config);
+            return new FetchTransport(config.trackingHost, config, this.logger);
         } else {
             throw new Error('No suitable transport method available');
         }
@@ -196,7 +198,7 @@ export class UsermavenClient {
         if (this.config.disableEventPersistence || !isWindowAvailable()) {
             return new MemoryPersistence();
         } else {
-            return new LocalStoragePersistence(`${this.namespace}_${this.config.key}`);
+            return new LocalStoragePersistence(`${this.namespace}_${this.config.key}`, this.logger);
         }
     }
 

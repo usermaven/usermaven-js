@@ -7,7 +7,7 @@ import * as url from 'url';
 export class HttpsTransport implements Transport {
     private config: Config;
 
-    constructor(private trackingHost: string, config: Config) {
+    constructor(private trackingHost: string, config: Config, private logger = getLogger()) {
         this.config = config;
     }
 
@@ -37,7 +37,7 @@ export class HttpsTransport implements Transport {
                 res.on('end', () => {
                     const statusCode = res.statusCode || 0;  // Default to 0 if undefined
                     if (statusCode >= 200 && statusCode < 300) {
-                        getLogger().debug(`Successfully sent ${payloads.length} event(s)`);
+                         this.logger.debug(`Successfully sent ${payloads.length} event(s)`);
                         resolve();
                     } else {
                         reject(new Error(`HTTP error! status: ${statusCode}`));
