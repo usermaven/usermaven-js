@@ -186,7 +186,7 @@ class AutoCapture {
 
         // Add href to the first element if it exists
         if (href !== null) {
-            elementsJson[0]['attr__href'] = this.sanitizeUrl(href);
+            elementsJson[0]['attr__href'] = href
         }
 
         return explicitNoCapture ? [] : elementsJson;
@@ -266,6 +266,7 @@ class AutoCapture {
     }
 
     private sanitizeUrl(url: string): string {
+        console.log('url', url);
         if (!url) return '';
         try {
             const parsedUrl = new URL(url, window.location.href);
