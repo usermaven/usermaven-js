@@ -41,11 +41,14 @@ export function getUtmParams(): Record<string, string> {
 
 export function parseQueryString(queryString: string): Record<string, string> {
     const params: Record<string, string> = {};
-    const queries = queryString.substring(1).split('&');
+    // Remove the leading '?' if present
+    const queries = queryString.replace(/^\?/, '').split('&');
 
     for (let i = 0; i < queries.length; i++) {
         const pair = queries[i].split('=');
-        params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        if (pair[0] !== '') {
+            params[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+        }
     }
 
     return params;
@@ -56,7 +59,7 @@ export function isString(value: any): boolean {
 }
 
 export function isObject(value: any): boolean {
-    return value && typeof value === 'object' && value.constructor === Object;
+    return value !== null && typeof value === 'object' && value.constructor === Object;
 }
 
 
