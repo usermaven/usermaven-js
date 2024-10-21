@@ -2,51 +2,39 @@ name: Release Candidate
 
 on:
   pull_request:
-    types: [closed]
+    types: [ closed ]
     branches:
       - develop
 
 jobs:
-  release_candidate:
+  release_on_merge:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Generate RC version
+      - name: Determine RC version
         id: rc_version
         run: |
-          # Get the latest tag
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          
-          # Extract version number and increment patch
-          version=$(echo $latest_tag | sed 's/^v//' | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
-          
-          # Generate RC version
-          rc_version="rc-v${version}-${{ github.run_number }}"
-          
-          echo "RC_VERSION=$rc_version" >> $GITHUB_OUTPUT
+          # Get the latest non-RC tag
+          BASE_VERSION=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          # Count the number of RCs for this version
+          RC_COUNT=$(git tag -l "${BASE_VERSION}-rc.*" | wc -l)
+          RC_NUMBER=$((RC_COUNT + 1))
+          RC_VERSION="${BASE_VERSION}-rc.${RC_NUMBER}"
+          echo "RC_VERSION=${RC_VERSION}" >> $GITHUB_OUTPUT
 
-#      - name: Create Release Candidate
-#        uses: rymndhng/release-on-push-action@master
-#        with:
-#          bump_version_scheme: none
-#          tag_prefix: ""
-#          tag_name: ${{ steps.rc_version.outputs.RC_VERSION }}
-#          release_name: "Release Candidate ${{ steps.rc_version.outputs.RC_VERSION }}"
-#          release_body: |
-#            This is a release candidate created from the develop branch.
-#            RC Version: ${{ steps.rc_version.outputs.RC_VERSION }}
-#
-#            Changes in this release candidate:
-#            ${{ github.event.pull_request.title }}
-#
-#            For full changes, please see the pull request: ${{ github.event.pull_request.html_url }}
+      - id: release
+        uses: rymndhng/release-on-push-action@master
+        with:
+          bump_version_scheme: none
+          tag_name: ${{ steps.rc_version.outputs.RC_VERSION }}
+          tag_prefix: ""
+          release_name: "Release Candidate ${{ steps.rc_version.outputs.RC_VERSION }}"
 
     outputs:
-      rc_version: ${{ steps.rc_version.outputs.RC_VERSION }}
+      version: ${{ steps.release.outputs.version }}
