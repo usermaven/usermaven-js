@@ -1,0 +1,52 @@
+name: Release Candidate
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - develop
+
+jobs:
+  release_candidate:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate RC version
+        id: rc_version
+        run: |
+          # Get the latest tag
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          # Extract version number and increment patch
+          version=$(echo $latest_tag | sed 's/^v//' | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+          
+          # Generate RC version
+          rc_version="rc-v${version}-${{ github.run_number }}"
+          
+          echo "RC_VERSION=$rc_version" >> $GITHUB_OUTPUT
+
+#      - name: Create Release Candidate
+#        uses: rymndhng/release-on-push-action@master
+#        with:
+#          bump_version_scheme: none
+#          tag_prefix: ""
+#          tag_name: ${{ steps.rc_version.outputs.RC_VERSION }}
+#          release_name: "Release Candidate ${{ steps.rc_version.outputs.RC_VERSION }}"
+#          release_body: |
+#            This is a release candidate created from the develop branch.
+#            RC Version: ${{ steps.rc_version.outputs.RC_VERSION }}
+#
+#            Changes in this release candidate:
+#            ${{ github.event.pull_request.title }}
+#
+#            For full changes, please see the pull request: ${{ github.event.pull_request.html_url }}
+
+    outputs:
+      rc_version: ${{ steps.rc_version.outputs.RC_VERSION }}
