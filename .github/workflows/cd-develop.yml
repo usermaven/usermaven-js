@@ -70,10 +70,6 @@ jobs:
           # Replace "workspace:*" with the actual version in all package.json files
           find packages -name 'package.json' -print0 | xargs -0 sed -i "s/\"workspace:\*\"/\"$RC_VERSION\"/g"
 
-          # Reinstall dependencies to update the lockfile
-          pnpm install --no-frozen-lockfile
-      
-      
       
 
       - name: Upload build artifacts
