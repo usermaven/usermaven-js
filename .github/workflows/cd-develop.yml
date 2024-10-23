@@ -63,24 +63,8 @@ jobs:
       - name: Update package versions
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
-
-          cd packages/javascript-sdk
-          pnpm version $RC_VERSION --no-git-tag-version
-          SDK_VERSION=$RC_VERSION
-          cd ../..
-
-          for package in packages/nextjs packages/react; do
-            if [ -d "$package" ]; then
-              echo "Setting version for $package to $RC_VERSION"
-              cd $package
-
-              pnpm version $RC_VERSION --no-git-tag-version
-
-              pnpm pkg set dependencies.@usermaven/sdk-js=$SDK_VERSION
-
-              cd ../..
-            fi
-          done
+          pnpm version $RC_VERSION --no-git-tag-version --recursive
+      
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
