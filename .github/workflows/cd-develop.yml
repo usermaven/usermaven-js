@@ -101,7 +101,10 @@ jobs:
             packages/*/dist/**
             packages/*/package.json
             packages/*/README.md
+            package.json
+            pnpm-workspace.yaml
           retention-days: 1
+
 
 
 
@@ -138,7 +141,6 @@ jobs:
         run: |
           cd packages/javascript-sdk
           pnpm publish --no-git-checks --tag rc --access public
-  
   
 
   publish-nextjs:
