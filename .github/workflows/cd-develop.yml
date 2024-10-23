@@ -45,6 +45,9 @@ jobs:
       - name: add pnpm typescript
         run: pnpm add typescript@latest -w
 
+      - name: Build project
+        run: pnpm build
+
       - name: Generate RC version
         id: rc_version
         run: |
@@ -60,17 +63,27 @@ jobs:
       - name: Update package versions
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
-          for package in packages/*; do
+          
+          # First update SDK version
+          cd packages/javascript-sdk
+          pnpm version $RC_VERSION --no-git-tag-version
+          SDK_VERSION=$RC_VERSION
+          cd ../..
+          
+          for package in packages/nextjs packages/react; do
             if [ -d "$package" ]; then
               echo "Setting version for $package to $RC_VERSION"
               cd $package
+          
+              # Update package version
               pnpm version $RC_VERSION --no-git-tag-version
-              cd - > /dev/null
+          
+              # Update workspace dependency to specific version
+              sed -i 's|"workspace:\*"|"'"$SDK_VERSION"'"|' package.json
+          
+              cd ../..
             fi
           done
-
-      - name: Build project
-        run: pnpm build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
