@@ -127,9 +127,6 @@ jobs:
           name: packages-artifacts
           path: .
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
       - name: Verify package version
         run: |
           cat packages/javascript-sdk/package.json
