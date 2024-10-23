@@ -71,7 +71,8 @@ jobs:
           find packages -name 'package.json' -print0 | xargs -0 sed -i "s/\"workspace:\*\"/\"$RC_VERSION\"/g"
 
           # Reinstall dependencies to update the lockfile
-          pnpm install
+          pnpm install --no-frozen-lockfile
+      
       
       
 
@@ -106,7 +107,7 @@ jobs:
           path: .
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Publish SDK
         env:
