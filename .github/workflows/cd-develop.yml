@@ -69,12 +69,22 @@ jobs:
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
 
-          # Update versions in all packages recursively
-          pnpm version $RC_VERSION --no-git-tag-version --recursive --loglevel debug
+          echo "Updating package versions to $RC_VERSION"
+
+          # Manually update the version field in package.json files
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              echo "Updating version in $pkg/package.json"
+              sed -i "s/\"version\": \".*\"/\"version\": \"$RC_VERSION\"/g" "$pkg/package.json"
+            fi
+          done
 
           # Replace "workspace:*" with the actual version in all package.json files
           find packages -name 'package.json' -print0 | xargs -0 sed -i "s/\"workspace:\*\"/\"$RC_VERSION\"/g"
 
+          # Reinstall dependencies to update the lockfile
+          pnpm install --no-frozen-lockfile
+      
 
       - name: Check package versions
         run: |
