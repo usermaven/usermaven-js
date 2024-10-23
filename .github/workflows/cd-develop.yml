@@ -75,8 +75,8 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: packages
-          path: packages/*
+          name: packages-dist
+          path: packages/*/dist
           retention-days: 1
 
 
@@ -99,8 +99,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages
-          path: .
+          name: packages-dist
+          path: packages
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -132,8 +132,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages
-          path: .
+          name: packages-dist
+          path: packages
 
       - name: Publish NextJS package
         env:
@@ -162,8 +162,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages
-          path: .
+          name: packages-dist
+          path: packages
 
 
       - name: Publish React package
@@ -181,8 +181,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages
-          path: .
+          name: packages-dist
+          path: packages
 
 
       - name: Deploy to BunnyCDN
@@ -226,8 +226,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages
-          path: .
+          name: packages-dist
+          path: packages
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
