@@ -60,28 +60,55 @@ jobs:
       - name: Set token
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
 
-      - name: Set package version to RC version
+      - name: Update package versions and dependencies
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
+          
+          # First update SDK version
+          cd packages/javascript-sdk
+          npm version $RC_VERSION --no-git-tag-version
+          SDK_VERSION=$(node -p "require('./package.json').version")
+          cd ../..
+          
+          # Then update other packages and their dependencies
           for package in packages/*; do
-          if [ -d "$package" ]; then
-              echo "Setting version for $package to $RC_VERSION"
+            if [ -d "$package" ] && [ "$package" != "packages/javascript-sdk" ]; then
+              echo "Processing $package"
               cd $package
-              npm version $RC_VERSION --no-git-tag-version    
-              cd - > /dev/null
-          fi
+          
+              # Update package version
+              npm version $RC_VERSION --no-git-tag-version
+          
+              # Update workspace dependency to specific version
+              if [ -f "package.json" ]; then
+                sed -i.bak "s|\"@usermaven/sdk-js\": \"workspace:\\*\"|\"@usermaven/sdk-js\": \"$SDK_VERSION\"|" package.json
+                rm package.json.bak
+              fi
+          
+              cd ../..
+            fi
           done
 
-      - name: Publishing RC SDK package
+      - name: Publishing RC packages
         run: |
+          # Publish SDK first
+          cd packages/javascript-sdk
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
+          npm publish --tag rc --access=public
+          cd ../..
+          
+          # Wait a bit for the SDK package to be available
+          sleep 10
+          
+          # Then publish other packages
           for package in packages/*; do
-          if [ -d "$package" ]; then
+            if [ -d "$package" ] && [ "$package" != "packages/javascript-sdk" ]; then
               cd $package
-              echo "Publishing $package RC SDK package"
-              echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
-              npm publish --tag rc --no-workspaces --access=public            
-              cd - > /dev/null
-          fi
+              echo "Publishing $package"
+              echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
+              npm publish --tag rc --access=public
+              cd ../..
+            fi
           done
 
       - name: Deploy to BunnyCDN
