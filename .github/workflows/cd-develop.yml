@@ -19,43 +19,83 @@ jobs:
       contents: read
       packages: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        always-auth: true
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          always-auth: true
+          node-version: '20'
 
-    - name: Install pnpm
-      run: npm install -g pnpm
+      - name: Install pnpm
+        run: npm install -g pnpm
 
-    - name: Install dependencies
-      run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-    - name: Ignore Workspace root check
-      run: npm add -g npm-cli-login
+      - name: Ignore Workspace root check
+        run: npm install -g npm-cli-login
 
-    - name: add pnpm typescript
-      run: pnpm add typescript@latest -w
+      - name: add pnpm typescript
+        run: pnpm add typescript@latest -w
 
-    - name: Build project
-      run: pnpm build
+      - name: Build project
+        run: pnpm build
 
+      - name: Generate RC version
+        id: rc_version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          IFS='.' read -r -a version_parts <<< "$LATEST_TAG"
+          MAJOR="${version_parts[0]}"
+          MINOR="${version_parts[1]}"
+          PATCH="${version_parts[2]}"
+          NEW_PATCH=$((PATCH + 1))
+          RC_VERSION="$MAJOR.$MINOR.$NEW_PATCH-rc.${{ github.run_number }}"
+          echo "RC_VERSION=${RC_VERSION}" >> $GITHUB_OUTPUT
 
-    - name: Deploy to BunnyCDN
-      uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
-      with:
-        source: "packages/javascript-sdk/dist"
-        destination: ""
-        storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
-        storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
-        accessKey: "${{ secrets.BCDN_STAGE_ACCESS_KEY }}"
-        pullZoneId: "${{ secrets.BCDN_STAGE_ZONE_ID }}"
-        upload: "true"
-        remove: "true"
-        purgePullZone: "true"
+      - name: Set token
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
+
+      - name: Set package version to RC version
+        run: |
+          RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
+          for package in packages/*; do
+          if [ -d "$package" ]; then
+              echo "Setting version for $package to $RC_VERSION"
+              cd $package
+              npm version $RC_VERSION --no-git-tag-version    
+              cd - > /dev/null
+          fi
+          done
+
+      - name: Publishing RC SDK package
+        run: |
+          for package in packages/*; do
+          if [ -d "$package" ]; then
+              cd $package
+              echo "Publishing $package RC SDK package"
+              echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
+              npm publish --tag rc --no-workspaces --access=public            
+              cd - > /dev/null
+          fi
+          done
+
+      - name: Deploy to BunnyCDN
+        uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
+        with:
+          source: "packages/javascript-sdk/dist"
+          destination: ""
+          storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
+          storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
+          accessKey: "${{ secrets.BCDN_STAGE_ACCESS_KEY }}"
+          pullZoneId: "${{ secrets.BCDN_STAGE_ZONE_ID }}"
+          upload: "true"
+          remove: "true"
+          purgePullZone: "true"
 
   dev-publish-docker:
     runs-on: ubuntu-latest
