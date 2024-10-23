@@ -109,14 +109,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
@@ -124,15 +124,12 @@ jobs:
           name: packages-artifacts
           path: .
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Verify package version
         run: |
-            cat packages/javascript-sdk/package.json
+          cat packages/javascript-sdk/package.json
 
       - name: Publish SDK
         env:
@@ -142,19 +139,20 @@ jobs:
           cd packages/javascript-sdk
           pnpm publish --no-git-checks --tag rc --access public
   
+  
 
   publish-nextjs:
     needs: publish-sdk
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
@@ -162,12 +160,8 @@ jobs:
           name: packages-artifacts
           path: .
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
+        run: pnpm install --no-frozen-lockfile
 
       - name: Publish NextJS package
         env:
@@ -176,19 +170,20 @@ jobs:
         run: |
           cd packages/nextjs
           pnpm publish --no-git-checks --tag rc --access public
+  
 
   publish-react:
     needs: publish-sdk
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Download build artifacts
         uses: actions/download-artifact@v3
@@ -196,13 +191,8 @@ jobs:
           name: packages-artifacts
           path: .
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-
+        run: pnpm install --no-frozen-lockfile
 
       - name: Publish React package
         env:
@@ -211,6 +201,7 @@ jobs:
         run: |
           cd packages/react
           pnpm publish --no-git-checks --tag rc --access public
+  
 
   deploy-cdn:
     needs: publish-sdk
