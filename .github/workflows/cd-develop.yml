@@ -75,9 +75,13 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: packages-dist
-          path: packages/*/dist
+          name: packages-artifacts
+          path: |
+            packages/*/dist/**
+            packages/*/package.json
+            packages/*/README.md
           retention-days: 1
+
 
 
   publish-sdk:
@@ -93,17 +97,21 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages-dist
-          path: packages
+          name: packages-artifacts
+          path: .
+
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify package version
+        run: |
+            cat packages/javascript-sdk/package.json
 
       - name: Publish SDK
         env:
@@ -112,6 +120,7 @@ jobs:
         run: |
           cd packages/javascript-sdk
           pnpm publish --no-git-checks --tag rc --access public
+  
 
   publish-nextjs:
     needs: publish-sdk
@@ -126,14 +135,18 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages-dist
-          path: packages
+          name: packages-artifacts
+          path: .
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
 
       - name: Publish NextJS package
         env:
@@ -156,14 +169,18 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages-dist
-          path: packages
+          name: packages-artifacts
+          path: .
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
 
 
       - name: Publish React package
@@ -181,8 +198,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages-dist
-          path: packages
+          name: packages-artifacts
+          path: .
 
 
       - name: Deploy to BunnyCDN
@@ -226,8 +243,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: packages-dist
-          path: packages
+          name: packages-artifacts
+          path: .
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
