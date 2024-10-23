@@ -48,6 +48,11 @@ jobs:
       - name: Build project
         run: pnpm build
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
       - name: Generate RC version
         id: rc_version
         run: |
@@ -65,11 +70,17 @@ jobs:
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
 
           # Update versions in all packages recursively
-          pnpm version $RC_VERSION --no-git-tag-version --recursive
+          pnpm version $RC_VERSION --no-git-tag-version --recursive --loglevel debug
 
           # Replace "workspace:*" with the actual version in all package.json files
           find packages -name 'package.json' -print0 | xargs -0 sed -i "s/\"workspace:\*\"/\"$RC_VERSION\"/g"
 
+
+      - name: Check package versions
+        run: |
+          cat packages/javascript-sdk/package.json
+          cat packages/nextjs/package.json
+          cat packages/react/package.json
       
 
       - name: Upload build artifacts
