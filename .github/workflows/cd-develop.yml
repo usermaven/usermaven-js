@@ -63,24 +63,21 @@ jobs:
       - name: Update package versions
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
-          
-          # First update SDK version
+
           cd packages/javascript-sdk
           pnpm version $RC_VERSION --no-git-tag-version
           SDK_VERSION=$RC_VERSION
           cd ../..
-          
+
           for package in packages/nextjs packages/react; do
             if [ -d "$package" ]; then
               echo "Setting version for $package to $RC_VERSION"
               cd $package
-          
-              # Update package version
+
               pnpm version $RC_VERSION --no-git-tag-version
-          
-              # Update workspace dependency to specific version
-              sed -i 's|"workspace:\*"|"'"$SDK_VERSION"'"|' package.json
-          
+
+              pnpm pkg set dependencies.@usermaven/sdk-js=$SDK_VERSION
+
               cd ../..
             fi
           done
