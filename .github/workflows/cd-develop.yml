@@ -12,12 +12,14 @@ env:
   DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
 
 jobs:
-  dev_publish:
+  build:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     permissions:
       contents: read
       packages: write
+    outputs:
+      rc_version: ${{ steps.rc_version.outputs.RC_VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,6 +31,7 @@ jobs:
         with:
           always-auth: true
           node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install pnpm
         run: npm install -g pnpm
@@ -36,14 +39,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Ignore Workspace root check
+      - name: Install npm-cli-login
         run: npm install -g npm-cli-login
 
       - name: add pnpm typescript
         run: pnpm add typescript@latest -w
-
-      - name: Build project
-        run: pnpm build
 
       - name: Generate RC version
         id: rc_version
@@ -57,59 +57,127 @@ jobs:
           RC_VERSION="$MAJOR.$MINOR.$NEW_PATCH-rc.${{ github.run_number }}"
           echo "RC_VERSION=${RC_VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Set token
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > ~/.npmrc
-
-      - name: Update package versions and dependencies
+      - name: Update package versions
         run: |
           RC_VERSION="${{ steps.rc_version.outputs.RC_VERSION }}"
-          
-          # First update SDK version
-          cd packages/javascript-sdk
-          npm version $RC_VERSION --no-git-tag-version
-          SDK_VERSION=$(node -p "require('./package.json').version")
-          cd ../..
-          
-          # Then update other packages and their dependencies
           for package in packages/*; do
-            if [ -d "$package" ] && [ "$package" != "packages/javascript-sdk" ]; then
-              echo "Processing $package"
+            if [ -d "$package" ]; then
+              echo "Setting version for $package to $RC_VERSION"
               cd $package
-          
-              # Update package version
-              npm version $RC_VERSION --no-git-tag-version
-          
-              # Update workspace dependency to specific version
-              if [ -f "package.json" ]; then
-                sed -i.bak "s|\"@usermaven/sdk-js\": \"workspace:\\*\"|\"@usermaven/sdk-js\": \"$SDK_VERSION\"|" package.json
-                rm package.json.bak
-              fi
-          
-              cd ../..
+              pnpm version $RC_VERSION --no-git-tag-version
+              cd - > /dev/null
             fi
           done
 
-      - name: Publishing RC packages
+      - name: Build project
+        run: pnpm build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages-dist
+          path: packages/*/dist
+          retention-days: 1
+
+  publish-sdk:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-dist
+          path: packages
+
+      - name: Publish SDK
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
         run: |
-          # Publish SDK first
           cd packages/javascript-sdk
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
-          npm publish --tag rc --access=public
-          cd ../..
-          
-          # Wait a bit for the SDK package to be available
-          sleep 10
-          
-          # Then publish other packages
-          for package in packages/*; do
-            if [ -d "$package" ] && [ "$package" != "packages/javascript-sdk" ]; then
-              cd $package
-              echo "Publishing $package"
-              echo "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
-              npm publish --tag rc --access=public
-              cd ../..
-            fi
-          done
+          pnpm publish --no-git-checks --tag rc --access public
+
+  publish-nextjs:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-dist
+          path: packages
+
+      - name: Publish NextJS package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/nextjs
+          pnpm publish --no-git-checks --tag rc --access public
+
+  publish-react:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-dist
+          path: packages
+
+      - name: Publish React package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/react
+          pnpm publish --no-git-checks --tag rc --access public
+
+  deploy-cdn:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-dist
+          path: packages
 
       - name: Deploy to BunnyCDN
         uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
@@ -125,65 +193,64 @@ jobs:
           purgePullZone: "true"
 
   dev-publish-docker:
+    needs: publish-sdk
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
     permissions:
       packages: write
       contents: read
       attestations: write
       id-token: write
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Log in to the Container registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.PAT }}
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
 
-    - name: Extract metadata for Docker
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-    - name: List directory contents
-      run: |
-        echo "Root directory:"
-        ls -R
-        echo "packages/javascript-sdk directory:"
-        ls -R packages/javascript-sdk
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-dist
+          path: packages
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        file: ${{ env.DOCKERFILE_PATH }}
-        push: true
-        tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   update-k8s-manifest:
     needs: dev-publish-docker
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout kubernetes manifests repository
-      uses: actions/checkout@v4
-      with:
-        repository: usermaven/kubernetes-manifests-staging
-        token: ${{ secrets.PAT }}
+      - name: Checkout kubernetes manifests repository
+        uses: actions/checkout@v4
+        with:
+          repository: usermaven/kubernetes-manifests-staging
+          token: ${{ secrets.PAT }}
 
-    - name: Update Kubernetes deployment
-      run: |
-        sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
+      - name: Update Kubernetes deployment
+        run: |
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add usermaven-js/usermaven-js-deployment.yaml
-        git commit -m "Update image to ${{ github.sha }}"
-        git push
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add usermaven-js/usermaven-js-deployment.yaml
+          git commit -m "Update image to ${{ github.sha }}"
+          git push
