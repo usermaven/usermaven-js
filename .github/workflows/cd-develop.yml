@@ -99,15 +99,12 @@ jobs:
           name: packages-artifacts
           path: |
             packages/*/dist/**
+            packages/*/lib/**
             packages/*/package.json
             packages/*/README.md
             package.json
             pnpm-workspace.yaml
           retention-days: 1
-
-
-
-
   publish-sdk:
     needs: build
     runs-on: ubuntu-latest
@@ -225,7 +222,6 @@ jobs:
           upload: "true"
           remove: "true"
           purgePullZone: "true"
-
   dev-publish-docker:
     needs: publish-sdk
     runs-on: ubuntu-latest
