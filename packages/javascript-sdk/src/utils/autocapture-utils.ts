@@ -105,59 +105,68 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
         return false
     }
 
-    // allow users to programmatically prevent capturing of elements by adding class 'um-no-capture'
-    if (el.classList && el.classList.contains('um-no-capture')) {
-        return false
+    // Check if current element or any parent has um-no-capture class
+    let curEl: Element | null = el;
+    while (curEl && !isTag(curEl, 'body')) {
+        if (curEl.classList && curEl.classList.contains('um-no-capture')) {
+            return false;
+        }
+        // Handle shadow DOM
+        if (curEl.parentNode && isDocumentFragment(curEl.parentNode)) {
+            curEl = (curEl.parentNode as any).host;
+        } else {
+            curEl = curEl.parentNode as Element;
+        }
     }
 
-    let parentIsUsefulElement = false
-    const targetElementList: Element[] = [el] // TODO: remove this var, it's never queried
-    let parentNode: Element | boolean = true
-    let curEl: Element = el
-    while (curEl.parentNode && !isTag(curEl, 'body')) {
-        // If element is a shadow root, we skip it
-        if (isDocumentFragment(curEl.parentNode)) {
-            targetElementList.push((curEl.parentNode as any).host)
-            curEl = (curEl.parentNode as any).host
-            continue
+    let parentIsUsefulElement = false;
+    curEl = el;
+    while (curEl && !isTag(curEl, 'body')) {
+        // Handle shadow DOM
+        if (curEl.parentNode && isDocumentFragment(curEl.parentNode)) {
+            curEl = (curEl.parentNode as any).host;
+            if (curEl && usefulElements.indexOf(curEl.tagName.toLowerCase()) > -1) {
+                parentIsUsefulElement = true;
+            }
+            continue;
         }
-        parentNode = (curEl.parentNode as Element) || false
-        if (!parentNode) break
+
+        const parentNode = curEl.parentNode as Element;
+        if (!parentNode) break;
+
         if (usefulElements.indexOf(parentNode.tagName.toLowerCase()) > -1) {
-            parentIsUsefulElement = true
+            parentIsUsefulElement = true;
         } else {
-            const compStyles = window.getComputedStyle(parentNode)
+            const compStyles = window.getComputedStyle(parentNode);
             if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer') {
-                parentIsUsefulElement = true
+                parentIsUsefulElement = true;
             }
         }
-
-        targetElementList.push(parentNode)
-        curEl = parentNode
+        curEl = parentNode;
     }
 
-    const compStyles = window.getComputedStyle(el)
+    const compStyles = window.getComputedStyle(el);
     if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer' && event.type === 'click') {
-        return true
+        return true;
     }
 
-    const tag = el.tagName.toLowerCase()
+    const tag = el.tagName.toLowerCase();
     switch (tag) {
         case 'html':
-            return false
+            return false;
         case 'form':
-            return event.type === 'submit'
+            return event.type === 'submit';
         case 'input':
-            return event.type === 'change' || event.type === 'click'
+            return event.type === 'change' || event.type === 'click';
         case 'select':
         case 'textarea':
-            return event.type === 'change' || event.type === 'click'
+            return event.type === 'change' || event.type === 'click';
         default:
-            if (parentIsUsefulElement) return event.type === 'click'
+            if (parentIsUsefulElement) return event.type === 'click';
             return (
                 event.type === 'click' &&
                 (usefulElements.indexOf(tag) > -1 || el.getAttribute('contenteditable') === 'true')
-            )
+            );
     }
 }
 
