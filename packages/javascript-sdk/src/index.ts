@@ -29,7 +29,7 @@ function initFromScript(script: HTMLScriptElement) {
         trackingHost: script.getAttribute('data-tracking-host') || 'https://events.usermaven.com',
         logLevel: parseLogLevel(script.getAttribute('data-log-level')),
         autocapture: script.getAttribute('data-autocapture') === 'true',
-        formTracking: script.getAttribute('data-form-tracking') === 'true' ? 'all' : false,
+        formTracking: script.getAttribute('data-form-tracking') === 'false' ? false : script.getAttribute('data-form-tracking') === 'true' ? 'all' : script.getAttribute('data-form-tracking') as 'tagged' | 'none',
         autoPageview: script.getAttribute('data-auto-pageview') === 'true',
         useBeaconApi: script.getAttribute('data-use-beacon-api') === 'true',
         forceUseFetch: script.getAttribute('data-force-use-fetch') === 'true',
