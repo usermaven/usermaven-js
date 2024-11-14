@@ -30,6 +30,11 @@ export class ScrollDepth {
     }
 
     public send(eventType = "$scroll"): void {
+        if(!this.lastScrollDepth) {
+            // if there is no scroll depth, do not send the event
+            return
+        }
+
         const props = {
             percent: this.lastScrollDepth,
             window_height: this.getWindowHeight(),

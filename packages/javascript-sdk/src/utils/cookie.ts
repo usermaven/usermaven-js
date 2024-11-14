@@ -3,11 +3,9 @@ export class CookieManager {
 
     constructor(private domain?: string) {
         this.cookieDomain = this.getCookieDomain();
-        console.log(this.cookieDomain);
     }
 
     set(name: string, value: string, expirationDays: number = 365, secure: boolean = true, httpOnly: boolean = false): void {
-        console.log('Setting cookie', name, value, expirationDays, secure, httpOnly);
         const date = new Date();
         date.setTime(date.getTime() + expirationDays * 24 * 60 * 60 * 1000);
         const expires = `expires=${date.toUTCString()}`;

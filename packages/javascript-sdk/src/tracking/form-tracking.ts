@@ -106,15 +106,8 @@ export default class FormTracking {
         };
     }
 
-    private _getElementAttributes(element: Element): Record<string, string> {
-        const attributes: Record<string, string> = {};
-        for (let i = 0; i < element.attributes.length; i++) {
-            const attr = element.attributes[i];
-            if (attr.name !== 'value' && !attr.name.startsWith('data-')) {
-                attributes[attr.name] = attr.value;
-            }
-        }
-        return attributes;
+    private _getElementAttributes(element: HTMLElement): Record<string, string> {
+        return Object.keys(element.dataset).length ? JSON.parse(JSON.stringify(element.dataset)) : {};
     }
 
     private getSafeText(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | Node): string {
