@@ -849,6 +849,7 @@ class UsermavenClientImpl implements UsermavenClient {
         const payload = {
             event_id: "", //generate id on the backend
             user: {
+                ...user,
                 anonymous_id:
                     this.cookiePolicy !== "strict"
                         ? env.getAnonymousId({
@@ -857,7 +858,6 @@ class UsermavenClientImpl implements UsermavenClient {
                             crossDomainLinking: this.crossDomainLinking,
                         })
                         : "",
-                ...user,
             },
             ids: this._getIds(),
             utc_time: reformatDate(now.toISOString()),
