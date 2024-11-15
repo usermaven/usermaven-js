@@ -208,7 +208,7 @@ export class UsermavenClient {
         }
 
         if (this.config.privacyPolicy === 'strict' || this.config.cookiePolicy === 'strict') {
-            return this.generateFingerprint();
+            return "" // empty in case of strict policy
         }
 
         const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
