@@ -189,7 +189,14 @@ const browserEnv: TrackingEnvironment = {
         doc_encoding: document.characterSet,
     }),
 
-    getAnonymousId: ({name, domain, crossDomainLinking = true}) => {
+    getAnonymousId: ({name, domain, crossDomainLinking = true, cookiePolicy = 'keep'}) => {
+        
+        // In strict mode (cookiePolicy === 'strict'), don't use cookies at all
+        if (cookiePolicy === 'strict') {
+            // Return an empty string to indicate that we don't want to use cookies
+            return "";
+        }
+
         expireNonRootCookies(name)
 
         // Check if cross domain linking is enabled
@@ -197,7 +204,6 @@ const browserEnv: TrackingEnvironment = {
             // Try to extract the '_um' parameter from query string and hash fragment (https://example.com#_um=1~abcde5~)
             const urlParams = new URLSearchParams(window.location.search);
             const queryId = urlParams.get('_um');
-
 
             const urlHash = window.location.hash.substring(1);
             const hashedValues = urlHash.split("~");
@@ -223,7 +229,6 @@ const browserEnv: TrackingEnvironment = {
             }
         }
 
-
         const idCookie = getCookie(name);
         if (idCookie) {
             getLogger().debug("Existing user id", idCookie);
@@ -239,7 +244,6 @@ const browserEnv: TrackingEnvironment = {
         return newId;
     },
 };
-
 
 function ensurePrefix(prefix: string, str?: string) {
     if (!str) {
@@ -265,8 +269,14 @@ export function fetchApi(
     opts: { disableCookies?: boolean } = {}
 ): TrackingEnvironment {
     return {
-        getAnonymousId({name, domain}): string {
+        getAnonymousId({name, domain, cookiePolicy = 'keep'}): string {
             if (opts?.disableCookies) {
+                return "";
+            }
+
+            // In strict mode (cookiePolicy === 'strict'), don't use cookies at all
+            if (cookiePolicy === 'strict') {
+                // Return an empty string to indicate that we don't want to use cookies
                 return "";
             }
 
@@ -352,8 +362,14 @@ export function httpApi(
     };
 
     return {
-        getAnonymousId({name, domain}): string {
+        getAnonymousId({name, domain, cookiePolicy = 'keep'}): string {
             if (opts?.disableCookies) {
+                return "";
+            }
+
+            // In strict mode (cookiePolicy === 'strict'), don't use cookies at all
+            if (cookiePolicy === 'strict') {
+                // Return an empty string to indicate that we don't want to use cookies
                 return "";
             }
 
@@ -850,14 +866,12 @@ class UsermavenClientImpl implements UsermavenClient {
             event_id: "", //generate id on the backend
             user: {
                 ...user,
-                anonymous_id:
-                    this.cookiePolicy !== "strict"
-                        ? env.getAnonymousId({
-                            name: this.idCookieName,
-                            domain: this.cookieDomain,
-                            crossDomainLinking: this.crossDomainLinking,
-                        })
-                        : "",
+                anonymous_id: env.getAnonymousId({
+                    name: this.idCookieName,
+                    domain: this.cookieDomain,
+                    crossDomainLinking: this.crossDomainLinking,
+                    cookiePolicy: this.cookiePolicy
+                })
             },
             ids: this._getIds(),
             utc_time: reformatDate(now.toISOString()),
