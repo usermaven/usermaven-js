@@ -1,6 +1,6 @@
 {
   "name": "@usermaven/nextjs",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Usermaven JavaScript SDK for NextJS",
   "author": "Usermaven <hello@usermaven.com>",
   "license": "MIT",
