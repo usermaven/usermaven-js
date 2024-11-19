@@ -388,7 +388,7 @@ export type TrackingEnvironment = {
    * Gets (and persists) anonymous id. Example implementation: id can be persisted in cookies or in other way.
    *
    */
-  getAnonymousId(cookieOpts: { name: string, domain?: string, crossDomainLinking?: boolean }): string;
+  getAnonymousId(cookieOpts: { name: string, domain?: string, crossDomainLinking?: boolean, cookiePolicy?: Policy }): string;
 };
 /**
  * List of environments where Jitsu tracker can work. See TrackingEnvironment above
