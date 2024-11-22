@@ -4,7 +4,6 @@
  * @returns {string} the element's class
  */
 import { _each, _includes, _isUndefined, _trim } from './common'
-import AutoCapture from "../tracking/autocapture";
 
 export function getClassName(el: Element): string {
     switch (typeof el.className) {
@@ -105,59 +104,68 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
         return false
     }
 
-    // allow users to programmatically prevent capturing of elements by adding class 'um-no-capture'
-    if (el.classList && el.classList.contains('um-no-capture')) {
-        return false
+    // Check if current element or any parent has um-no-capture class
+    let curEl: Element | null = el;
+    while (curEl && !isTag(curEl, 'body')) {
+        if (curEl.classList && curEl.classList.contains('um-no-capture')) {
+            return false;
+        }
+        // Handle shadow DOM
+        if (curEl.parentNode && isDocumentFragment(curEl.parentNode)) {
+            curEl = (curEl.parentNode as any).host;
+        } else {
+            curEl = curEl.parentNode as Element;
+        }
     }
 
-    let parentIsUsefulElement = false
-    const targetElementList: Element[] = [el] // TODO: remove this var, it's never queried
-    let parentNode: Element | boolean = true
-    let curEl: Element = el
-    while (curEl.parentNode && !isTag(curEl, 'body')) {
-        // If element is a shadow root, we skip it
-        if (isDocumentFragment(curEl.parentNode)) {
-            targetElementList.push((curEl.parentNode as any).host)
-            curEl = (curEl.parentNode as any).host
-            continue
+    let parentIsUsefulElement = false;
+    curEl = el;
+    while (curEl && !isTag(curEl, 'body')) {
+        // Handle shadow DOM
+        if (curEl.parentNode && isDocumentFragment(curEl.parentNode)) {
+            curEl = (curEl.parentNode as any).host;
+            if (curEl && usefulElements.indexOf(curEl.tagName.toLowerCase()) > -1) {
+                parentIsUsefulElement = true;
+            }
+            continue;
         }
-        parentNode = (curEl.parentNode as Element) || false
-        if (!parentNode) break
+
+        const parentNode = curEl.parentNode as Element;
+        if (!parentNode) break;
+
         if (usefulElements.indexOf(parentNode.tagName.toLowerCase()) > -1) {
-            parentIsUsefulElement = true
+            parentIsUsefulElement = true;
         } else {
-            const compStyles = window.getComputedStyle(parentNode)
+            const compStyles = window.getComputedStyle(parentNode);
             if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer') {
-                parentIsUsefulElement = true
+                parentIsUsefulElement = true;
             }
         }
-
-        targetElementList.push(parentNode)
-        curEl = parentNode
+        curEl = parentNode;
     }
 
-    const compStyles = window.getComputedStyle(el)
+    const compStyles = window.getComputedStyle(el);
     if (compStyles && compStyles.getPropertyValue('cursor') === 'pointer' && event.type === 'click') {
-        return true
+        return true;
     }
 
-    const tag = el.tagName.toLowerCase()
+    const tag = el.tagName.toLowerCase();
     switch (tag) {
         case 'html':
-            return false
+            return false;
         case 'form':
-            return event.type === 'submit'
+            return event.type === 'submit';
         case 'input':
-            return event.type === 'change' || event.type === 'click'
+            return event.type === 'change' || event.type === 'click';
         case 'select':
         case 'textarea':
-            return event.type === 'change' || event.type === 'click'
+            return event.type === 'change' || event.type === 'click';
         default:
-            if (parentIsUsefulElement) return event.type === 'click'
+            if (parentIsUsefulElement) return event.type === 'click';
             return (
                 event.type === 'click' &&
                 (usefulElements.indexOf(tag) > -1 || el.getAttribute('contenteditable') === 'true')
-            )
+            );
     }
 }
 
@@ -167,54 +175,45 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
  * @param {Element} el - element to check
  * @returns {boolean} whether the element should be captured
  */
-export function shouldCaptureElement(el: Element | null | undefined): boolean {
-    if (!el || !isElementNode(el)) {
-        return false;
-    }
-
-    // Check for force capture and prevent capture attributes
-    if (typeof el.hasAttribute === 'function') {
-        if (el.hasAttribute(AutoCapture.FORCE_CAPTURE_ATTR)) {
-            return true;
-        }
-        if (el.hasAttribute(AutoCapture.PREVENT_CAPTURE_ATTR)) {
-            return false;
-        }
-    }
-
-    let curEl: Element | null = el;
-    while (curEl && curEl.parentElement && !isTag(curEl, 'body')) {
-        const classes = getClassName(curEl).split(' ');
+export function shouldCaptureElement(el: Element): boolean {
+    for (let curEl = el; curEl.parentNode && !isTag(curEl, 'body'); curEl = curEl.parentNode as Element) {
+        const classes = getClassName(curEl).split(' ')
         if (_includes(classes, 'ph-sensitive') || _includes(classes, 'ph-no-capture')) {
-            return false;
+            return false
         }
-        curEl = curEl.parentElement;
     }
 
     if (_includes(getClassName(el).split(' '), 'ph-include')) {
-        return true;
+        return true
     }
 
     // don't include hidden or password fields
-    const type = (el as HTMLInputElement).type;
+    const type = (el as HTMLInputElement).type || ''
     if (typeof type === 'string') {
+        // it's possible for el.type to be a DOM element if el is a form with a child input[name="type"]
         switch (type.toLowerCase()) {
             case 'hidden':
+                return false
             case 'password':
-                return false;
+                return false
         }
     }
 
     // filter out data from fields that look like sensitive fields
-    const name = (el as HTMLInputElement).name || el.id || '';
+    const name = (el as HTMLInputElement).name || el.id || ''
+    // See https://github.com/posthog/posthog-js/issues/165
+    // Under specific circumstances a bug caused .replace to be called on a DOM element
+    // instead of a string, removing the element from the page. Ensure this issue is mitigated.
     if (typeof name === 'string') {
-        const sensitiveNameRegex = /^cc|cardnum|ccnum|creditcard|csc|cvc|cvv|exp|pass|pwd|routing|seccode|securitycode|securitynum|socialsec|socsec|ssn/i;
+        // it's possible for el.name or el.id to be a DOM element if el is a form with a child input[name="name"]
+        const sensitiveNameRegex =
+            /^cc|cardnum|ccnum|creditcard|csc|cvc|cvv|exp|pass|pwd|routing|seccode|securitycode|securitynum|socialsec|socsec|ssn/i
         if (sensitiveNameRegex.test(name.replace(/[^a-zA-Z0-9]/g, ''))) {
-            return false;
+            return false
         }
     }
 
-    return true;
+    return true
 }
 
 /*
