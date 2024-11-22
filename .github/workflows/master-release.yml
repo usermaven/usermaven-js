@@ -1,26 +1,26 @@
-name: Master Release
+# name: Master Release
 
-on:
-  pull_request:
-    types: [ closed ]
-    branches:
-      - master
 # on:
-#   push:
+#   pull_request:
+#     types: [ closed ]
 #     branches:
 #       - master
+# # on:
+# #   push:
+# #     branches:
+# #       - master
 
-jobs:
-  release_on_merge:
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
-    env:
-      GITHUB_TOKEN: ${{ secrets.PAT }}
-    steps:
-      - id: release
-        uses: rymndhng/release-on-push-action@master
-        with:
-          bump_version_scheme: patch
-          tag_prefix: ""
-    outputs:
-      version: ${{ steps.release.outputs.version }}
+# jobs:
+#   release_on_merge:
+#     runs-on: ubuntu-latest
+#     if: github.event.pull_request.merged == true
+#     env:
+#       GITHUB_TOKEN: ${{ secrets.PAT }}
+#     steps:
+#       - id: release
+#         uses: rymndhng/release-on-push-action@master
+#         with:
+#           bump_version_scheme: patch
+#           tag_prefix: ""
+#     outputs:
+#       version: ${{ steps.release.outputs.version }}
