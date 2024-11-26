@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usermaven SDK Autocapture Test Page</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 40px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .links {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f5f5f5;
+        }
+        .links a {
+            margin-right: 15px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+        .dropdown-content a {
+            padding: 12px 16px;
+            display: block;
+            text-decoration: none;
+            color: black;
+        }
+        .scroll-section {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 20px 0;
+        }
+        /* Back to Top Button Styles */
+        #back_to_top {
+            position: fixed;
+            right: 25px;
+            bottom: 25px;
+            width: 40px;
+            height: 40px;
+            background-color: #333;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            z-index: 1000;
+            transition: background-color 0.3s;
+
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            z-index: 1000;
+            transition: background-color 0.3s
+        }
+
+        #back_to_top > span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #back_to_top.on {
+            display: flex;
+        }
+        #back_to_top:hover {
+            background-color: #555;
+        }
+        #back_to_top i {
+            color: white;
+            font-size: 20px;
+        }
+        /* Add more content for scrolling */
+        .long-content {
+            height: 2000px;
+            background: linear-gradient(to bottom, #f9f9f9, #e9e9e9);
+            padding: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Usermaven SDK Autocapture Test Page</h1>
+
+    <div class="links">
+        <a href="/examples/index.html">Home</a>
+        <a href="/examples/form-tracking.html">Form Tracking</a>
+        <a href="http://stage.test.local:5173/examples/cross-domain.html">Cross Domain Tracking</a>
+        <a href="http://stage.test.local:5173/examples/autocapture.html">Autocapture</a>
+    </div>
+
+    <!-- Basic Button Events Section -->
+    <div class="section">
+        <h2>Button Events Testing</h2>
+        <button id="trackEvent">Track Event</button>
+        <button id="identifyUser">Identify User</button>
+        <button class="your-class um-no-capture">This button will not be captured</button>
+        <button id="updateUserId">Update the user ID</button>
+        <button onclick="alert('Click alert')">Show Alert</button>
+        <button data-custom-attr="test">Button with Custom Attribute</button>
+    </div>
+
+    <!-- Form Elements Section -->
+    <div class="section">
+        <h2>Form Elements Testing</h2>
+        <form id="testForm" onsubmit="event.preventDefault()">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" placeholder="Enter your name">
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Gender:</label>
+                <input type="radio" id="male" name="gender" value="male">
+                <label for="male">Male</label>
+                <input type="radio" id="female" name="gender" value="female">
+                <label for="female">Female</label>
+            </div>
+            <div class="form-group">
+                <label>Interests:</label>
+                <input type="checkbox" id="coding" name="interests" value="coding">
+                <label for="coding">Coding</label>
+                <input type="checkbox" id="reading" name="interests" value="reading">
+                <label for="reading">Reading</label>
+            </div>
+            <div class="form-group">
+                <label for="country">Country:</label>
+                <select id="country" name="country">
+                    <option value="">Select a country</option>
+                    <option value="us">United States</option>
+                    <option value="uk">United Kingdom</option>
+                    <option value="ca">Canada</option>
+                </select>
+            </div>
+            <button type="submit">Submit Form</button>
+            <button type="reset">Reset Form</button>
+        </form>
+    </div>
+
+    <!-- Modal Testing Section -->
+    <div class="section">
+        <h2>Modal Testing</h2>
+        <button onclick="document.getElementById('testModal').style.display='block';document.getElementById('modalBackdrop').style.display='block'">
+            Open Modal
+        </button>
+        <div id="modalBackdrop" class="modal-backdrop"></div>
+        <div id="testModal" class="modal">
+            <h3>Test Modal</h3>
+            <p>This is a test modal for autocapture events.</p>
+            <button onclick="document.getElementById('testModal').style.display='none';document.getElementById('modalBackdrop').style.display='none'">
+                Close Modal
+            </button>
+        </div>
+    </div>
+
+    <!-- Tabs Testing Section -->
+    <div class="section">
+        <h2>Tabs Testing</h2>
+        <div class="tabs">
+            <div class="tab" onclick="showTab('tab1')">Tab 1</div>
+            <div class="tab" onclick="showTab('tab2')">Tab 2</div>
+            <div class="tab" onclick="showTab('tab3')">Tab 3</div>
+        </div>
+        <div id="tab1" class="tab-content active">Content for Tab 1</div>
+        <div id="tab2" class="tab-content">Content for Tab 2</div>
+        <div id="tab3" class="tab-content">Content for Tab 3</div>
+    </div>
+
+    <!-- Dropdown Testing Section -->
+    <div class="section">
+        <h2>Dropdown Testing</h2>
+        <div class="dropdown">
+            <button onclick="toggleDropdown()">Dropdown Menu</button>
+            <div id="dropdownContent" class="dropdown-content">
+                <a href="#" data-value="option1">Option 1</a>
+                <a href="#" data-value="option2">Option 2</a>
+                <a href="#" data-value="option3">Option 3</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scroll Testing Section -->
+    <div class="section">
+        <h2>Scroll Testing</h2>
+        <div class="scroll-section">
+            <p>Scroll content 1</p>
+            <p>Scroll content 2</p>
+            <p>Scroll content 3</p>
+            <p>Scroll content 4</p>
+            <p>Scroll content 5</p>
+            <p>Scroll content 6</p>
+            <p>Scroll content 7</p>
+            <p>Scroll content 8</p>
+            <p>Scroll content 9</p>
+            <p>Scroll content 10</p>
+        </div>
+    </div>
+
+    <!-- Dynamic Content Section -->
+    <div class="section">
+        <h2>Dynamic Content Testing</h2>
+        <button onclick="addDynamicContent()">Add Dynamic Content</button>
+        <div id="dynamicContent"></div>
+    </div>
+
+    <!-- Long content for scrolling -->
+    <div class="section">
+        <h2>Long Content for Scroll Testing</h2>
+        <div class="long-content">
+            <h3>Scroll down to test the back to top button</h3>
+            <p>This is a long content section to enable scrolling...</p>
+        </div>
+    </div>
+
+    <!-- Back to Top Button -->
+    <a id="back_to_top" href="#" class="on">
+        <span class="fa-stack">
+            <i class="qode_icon_font_awesome fa fa-arrow-up"></i>
+        </span>
+    </a>
+
+    <!-- Load the SDK -->
+    <script src="/dist/lib.js"
+            data-key="test-api-key"
+            data-tracking-host="http://localhost:3000"
+            data-log-level="debug"
+            data-autocapture="true"
+            data-form-tracking="true"
+            data-auto-pageview="true"></script>
+
+    <script>
+        // Tab functionality
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Dropdown functionality
+        function toggleDropdown() {
+            document.getElementById('dropdownContent').style.display = 
+                document.getElementById('dropdownContent').style.display === 'block' ? 'none' : 'block';
+        }
+
+        // Dynamic content functionality
+        function addDynamicContent() {
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <div class="dynamic-item">
+                    <h4>Dynamic Content ${Math.random().toString(36).substring(7)}</h4>
+                    <button>Dynamic Button</button>
+                    <a href="#">Dynamic Link</a>
+                </div>
+            `;
+            document.getElementById('dynamicContent').appendChild(content);
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.dropdown button')) {
+                const dropdowns = document.getElementsByClassName('dropdown-content');
+                for (let dropdown of dropdowns) {
+                    if (dropdown.style.display === 'block') {
+                        dropdown.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        // Back to top functionality
+        window.addEventListener('scroll', function() {
+            const backToTop = document.getElementById('back_to_top');
+            if (window.pageYOffset > 300) {
+                backToTop.classList.add('on');
+            } else {
+                backToTop.classList.remove('on');
+            }
+        });
+
+        document.getElementById('back_to_top').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    </script>
+</body>
+</html>

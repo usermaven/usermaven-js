@@ -46,3 +46,13 @@ export type ClientProperties = {
     user_language: string            //user language
     doc_encoding: string
 }
+
+
+// Autocapture
+export type Property = any
+export type Properties = Record<string, Property>
+export interface AutoCaptureCustomProperty {
+    name: string
+    css_selector: string
+    event_selectors: string[]
+}
