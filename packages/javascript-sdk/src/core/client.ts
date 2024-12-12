@@ -15,6 +15,7 @@ import {isWindowAvailable} from "../utils/common";
 import {RageClick} from "../extensions/rage-click";
 import {HttpsTransport} from "../transport/https";
 import FormTracking from "../tracking/form-tracking";
+import { eventNames } from 'process';
 
 export class UsermavenClient {
     private config: Config;
@@ -261,7 +262,7 @@ export class UsermavenClient {
                 ...userData,
                 anonymous_id: this.anonymousId,
             };
-
+        
             await this.track('user_identify', identifyPayload);
         }
 
@@ -326,7 +327,7 @@ export class UsermavenClient {
 
     private createEventPayload(eventName: string, eventProps?: EventPayload): any {
         const userProps = this.persistence.get('userProps') || {};
-        const companyProps = this.persistence.get('companyProps') || undefined;
+        const companyProps = this.persistence.get('companyProps') || userProps?.company || {};
         const userId = this.persistence.get('userId');
         const globalProps = this.persistence.get('global_props') || {};
         const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
@@ -356,7 +357,7 @@ export class UsermavenClient {
         if (eventName === '$autocapture') {
             const autocaptureAttributes = this.processAutocaptureAttributes(eventProps || {});
             payload.autocapture_attributes = autocaptureAttributes;
-        } else {
+        } else if (eventName !== 'user_identify' && eventName !== 'group') {
             // Apply property blacklist for non-autocapture events
             if (Array.isArray(this.config.propertyBlacklist)) {
                 this.config.propertyBlacklist.forEach(prop => {

@@ -5,19 +5,21 @@ export interface EventPayload {
 export interface UserProps extends EventPayload {
     id?: string;
     email?: string;
+    company?: {
+        id?: string;
+        name?: string;
+        created_at?: string;
+        custom?: {
+            [key: string]: any;
+        };
+    }
+    [key: string]: any;
 }
 
 
 export interface Transport {
     send(payload: any): Promise<void>;
 }
-
-export interface UserProps {
-    id?: string;
-    email?: string;
-    [key: string]: any;
-}
-
 
 export type Policy = 'strict' | 'keep' | 'comply';
 
