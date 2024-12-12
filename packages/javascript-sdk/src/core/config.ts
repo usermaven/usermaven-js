@@ -1,43 +1,9 @@
 // src/core/config.ts
 
 import { LogLevel } from '../utils/logger';
+import {Config} from "./types";
 
 export type Policy = 'strict' | 'keep' | 'comply';
-
-export interface Config {
-    key: string;
-    trackingHost: string;
-    cookieDomain?: string;
-    cookieName?: string;
-    logLevel?: LogLevel;
-    useBeaconApi?: boolean;
-    forceUseFetch?: boolean;
-    autocapture?: boolean;
-    rageClick?: boolean;
-    formTracking?: boolean | 'all' | 'tagged' | 'none';
-    autoPageview?: boolean;
-    disableEventPersistence?: boolean;
-    gaHook?: boolean;
-    segmentHook?: boolean;
-    randomizeUrl?: boolean;
-    capture3rdPartyCookies?: string[] | false;
-    idMethod?: 'cookie' | 'localStorage';
-    privacyPolicy?: 'strict';
-    ipPolicy?: Policy;
-    cookiePolicy?: Policy;
-    customHeaders?: Record<string, string> | (() => Record<string, string>);
-    minSendTimeout?: number;
-    maxSendTimeout?: number;
-    maxSendAttempts?: number;
-    propertiesStringMaxLength?: number | null;
-    propertyBlacklist?: string[];
-    exclude?: string;
-    namespace?: string;
-    crossDomainLinking?: boolean;
-    domains?: string;
-    maskAllText?: boolean;
-    maskAllElementAttributes?: boolean;
-}
 
 export const defaultConfig: Partial<Config> = {
     logLevel: LogLevel.ERROR,

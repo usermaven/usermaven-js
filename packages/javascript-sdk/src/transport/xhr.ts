@@ -1,7 +1,7 @@
 import {Transport} from '../core/types';
 import {getLogger} from '../utils/logger';
 import {generateRandom, isWindowAvailable} from "../utils/common";
-import {Config} from '@/core/config';
+import {Config} from '@/core/types';
 
 export class XhrTransport implements Transport {
     private config: Config;

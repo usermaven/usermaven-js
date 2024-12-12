@@ -1,6 +1,6 @@
 import { UsermavenClient } from './core/client';
 import { defaultConfig } from './core/config';
-import type { Config } from './core/config';
+import type { Config } from './core/types';
 import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload, ClientProperties } from './core/types';
 import {parseLogLevel} from "./utils/helpers";

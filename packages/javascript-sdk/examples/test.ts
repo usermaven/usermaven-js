@@ -19,7 +19,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Test identify user
         document.getElementById('identifyUser')?.addEventListener('click', () => {
-            usermaven('id', { id: 'user123', email: 'test@example.com' });
+            usermaven('id', { 
+                id: 'user123', 
+                email: 'test@example.com',
+                custom : {},
+
+                company: {
+                    id: 'company123',
+                    name: 'Test Company',
+                    created_at: '2023-01-01'
+                }
+            
+            });
             console.log('User identified');
         });
 

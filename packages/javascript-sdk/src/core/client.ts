@@ -1,4 +1,5 @@
-import {Config, defaultConfig} from './config';
+import {defaultConfig} from './config';
+import {Config} from './types';
 import {CompanyProps, EventPayload, Transport, UserProps} from './types';
 import {getLogger, Logger} from '../utils/logger';
 import {CookieManager} from '../utils/cookie';
@@ -172,8 +173,10 @@ export class UsermavenClient {
     }
 
     private initializeTransport(config: Config): Transport {
+        const fallback = "https://events.usermaven.com"
+
         if (!isWindowAvailable()) {
-            return new HttpsTransport(config.trackingHost, config);
+            return new HttpsTransport(config.trackingHost || fallback, config);
         }
 
         const isXhrAvailable = 'XMLHttpRequest' in window;
@@ -181,13 +184,13 @@ export class UsermavenClient {
         const isBeaconAvailable = typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
 
         if (config.useBeaconApi && isBeaconAvailable) {
-            return new BeaconTransport(config.trackingHost, config, this.logger);
+            return new BeaconTransport(config.trackingHost || fallback, config, this.logger);
         } else if (config.forceUseFetch && isFetchAvailable) {
-            return new FetchTransport(config.trackingHost, config, this.logger);
+            return new FetchTransport(config.trackingHost || fallback, config, this.logger);
         } else if (isXhrAvailable) {
-            return new XhrTransport(config.trackingHost, config, this.logger);
+            return new XhrTransport(config.trackingHost || fallback, config, this.logger);
         } else if (isFetchAvailable) {
-            return new FetchTransport(config.trackingHost, config, this.logger);
+            return new FetchTransport(config.trackingHost || fallback, config, this.logger);
         } else {
             throw new Error('No suitable transport method available');
         }
@@ -326,7 +329,7 @@ export class UsermavenClient {
 
     private createEventPayload(eventName: string, eventProps?: EventPayload): any {
         const userProps = this.persistence.get('userProps') || {};
-        const companyProps = this.persistence.get('companyProps') || undefined;
+        const companyProps = this.persistence.get('companyProps') || userProps?.company || {};
         const userId = this.persistence.get('userId');
         const globalProps = this.persistence.get('global_props') || {};
         const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
@@ -356,7 +359,7 @@ export class UsermavenClient {
         if (eventName === '$autocapture') {
             const autocaptureAttributes = this.processAutocaptureAttributes(eventProps || {});
             payload.autocapture_attributes = autocaptureAttributes;
-        } else {
+        } else if (eventName !== 'user_identify' && eventName !== 'group') {
             // Apply property blacklist for non-autocapture events
             if (Array.isArray(this.config.propertyBlacklist)) {
                 this.config.propertyBlacklist.forEach(prop => {

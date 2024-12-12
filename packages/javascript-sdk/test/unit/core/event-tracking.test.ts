@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { UsermavenClient } from '../../../src/core/client';
-import { Config } from '../../../src/core/config';
+import { Config } from '../../../src/core/types';
 
 describe('UsermavenClient Event Tracking', () => {
     let client: UsermavenClient;
