@@ -25,7 +25,7 @@ import {
 import { getLogger } from '../utils/logger';
 import {ScrollDepth} from "../extensions/scroll-depth";
 import {UsermavenClient} from "@/core/client";
-import {Config} from "../core/config";
+import {Config} from "../core/types";
 import {AutoCaptureCustomProperty, EventPayload, Properties} from "../core/types";
 
 class AutoCapture {

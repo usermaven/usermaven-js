@@ -1,6 +1,6 @@
 import { Transport } from '../core/types';
 import { getLogger } from '../utils/logger';
-import { Config } from '@/core/config';
+import { Config } from '@/core/types';
 import * as https from 'https';
 import * as url from 'url';
 

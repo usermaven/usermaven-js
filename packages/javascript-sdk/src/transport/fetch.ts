@@ -1,7 +1,7 @@
 import { Transport } from '../core/types';
 import {getLogger, Logger} from '../utils/logger';
 import { isWindowAvailable, generateRandom } from "../utils/common";
-import { Config } from '@/core/config';
+import { Config } from '@/core/types';
 
 export class FetchTransport implements Transport {
     private config: Config;

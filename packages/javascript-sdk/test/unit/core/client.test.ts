@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { UsermavenClient } from '../../../src/core/client';
-import { Config } from '../../../src/core/config';
+import { Config } from '../../../src/core/types';
 
 describe('UsermavenClient', () => {
     let client: UsermavenClient;
     const mockConfig: Config = {
         key: 'test-api-key',
         trackingHost: 'https://test.usermaven.com',
+        tracking_host: 'https://test.usermaven.com',
     };
 
     beforeEach(() => {
