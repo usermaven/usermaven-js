@@ -34,7 +34,7 @@ export class UsermavenClient {
     constructor(config: Config) {
         this.config = this.mergeConfig(config, defaultConfig);
         this.logger = getLogger(this.config.logLevel);
-        this.namespace = config.namespace || 'usermaven';
+        this.namespace = config.namespace || 'default';
         this.transport = this.initializeTransport(this.config);
         this.persistence = this.initializePersistence();
         this.retryQueue = new RetryQueue(
@@ -43,7 +43,8 @@ export class UsermavenClient {
             this.config.minSendTimeout || 1000,
             10,
             200,  // Reduced interval to .2 second
-            this.logger
+            this.logger,
+            this.namespace
         );
 
         if (isWindowAvailable()) {
@@ -121,7 +122,8 @@ export class UsermavenClient {
             this.config.minSendTimeout || 1000,
             10,
             250,  // Reduced interval to .25 second
-            this.logger
+            this.logger,
+            this.namespace
         );
 
         if (isWindowAvailable()) {
@@ -139,8 +141,7 @@ export class UsermavenClient {
         }
 
         const domains = this.config.domains.split(',').map(d => d.trim());
-        // const cookieName = this.config.cookieName || `__eventn_id_${this.config.key}`;
-        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
+        const cookieName = this.config.cookieName || `__eventn_id_${this.config.key}`;
 
 
         document.addEventListener('click', (event) => {
@@ -214,7 +215,7 @@ export class UsermavenClient {
             return "" // empty in case of strict policy
         }
 
-        const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
+        const cookieName = this.config.cookieName || `__eventn_id_${this.config.key}`;
         let id = this.cookieManager?.get(cookieName);
 
         if (!id) {
@@ -505,7 +506,7 @@ export class UsermavenClient {
         this.persistence.clear();
 
         if (resetAnonId && this.cookieManager) {
-            const cookieName = this.config.cookieName || `${this.namespace}_id_${this.config.key}`;
+            const cookieName = this.config.cookieName || `__eventn_id_${this.config.key}`;
             this.cookieManager.delete(cookieName);
             this.anonymousId = this.getOrCreateAnonymousId();
         }
