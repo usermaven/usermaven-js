@@ -9,16 +9,16 @@ export class RetryQueue {
     private batchTimeoutId: number | null = null;
     private persistence: LocalStoragePersistence;
     private isOnline: boolean = true; // Default to true for server-side
-
     constructor(
         private transport: Transport,
         private maxRetries: number = 3,
         private retryInterval: number = 1000,
         private batchSize: number = 10,
         private batchInterval: number = 1000,
-        private logger: Logger = getLogger()
+        private logger: Logger = getLogger(),
+        namespace: string = 'default'
     ) {
-        this.persistence = new LocalStoragePersistence('offline_queue');
+        this.persistence = new LocalStoragePersistence(`offline_queue_${namespace}`);
         if (isWindowAvailable()) {
             this.isOnline = navigator.onLine;
             this.loadQueueFromStorage();
