@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Usermaven Pixel Test Page</title>
+
+    <!-- Load the local development build of Usermaven -->
+
+    <script type="text/javascript">     
+        (function () {
+            window.usermaven = window.usermaven || (function () { (window.usermavenQ = window.usermavenQ || []).push(arguments); })
+            var t = document.createElement('script'),
+                s = document.getElementsByTagName('script')[0];
+            t.defer = true;
+            t.id = 'um-tracker';
+            t.setAttribute('data-tracking-host', "https://events.usermaven.com")
+            t.setAttribute('data-key', 'UMaugVPOWz');
+            t.setAttribute('data-autocapture', 'true');  
+            t.src = '/dist/lib.js';
+            s.parentNode.insertBefore(t, s);
+        })();
+      </script>
+</head>
+<body>
+    <h1>Usermaven Test Page</h1>
+    <div id="testContainer">
+        <button id="testButton" onclick="testButtonClick()">Test Button</button>
+        <form id="testForm" onsubmit="testFormSubmit(event)">
+            <input type="text" id="testInput" value="test value" />
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <script>
+        // Test custom event handlers
+        function testButtonClick() {
+            window.usermaven.track('button_click', {
+                buttonId: 'testButton',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        function testFormSubmit(event) {
+            event.preventDefault();
+            window.usermaven.track('form_submit', {
+                formId: 'testForm',
+                inputValue: document.getElementById('testInput').value,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Helper function to check if Usermaven is loaded
+        function isUsermavenLoaded() {
+            return typeof window.usermaven !== 'undefined' && 
+                   typeof window.usermaven.track === 'function';
+        }
+
+        // Log any errors
+        window.console.errors = [];
+        const originalError = console.error;
+        console.error = function(...args) {
+            window.console.errors.push(args);
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+</html>
