@@ -1,8 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Usermaven Pixel Tests', () => {
+
   test('should load pixel script correctly', async ({ page }) => {
     try {
+      // Add initial wait for stability
+    await page.waitForTimeout(1000);
+
       // Navigate to the test page
       const response = await page.goto('/test/e2e/test.html');
       expect(response?.ok()).toBeTruthy();
