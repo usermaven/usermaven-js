@@ -39,6 +39,15 @@ platforms:
     osVersion: 11
     browserName: playwright-firefox
     browserVersion: latest
+  - deviceName: Samsung Galaxy S23 Ultra
+    browserName: chrome
+    osVersion: 13.0
+  - browserName: safari 
+    osVersion: 17
+    deviceName: iPad Air 6
+  - os: Android
+    osVersion: 12.0
+    browserName: chrome
 
 # =======================
 # Parallels per Platform
