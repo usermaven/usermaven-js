@@ -47,6 +47,8 @@ export default defineConfig({
       name: 'Tablet',
       use: { ...devices['iPad (gen 7)'] },
     },
+
+    // BrowserStack Projects
     {
       name: 'browserstack-windows-chrome',
       use: {
