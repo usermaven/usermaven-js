@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+declare global {
+  interface Window {
+    usermaven?: Function;
+    usermavenQ?: any[];
+  }
+}
+
 test.describe('Usermaven Pixel Tests', () => {
 
   test('should load pixel script correctly', async ({ page }) => {
@@ -8,8 +15,8 @@ test.describe('Usermaven Pixel Tests', () => {
     await page.waitForTimeout(1000);
 
       // Navigate to the test page
-      const response = await page.goto('/test/e2e/test.html');
-      expect(response?.ok()).toBeTruthy();
+      const pageResponse = await page.goto('/test/e2e/test.html');
+      expect(pageResponse?.ok()).toBeTruthy();
 
       // Wait for network idle state
       await page.waitForLoadState('networkidle');
@@ -34,27 +41,38 @@ test.describe('Usermaven Pixel Tests', () => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     // Setup request interception before navigation
-    await page.route('**/api/v1/event?token=UMaugVPOWz', async route => {
+    await page.route('**/api/v1/event**', async route => {
       const request = route.request();
-      requests.push({
-        url: request.url(),
-        postData: request.postData() as any
-      });
+      const postData = request.postData() || undefined;
+      requests.push({ url: request.url(), postData });
       await route.continue();
     });
 
     try {
-      // Navigate to page
-      await page.goto('/test/e2e/test.html');
+      // Navigate to the test page
+      const pageResponse = await page.goto('/test/e2e/test.html');
+      expect(pageResponse?.ok()).toBeTruthy();
+
+      // Wait for script to be loaded and initialized
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
+      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
       
-      // Wait for the pageview event request
-      const response = await page.waitForResponse(
-        response => response.url().includes('/api/v1/event') && 
-                   response.request().method() === 'POST',
-        { timeout: 10000 }
-      );
-      
-      expect(response.status()).toBe(200);
+      // Wait for network idle
+      await page.waitForLoadState('networkidle');
+
+      // Wait for the pageview event
+      const pageviewEvent = requests.find(req => {
+        if (!req.postData) return false;
+        try {
+          const data = JSON.parse(req.postData);
+          const events = Array.isArray(data) ? data : [data];
+          return events.some(event => event.event_type === 'pageview');
+        } catch (e) {
+          return false;
+        }
+      });
+
+      expect(pageviewEvent, 'Pageview event should be captured').toBeTruthy();
       
       // Verify the request was intercepted
       expect(requests.length).toBeGreaterThan(0);
@@ -65,7 +83,10 @@ test.describe('Usermaven Pixel Tests', () => {
 
       // Verify the request payload
       if (eventRequest.postData) {
-        const payload = JSON.parse(eventRequest.postData);
+        const data = JSON.parse(eventRequest.postData);
+        const payload = Array.isArray(data) 
+          ? data.find(event => event.event_type === 'pageview')
+          : data;
         expect(payload).toMatchObject({
           event_type: 'pageview',
           src: 'usermaven',
@@ -75,6 +96,132 @@ test.describe('Usermaven Pixel Tests', () => {
       }
     } catch (error) {
       console.error('Test failed:', error);
+      throw error;
+    }
+  });
+
+  test('should fire custom event', async ({ page }) => {
+    const requests: Array<{ url: string; postData?: string }> = [];
+
+    // Setup request interception before navigation
+    await page.route('**/api/v1/event**', async route => {
+      const request = route.request();
+      const postData = request.postData() || undefined;
+      requests.push({ url: request.url(), postData });
+      await route.continue();
+    });
+
+    try {
+      // Navigate to the test page
+      const pageResponse = await page.goto('/test/e2e/test.html');
+      expect(pageResponse?.ok()).toBeTruthy();
+
+      // Wait for script to be loaded and initialized
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
+      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
+      
+      // Wait for network idle
+      await page.waitForLoadState('networkidle');
+
+      // Click the test button
+      const button = await page.waitForSelector('#testButton');
+      await button.click();
+
+      // Wait longer for the event to be captured and processed
+      await page.waitForTimeout(3000);
+
+      // Verify the event was captured
+      const buttonClickEvent = requests.find(req => {
+        if (!req.postData) return false;
+        try {
+          const data = JSON.parse(req.postData);
+          const events = Array.isArray(data) ? data : [data];
+          return events.some(event => event.event_type === 'button_click');
+        } catch (e) {
+          return false;
+        }
+      });
+
+      expect(buttonClickEvent, 'Button click event should be captured').toBeTruthy();
+      if (buttonClickEvent?.postData) {
+        const data = JSON.parse(buttonClickEvent.postData);
+        const payload = Array.isArray(data) 
+          ? data.find(event => event.event_type === 'button_click')
+          : data;
+        expect(payload).toMatchObject({
+          event_type: 'button_click',
+          src: 'usermaven',
+          api_key: 'UMaugVPOWz',
+        });
+      }
+    } catch (error) {
+      console.error('Test failed:', error);
+      console.log('Captured requests:', JSON.stringify(requests, null, 2));
+      throw error;
+    }
+  });
+
+  test('should capture autocapture events', async ({ page }) => {
+    const requests: Array<{ url: string; postData?: string }> = [];
+
+    // Setup request interception before navigation
+    await page.route('**/api/v1/event**', async route => {
+      const request = route.request();
+      const postData = request.postData() || undefined;
+      requests.push({ url: request.url(), postData });
+      await route.continue();
+    });
+
+    try {
+      // Navigate to the test page
+      const pageResponse = await page.goto('/test/e2e/test.html');
+      expect(pageResponse?.ok()).toBeTruthy();
+
+      // Wait for script to be loaded and initialized
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
+      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
+      
+      // Wait for network idle
+      await page.waitForLoadState('networkidle');
+
+      // Click the autocapture button
+      const autoButton = await page.waitForSelector('#test-auto-capture');
+      await autoButton.click();
+
+      // Wait longer for the event to be captured and processed
+      await page.waitForTimeout(3000);
+
+      // Find the autocapture click event in requests
+      const autoClickEvent = requests.find(req => {
+        if (!req.postData) return false;
+        try {
+          const data = JSON.parse(req.postData);
+          const events = Array.isArray(data) ? data : [data];
+          return events.some(event => event.event_type === '$autocapture');
+        } catch (e) {
+          return false;
+        }
+      });
+
+      expect(autoClickEvent, 'Autocapture event should be captured').toBeTruthy();
+      if (autoClickEvent?.postData) {
+        const data = JSON.parse(autoClickEvent.postData);
+        const payload = Array.isArray(data) 
+          ? data.find(event => event.event_type === '$autocapture')
+          : data;
+        expect(payload).toMatchObject({
+          event_type: '$autocapture',
+          src: 'usermaven',
+          api_key: 'UMaugVPOWz',
+          autocapture_attributes: {
+            tag_name: 'button',
+            event_type: 'click',
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Test failed:', error);
+      console.log('Captured requests:', JSON.stringify(requests, null, 2));
       throw error;
     }
   });

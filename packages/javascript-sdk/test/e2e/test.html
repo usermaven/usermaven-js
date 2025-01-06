@@ -28,20 +28,27 @@
             <input type="text" id="testInput" value="test value" />
             <button type="submit">Submit</button>
         </form>
+        <div>
+            <button id="test-auto-capture"></button>
+        </div>
     </div>
 
     <script>
         // Test custom event handlers
         function testButtonClick() {
-            window.usermaven.track('button_click', {
-                buttonId: 'testButton',
-                timestamp: new Date().toISOString()
-            });
+            if (typeof window.usermaven === 'function') {
+                window.usermaven('track', 'button_click', {
+                    buttonId: 'testButton',
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                console.error('Usermaven not initialized');
+            }
         }
 
         function testFormSubmit(event) {
             event.preventDefault();
-            window.usermaven.track('form_submit', {
+            window.usermaven('track', 'form_submit', {
                 formId: 'testForm',
                 inputValue: document.getElementById('testInput').value,
                 timestamp: new Date().toISOString()
