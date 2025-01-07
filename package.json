@@ -5,11 +5,13 @@
     "build:javascript": "pnpm --filter @usermaven/sdk-js build",
     "build:nextjs": "pnpm --filter @usermaven/nextjs build",
     "build:react": "pnpm --filter @usermaven/react build",
-    "build": "pnpm build:javascript && pnpm build:nextjs && pnpm build:react",
+    "build:vue": "pnpm --filter @usermaven/vue build",
+    "build": "pnpm build:javascript && pnpm build:nextjs && pnpm build:react && pnpm build:vue",
     "dev:javascript": "pnpm --filter @usermaven/sdk-js start",
-    "dev": "pnpm dev:javascript",
+    "dev": "pnpm dev",
     "dev:example-nextjs": "pnpm --filter @example/nextjs dev",
-    "dev:example-react": "pnpm --filter @example/react dev"
+    "dev:example-react": "pnpm --filter @example/react dev",
+    "dev:example-vue": "pnpm --filter @example/vue dev"
   },
   "workspaces": [
     "packages/*",

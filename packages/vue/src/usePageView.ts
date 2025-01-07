@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from '@vue/runtime-core'
 import useUsermaven from './useUsermaven'
 import { EventPayload, UsermavenClient } from '@usermaven/sdk-js'
 
@@ -6,8 +6,8 @@ import { EventPayload, UsermavenClient } from '@usermaven/sdk-js'
 function useUrlChange() {
   const url = ref(window.location.href)
   const lastUrl = ref(window.location.href)
-  let originalPushState: typeof window.history.pushState
-  let originalReplaceState: typeof window.history.replaceState
+  const originalPushState = ref<typeof window.history.pushState>()
+  const originalReplaceState = ref<typeof window.history.replaceState>()
 
   const handleUrlChange = () => {
     const currentUrl = window.location.href
@@ -21,26 +21,30 @@ function useUrlChange() {
     window.addEventListener('popstate', handleUrlChange)
 
     // Store original history methods
-    originalPushState = window.history.pushState.bind(window.history)
-    originalReplaceState = window.history.replaceState.bind(window.history)
+    originalPushState.value = window.history.pushState
+    originalReplaceState.value = window.history.replaceState
 
     // Override history methods
-    window.history.pushState = function (...args: Parameters<typeof originalPushState>) {
-      originalPushState.apply(this, args)
+    window.history.pushState = function (...args: any[]) {
+      if (originalPushState.value) {
+        originalPushState.value.apply(window.history, args as any)
+      }
       handleUrlChange()
     }
 
-    window.history.replaceState = function (...args: Parameters<typeof originalReplaceState>) {
-      originalReplaceState.apply(this, args)
+    window.history.replaceState = function (...args: any[]) {
+      if (originalReplaceState.value) {
+        originalReplaceState.value.apply(window.history, args as any)
+      }
       handleUrlChange()
     }
   })
 
   onUnmounted(() => {
     window.removeEventListener('popstate', handleUrlChange)
-    if (originalPushState && originalReplaceState) {
-      window.history.pushState = originalPushState
-      window.history.replaceState = originalReplaceState
+    if (originalPushState.value && originalReplaceState.value) {
+      window.history.pushState = originalPushState.value
+      window.history.replaceState = originalReplaceState.value
     }
   })
 
