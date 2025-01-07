@@ -22,12 +22,11 @@ import App from './App.vue'
 const app = createApp(App)
 
 app.use(UsermavenPlugin, {
-  options: {
-    apiKey: 'your-api-key',
+    key: 'your-api-key',
     trackingHost: 'https://events.usermaven.com',
     autocapture: true,
     // Additional options
-  }
+
 })
 
 app.mount('#app')
@@ -63,10 +62,10 @@ usermaven.identify('user123', {
 import { usePageView } from '@usermaven/vue'
 
 // Automatically tracks page views when route changes
-const { trackPageView } = usePageView()
+const { track } = usePageView()
 
 // Manually track a page view if needed
-trackPageView()
+track('pageview')
 </script>
 ```
 

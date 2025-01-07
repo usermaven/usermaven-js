@@ -6,6 +6,7 @@ const USERMAVEN_INJECTION_KEY = 'usermaven'
 
 export const UsermavenPlugin = {
   install: (app: App, options: UsermavenOptions) => {
+    console.log('UsermavenPlugin installed', options)
     const client = createClient(options)
     app.config.globalProperties.$usermaven = client
     app.provide(USERMAVEN_INJECTION_KEY, client)
