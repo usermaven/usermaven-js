@@ -56,7 +56,7 @@ jobs:
       - name: Generate Release version
         id: release_version
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          LATEST_TAG=$(git tag | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | sort -V | tail -n1)
           IFS='.' read -r -a version_parts <<< "$LATEST_TAG"
           MAJOR="${version_parts[0]}"
           MINOR="${version_parts[1]}"
