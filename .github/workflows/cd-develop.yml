@@ -5,6 +5,9 @@ on:
     types: [ closed ]
     branches:
       - develop
+  push:
+    branches:
+      - next
 
 env:
   REGISTRY: ghcr.io
@@ -110,6 +113,7 @@ jobs:
 
   tag-release:
     # needs: dev-publish-docker
+    needs: build
     runs-on: ubuntu-latest
     # Give this job permission to push tags (and create releases)
     permissions:
@@ -124,15 +128,12 @@ jobs:
           # Important to fetch full history so we can see all tags
           fetch-depth: 0
 
-      - name: Install the gh cli
-        uses: ksivamuthu/actions-setup-gh-cli@<VERSION>
-        with:
-         version: 2.24.3
-
-      - name: Install GitHub CLI
-        uses: cli/gh-action@v2
-        with:
-          version: latest
+      - name: Install GitHub CLI manually
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
 
       # (A) Gather commits since the last 'plain' semver tag
       - name: Gather commits
