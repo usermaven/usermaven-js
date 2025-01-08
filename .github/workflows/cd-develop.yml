@@ -109,7 +109,7 @@ jobs:
 
 
   tag-release:
-    needs: dev-publish-docker
+    # needs: dev-publish-docker
     runs-on: ubuntu-latest
     # Give this job permission to push tags (and create releases)
     permissions:
@@ -128,7 +128,7 @@ jobs:
         uses: ksivamuthu/actions-setup-gh-cli@<VERSION>
         with:
          version: 2.24.3
-         
+
       - name: Install GitHub CLI
         uses: cli/gh-action@v2
         with:
