@@ -326,20 +326,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Determine RC version
-        id: rc_version
-        run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
-          IFS='.' read -r -a version_parts <<< "$LATEST_TAG"
-          MAJOR="${version_parts[0]}"
-          MINOR="${version_parts[1]}"
-          PATCH="${version_parts[2]}"
-          NEW_PATCH=$((PATCH + 1))
-          RC_VERSION="$MAJOR.$MINOR.$NEW_PATCH-rc.${{ github.run_number }}"
-          echo "RC_VERSION=${RC_VERSION}" >> $GITHUB_OUTPUT
-
-      - id: release
+      - name: Create GitHub release
         uses: rymndhng/release-on-push-action@master
         with:
-          bump_version_scheme: patch
-          tag_prefix: "rc-"
+          version: ${{ needs.build.outputs.rc_version }}
+          bump_version_scheme: 'none'
+          tag_prefix: 'rc-'
