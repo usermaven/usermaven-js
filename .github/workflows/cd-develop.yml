@@ -198,6 +198,36 @@ jobs:
           cd packages/react
           pnpm publish --no-git-checks --tag rc --access public
   
+  publish-vue:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish Vue package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/vue
+          pnpm publish --no-git-checks --tag rc --access public  
+  
 
   deploy-cdn:
     needs: publish-sdk
