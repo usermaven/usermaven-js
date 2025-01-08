@@ -61,7 +61,7 @@ jobs:
           MAJOR="${version_parts[0]}"
           MINOR="${version_parts[1]}"
           PATCH="${version_parts[2]}"
-          NEW_PATCH=$((PATCH + 1))
+          NEW_PATCH=$((PATCH))
           RC_VERSION="$MAJOR.$MINOR.$NEW_PATCH-rc.${{ github.run_number }}"
           echo "RC_VERSION=${RC_VERSION}" >> $GITHUB_OUTPUT
 
