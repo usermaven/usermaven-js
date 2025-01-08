@@ -1,0 +1,394 @@
+name: Master CD
+
+on:
+  pull_request:
+    types: [ closed ]
+    branches:
+      - master
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: usermaven-js-prod
+  DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      release_version: ${{ steps.release_version.outputs.RELEASE_VERSION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          always-auth: true
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install npm-cli-login
+        run: npm install -g npm-cli-login
+
+      - name: add pnpm typescript
+        run: pnpm add typescript@latest -w
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Generate Release version
+        id: release_version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          IFS='.' read -r -a version_parts <<< "$LATEST_TAG"
+          MAJOR="${version_parts[0]}"
+          MINOR="${version_parts[1]}"
+          PATCH="${version_parts[2]}"
+          NEW_PATCH=$((PATCH + 1))
+          RELEASE_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "RELEASE_VERSION=${RELEASE_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update package versions and dependencies
+        run: |
+          RELEASE_VERSION="${{ steps.release_version.outputs.RELEASE_VERSION }}"
+
+          echo "Updating package versions to $RELEASE_VERSION"
+          
+          # Update versions in all packages recursively (might work)
+          pnpm version $RELEASE_VERSION --no-git-tag-version --recursive
+          
+          # Manually update the version field in package.json files
+          for pkg in packages/*; do
+            if [ -f "$pkg/package.json" ]; then
+              echo "Updating version in $pkg/package.json"
+              sed -i "s/\"version\": \".*\"/\"version\": \"$RELEASE_VERSION\"/g" "$pkg/package.json"
+            fi
+          done
+
+          # Replace "workspace:*" with the actual version in all package.json files
+          find packages -name 'package.json' -print0 | xargs -0 sed -i "s/\"workspace:\*\"/\"$RELEASE_VERSION\"/g"
+      
+
+      - name: Check package versions
+        run: |
+          cat packages/javascript-sdk/package.json
+          cat packages/nextjs/package.json
+          cat packages/react/package.json
+          cat packages/vue/package.json
+      
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: packages-artifacts
+          path: |
+            packages/*/dist/**
+            packages/*/lib/**
+            packages/*/package.json
+            packages/*/README.md
+            package.json
+            pnpm-workspace.yaml
+          retention-days: 1
+
+  publish-sdk:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Verify package version
+        run: |
+          cat packages/javascript-sdk/package.json
+
+      - name: Publish SDK
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/javascript-sdk
+          pnpm publish --no-git-checks --access public
+  
+
+  publish-nextjs:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish NextJS package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/nextjs
+          pnpm publish --no-git-checks --access public
+  
+
+  publish-react:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish React package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/react
+          pnpm publish --no-git-checks --access public
+  
+  publish-vue:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish Vue package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/vue
+          pnpm publish --no-git-checks --access public  
+  
+
+  deploy-cdn:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+
+      - name: Deploy to BunnyCDN
+        uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
+        with:
+          source: "packages/javascript-sdk/dist"
+          destination: ""
+          storageZoneName: "${{ secrets.BCDN_PROD_STORAGE_NAME }}"
+          storagePassword: "${{ secrets.BCDN_PROD_STORAGE_PASSWORD }}"
+          accessKey: "${{ secrets.BCDN_PROD_ACCESS_KEY }}"
+          pullZoneId: "${{ secrets.BCDN_PROD_ZONE_ID }}"
+          upload: "true"
+          remove: "true"
+          purgePullZone: "true"
+  dev-publish-docker:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  update-k8s-manifest:
+    needs: dev-publish-docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kubernetes manifests repository
+        uses: actions/checkout@v4
+        with:
+          repository: usermaven/kubernetes-manifests-production
+          token: ${{ secrets.PAT }}
+
+      - name: Update Kubernetes deployment
+        run: |
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add usermaven-js/usermaven-js-deployment.yaml
+          git commit -m "Update image to ${{ github.sha }}"
+          git push
+
+
+  tag-release:
+    needs: [dev-publish-docker, build]
+    runs-on: ubuntu-latest
+    # Give this job permission to push tags (and create releases)
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GH CLI will pick this up for auth
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # Important to fetch full history so we can see all tags
+          fetch-depth: 0
+
+      - name: Install GitHub CLI manually
+        run: |
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt update
+          sudo apt install gh -y
+
+      # (A) Gather commits since the last 'plain' semver tag
+      - name: Gather commits
+        id: commits
+        run: |
+          # Attempt to find the last semver tag like "1.4.3" (ignoring rc- prefixed tags).
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          echo "Found last tag: $LAST_TAG"
+
+          # Grab commit messages between last tag and HEAD
+          COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s (%h)")
+
+          # Store them as a multi-line output
+          echo "COMMITS<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${COMMITS}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      # (B) Create and push the new tag
+      - name: Create and push tag
+        run: |
+          VERSION="${{ needs.build.outputs.release_version }}" 
+          # Example: "1.4.6"
+
+          echo "Using release version: $VERSION"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # If you want a "rc-" prefix on the *actual* Git tag, do: 
+          #   TAG="rc-$VERSION"
+          #   git tag -a "$TAG" ...
+          #   git push origin "$TAG"
+          #
+          # Otherwise just tag with the same string from build:
+          TAG="$VERSION"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      # (C) Create a GitHub Release
+      - name: Create GitHub Release
+        run: |
+          TAG="${{ needs.build.outputs.release_version }}"
+          NOTES="${{ steps.commits.outputs.COMMITS }}"
+
+          echo "Creating release for tag: $TAG"
+          echo "Release notes:"
+          echo "$NOTES"
+
+          # Use GH CLI to create a release with those notes
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes "$NOTES" 
+            
