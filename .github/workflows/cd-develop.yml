@@ -318,17 +318,71 @@ jobs:
   tag-release:
     needs: dev-publish-docker
     runs-on: ubuntu-latest
+    # Give this job permission to push tags (and create releases)
+    permissions:
+      contents: write
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GH CLI will pick this up for auth
+
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v4
         with:
+          # Important to fetch full history so we can see all tags
           fetch-depth: 0
 
-      - name: Create GitHub release
-        uses: rymndhng/release-on-push-action@master
+      - name: Install GitHub CLI
+        uses: cli/gh-action@v2
         with:
-          version: ${{ needs.build.outputs.rc_version }}
-          bump_version_scheme: 'none'
-          tag_prefix: 'rc-'
+          version: latest
+
+      # (A) Gather commits since the last 'plain' semver tag
+      - name: Gather commits
+        id: commits
+        run: |
+          # Attempt to find the last semver tag like "1.4.3" (ignoring rc- prefixed tags).
+          LAST_TAG=$(git describe --tags --abbrev=0 --match "[0-9]*.[0-9]*.[0-9]*" 2>/dev/null || echo "0.0.0")
+          echo "Found last tag: $LAST_TAG"
+
+          # Grab commit messages between last tag and HEAD
+          COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s (%h)")
+
+          # Store them as a multi-line output
+          echo "COMMITS<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${COMMITS}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      # (B) Create and push the new tag
+      - name: Create and push tag
+        run: |
+          VERSION="${{ needs.build.outputs.rc_version }}" 
+          # Example: "1.4.5-rc.70"
+
+          echo "Using RC version: $VERSION"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # If you want a "rc-" prefix on the *actual* Git tag, do: 
+          #   TAG="rc-$VERSION"
+          #   git tag -a "$TAG" ...
+          #   git push origin "$TAG"
+          #
+          # Otherwise just tag with the same string from build:
+          TAG="$VERSION"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+
+      # (C) Create a GitHub Release
+      - name: Create GitHub Release
+        run: |
+          TAG="${{ needs.build.outputs.rc_version }}"
+          NOTES="${{ steps.commits.outputs.COMMITS }}"
+
+          echo "Creating release for tag: $TAG"
+          echo "Release notes:"
+          echo "$NOTES"
+
+          # Use GH CLI to create a release with those notes
+          gh release create "$TAG" \
+            --title "Release Candidate $TAG" \
+            --notes "$NOTES"
