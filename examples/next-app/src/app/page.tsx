@@ -1,7 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import styles from "./page.module.css";
+import { useUsermaven } from "@usermaven/nextjs";
 
 export default function Home() {
+  const { track } = useUsermaven();
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -19,6 +24,17 @@ export default function Home() {
           </li>
           <li>Save and see your changes instantly.</li>
         </ol>
+
+        {/* Custom Event */}
+        <button
+          onClick={() => {
+            track('custom_event', {
+              custom_property: 'custom value'
+            });
+          }}
+        >
+          Track custom event
+        </button>
 
         <div className={styles.ctas}>
           <a
