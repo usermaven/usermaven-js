@@ -1,10 +1,10 @@
 import * as React from 'react'
 import UsermavenContext from './UsermavenContext'
 import { UsermavenClient } from "@usermaven/sdk-js"
-import {PropsWithChildren} from "react";
+import { PropsWithChildren } from "react"
 
 export interface UsermavenProviderProps {
-    client: UsermavenClient
+    client: UsermavenClient | null
 }
 
 const UsermavenProvider: React.FC<PropsWithChildren<UsermavenProviderProps>> = function ({children, client}) {
