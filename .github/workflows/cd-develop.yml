@@ -5,6 +5,9 @@ on:
     types: [ closed ]
     branches:
       - develop
+  push:
+    branches:
+      - next
 
 env:
   REGISTRY: ghcr.io
@@ -110,6 +113,7 @@ jobs:
 
   tag-release:
     # needs: dev-publish-docker
+    needs: build
     runs-on: ubuntu-latest
     # Give this job permission to push tags (and create releases)
     permissions:
