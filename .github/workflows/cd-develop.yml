@@ -5,9 +5,6 @@ on:
     types: [ closed ]
     branches:
       - develop
-  push:
-    branches:
-      - next
 
 env:
   REGISTRY: ghcr.io
@@ -393,4 +390,5 @@ jobs:
           # Use GH CLI to create a release with those notes
           gh release create "$TAG" \
             --title "Release Candidate $TAG" \
-            --notes "$NOTES"
+            --notes "$NOTES" \
+            --prerelease
