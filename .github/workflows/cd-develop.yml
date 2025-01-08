@@ -123,10 +123,12 @@ jobs:
         with:
           # Important to fetch full history so we can see all tags
           fetch-depth: 0
-     - name: Install the gh cli
-       uses: ksivamuthu/actions-setup-gh-cli@<VERSION>
-       with:
+
+      - name: Install the gh cli
+        uses: ksivamuthu/actions-setup-gh-cli@<VERSION>
+        with:
          version: 2.24.3
+         
       - name: Install GitHub CLI
         uses: cli/gh-action@v2
         with:
