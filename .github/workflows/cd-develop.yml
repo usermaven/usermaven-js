@@ -17,7 +17,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true
     permissions:
       contents: read
       packages: write
@@ -110,10 +110,219 @@ jobs:
             pnpm-workspace.yaml
           retention-days: 1
 
+  publish-sdk:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Verify package version
+        run: |
+          cat packages/javascript-sdk/package.json
+
+      - name: Publish SDK
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/javascript-sdk
+          pnpm publish --no-git-checks --tag rc --access public
+  
+
+  publish-nextjs:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish NextJS package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/nextjs
+          pnpm publish --no-git-checks --tag rc --access public
+  
+
+  publish-react:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish React package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/react
+          pnpm publish --no-git-checks --tag rc --access public
+  
+  publish-vue:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Publish Vue package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: false
+        run: |
+          cd packages/vue
+          pnpm publish --no-git-checks --tag rc --access public  
+  
+
+  deploy-cdn:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+
+      - name: Deploy to BunnyCDN
+        uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
+        with:
+          source: "packages/javascript-sdk/dist"
+          destination: ""
+          storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
+          storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
+          accessKey: "${{ secrets.BCDN_STAGE_ACCESS_KEY }}"
+          pullZoneId: "${{ secrets.BCDN_STAGE_ZONE_ID }}"
+          upload: "true"
+          remove: "true"
+          purgePullZone: "true"
+  dev-publish-docker:
+    needs: publish-sdk
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.PAT }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: packages-artifacts
+          path: .
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE_PATH }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  update-k8s-manifest:
+    needs: dev-publish-docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout kubernetes manifests repository
+        uses: actions/checkout@v4
+        with:
+          repository: usermaven/kubernetes-manifests-staging
+          token: ${{ secrets.PAT }}
+
+      - name: Update Kubernetes deployment
+        run: |
+          sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add usermaven-js/usermaven-js-deployment.yaml
+          git commit -m "Update image to ${{ github.sha }}"
+          git push
+
 
   tag-release:
-    # needs: dev-publish-docker
-    needs: build
+    needs: dev-publish-docker
     runs-on: ubuntu-latest
     # Give this job permission to push tags (and create releases)
     permissions:
@@ -167,10 +376,9 @@ jobs:
           #   git push origin "$TAG"
           #
           # Otherwise just tag with the same string from build:
-          # Commented
           TAG="$VERSION"
-          # git tag -a "$TAG" -m "Release $TAG"
-          # git push origin "$TAG"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
 
       # (C) Create a GitHub Release
       - name: Create GitHub Release
@@ -183,217 +391,6 @@ jobs:
           echo "$NOTES"
 
           # Use GH CLI to create a release with those notes
-          # Commented
-          # gh release create "$TAG" \
-          #   --title "Release Candidate $TAG" \
-          #   --notes "$NOTES"
-
-  # publish-sdk:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         registry-url: 'https://registry.npmjs.org'
-
-  #     - name: Install pnpm
-  #       run: npm install -g pnpm
-
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-  #     - name: Verify package version
-  #       run: |
-  #         cat packages/javascript-sdk/package.json
-
-  #     - name: Publish SDK
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-  #         NPM_CONFIG_PROVENANCE: false
-  #       run: |
-  #         cd packages/javascript-sdk
-  #         pnpm publish --no-git-checks --tag rc --access public
-  
-
-  # publish-nextjs:
-  #   needs: publish-sdk
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         registry-url: 'https://registry.npmjs.org'
-
-  #     - name: Install pnpm
-  #       run: npm install -g pnpm
-
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-  #     - name: Install dependencies
-  #       run: pnpm install --no-frozen-lockfile
-
-  #     - name: Publish NextJS package
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-  #         NPM_CONFIG_PROVENANCE: false
-  #       run: |
-  #         cd packages/nextjs
-  #         pnpm publish --no-git-checks --tag rc --access public
-  
-
-  # publish-react:
-  #   needs: publish-sdk
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         registry-url: 'https://registry.npmjs.org'
-
-  #     - name: Install pnpm
-  #       run: npm install -g pnpm
-
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-  #     - name: Install dependencies
-  #       run: pnpm install --no-frozen-lockfile
-
-  #     - name: Publish React package
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-  #         NPM_CONFIG_PROVENANCE: false
-  #       run: |
-  #         cd packages/react
-  #         pnpm publish --no-git-checks --tag rc --access public
-  
-  # publish-vue:
-  #   needs: publish-sdk
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         registry-url: 'https://registry.npmjs.org'
-
-  #     - name: Install pnpm
-  #       run: npm install -g pnpm
-
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-  #     - name: Install dependencies
-  #       run: pnpm install --no-frozen-lockfile
-
-  #     - name: Publish Vue package
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-  #         NPM_CONFIG_PROVENANCE: false
-  #       run: |
-  #         cd packages/vue
-  #         pnpm publish --no-git-checks --tag rc --access public  
-  
-
-  # deploy-cdn:
-  #   needs: publish-sdk
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-
-  #     - name: Deploy to BunnyCDN
-  #       uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
-  #       with:
-  #         source: "packages/javascript-sdk/dist"
-  #         destination: ""
-  #         storageZoneName: "${{ secrets.BCDN_STAGE_STORAGE_NAME }}"
-  #         storagePassword: "${{ secrets.BCDN_STAGE_STORAGE_PASSWORD }}"
-  #         accessKey: "${{ secrets.BCDN_STAGE_ACCESS_KEY }}"
-  #         pullZoneId: "${{ secrets.BCDN_STAGE_ZONE_ID }}"
-  #         upload: "true"
-  #         remove: "true"
-  #         purgePullZone: "true"
-  # dev-publish-docker:
-  #   needs: publish-sdk
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     packages: write
-  #     contents: read
-  #     attestations: write
-  #     id-token: write
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-
-  #     - name: Log in to the Container registry
-  #       uses: docker/login-action@v2
-  #       with:
-  #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ github.repository_owner }}
-  #         password: ${{ secrets.PAT }}
-
-  #     - name: Extract metadata for Docker
-  #       id: meta
-  #       uses: docker/metadata-action@v4
-  #       with:
-  #         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-  #     - name: Download build artifacts
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: packages-artifacts
-  #         path: .
-
-  #     - name: Build and push Docker image
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         context: .
-  #         file: ${{ env.DOCKERFILE_PATH }}
-  #         push: true
-  #         tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-  #         labels: ${{ steps.meta.outputs.labels }}
-
-  # update-k8s-manifest:
-  #   needs: dev-publish-docker
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - name: Checkout kubernetes manifests repository
-  #       uses: actions/checkout@v4
-  #       with:
-  #         repository: usermaven/kubernetes-manifests-staging
-  #         token: ${{ secrets.PAT }}
-
-  #     - name: Update Kubernetes deployment
-  #       run: |
-  #         sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' usermaven-js/usermaven-js-deployment.yaml
-
-  #     - name: Commit and push changes
-  #       run: |
-  #         git config --local user.email "action@github.com"
-  #         git config --local user.name "GitHub Action"
-  #         git add usermaven-js/usermaven-js-deployment.yaml
-  #         git commit -m "Update image to ${{ github.sha }}"
-  #         git push
+          gh release create "$TAG" \
+            --title "Release Candidate $TAG" \
+            --notes "$NOTES"
