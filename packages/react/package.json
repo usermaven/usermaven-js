@@ -1,6 +1,6 @@
 {
   "name": "@usermaven/react",
-  "version": "1.4.4",
+  "version": "0.0.0",
   "description": "Usermaven JavaScript SDK for React",
   "author": "Usermaven <hello@usermaven.com>",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@usermaven/sdk-js": "^1.2.5"
+    "@usermaven/sdk-js": "workspace:*"
   },
   "peerDependencies": {
     "react": "15.x || 16.x || 17.x || 18.x",

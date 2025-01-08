@@ -1,0 +1,141 @@
+# name: Master CD Pipeline
+
+# on:
+#   release:
+#     types: [published]
+
+# env:
+#   VERSION: ${{ github.event.release.tag_name }}
+#   REGISTRY: ghcr.io
+#   IMAGE_NAME: usermaven-js
+#   DOCKERFILE_PATH: packages/javascript-sdk/docker/Dockerfile
+
+# jobs:
+#   master_publish:
+#     runs-on: ubuntu-latest
+#     #if: github.event.pull_request.merged == true
+#     #needs: [release_on_merge]
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v4
+
+#     - name: Setup Node.js
+#       uses: actions/setup-node@v4
+#       with:
+#         always-auth: true
+#         node-version: '20'
+
+#     - name: Install pnpm
+#       run: npm install -g pnpm
+
+#     - name: Install dependencies
+#       run: pnpm install
+
+#     - name: Ignore Workspace root check
+#       run: pnpm add -g npm-cli-login
+
+#     - name: add pnpm typescript
+#       run: npm add typescript@latest -w
+
+#     - name: Build project
+#       run: pnpm build
+
+#     - name: Set token
+#       run: echo \"//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}\" > ~/.npmrc
+
+#     - name: Set package version to release version
+#       run: |
+#         VERSION="${GITHUB_REF#refs/tags/}"
+#         for package in packages/*; do
+#         if [ -d "$package" ]; then
+#             echo "Setting version for $package to $VERSION"
+#             cd $package
+#             echo $VERSION
+#             npm version $VERSION --no-git-tag-version    
+#             cd - > /dev/null
+#         fi
+#         done
+
+#     - name: Publishing SDK package
+#       run: |
+#         for package in packages/*; do
+#         if [ -d "$package" ]; then
+#             cd $package
+#             echo "Publishing $package SDK package"
+#             echo  "//registry.npmjs.org/:_authToken=${{ secrets.NODE_AUTH_TOKEN }}" > .npmrc
+#             npm publish --no-workspaces --access=public            
+#             cd - > /dev/null
+#         fi
+#         done
+
+#     - name: Deploy to BunnyCDN
+#       uses: ayeressian/bunnycdn-storage-deploy@v2.2.3
+#       with:
+#         source: "packages/javascript-sdk/dist"
+#         destination: ""
+#         storageZoneName: "${{ secrets.BCDN_PROD_STORAGE_NAME }}"
+#         storagePassword: "${{ secrets.BCDN_PROD_STORAGE_PASSWORD }}"
+#         accessKey: "${{ secrets.BCDN_PROD_ACCESS_KEY }}"
+#         pullZoneId: "${{ secrets.BCDN_PROD_ZONE_ID }}"
+#         upload: "true"
+#         remove: "true"
+#         purgePullZone: "true"
+
+
+#   prod-publish-docker:
+#     runs-on: ubuntu-latest
+#     #if: github.event.pull_request.merged == true
+#     permissions:
+#       packages: write
+#       contents: read
+#       attestations: write
+#       id-token: write
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v4
+
+#     - name: Log in to the Container registry
+#       uses: docker/login-action@v2
+#       with:
+#         registry: ${{ env.REGISTRY }}
+#         username: ${{ github.repository_owner }}
+#         password: ${{ secrets.PAT }}
+
+#     - name: Extract metadata for Docker
+#       id: meta
+#       uses: docker/metadata-action@v4
+#       with:
+#         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+
+#     - name: Build and push Docker image
+#       uses: docker/build-push-action@v6
+#       with:
+#         context: .
+#         file: ${{ env.DOCKERFILE_PATH }}
+#         push: true
+#         tags: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }},ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+#         labels: ${{ steps.meta.outputs.labels }}
+
+#   update-k8s-manifest:
+#     needs: prod-publish-docker
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout kubernetes manifests repository
+#       uses: actions/checkout@v4
+#       with:
+#         repository: usermaven/kubernetes-manifests-production
+#         token: ${{ secrets.PAT }}
+
+#     - name: Update Kubernetes deployment
+#       run: |
+#         sed -i 's|image: .*|image: ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}|' usermaven-js/usermaven-js-deployment.yaml
+
+#     - name: Commit and push changes
+#       run: |
+#         git config --local user.email "action@github.com"
+#         git config --local user.name "GitHub Action"
+#         git add usermaven-js/usermaven-js-deployment.yaml
+#         git commit -m "Update image to ${{ env.VERSION }}"
+#         git push

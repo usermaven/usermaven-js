@@ -1,15 +1,19 @@
-import * as React from 'react'
-import UsermavenContext from './UsermavenContext'
-import { UsermavenClient } from "@usermaven/sdk-js";
-import {PropsWithChildren} from "react";
+import * as React from 'react';
+import UsermavenContext from './UsermavenContext'; // Assuming you created this context earlier
+import { UsermavenClient } from '@usermaven/sdk-js';
+import { PropsWithChildren } from 'react';
 
+// Define the props to accept the client
 export interface UsermavenProviderProps {
-  client: UsermavenClient
+  client: UsermavenClient;
 }
 
-const UsermavenProvider: React.FC<PropsWithChildren<UsermavenProviderProps>> = function ({children, client}) {
-  const Context = UsermavenContext
-  return <Context.Provider value={client}>{children}</Context.Provider>
-}
+// The functional component that provides the Usermaven client context
+const UsermavenProvider: React.FC<PropsWithChildren<UsermavenProviderProps>> = ({ children, client }) => {
+  const Context = UsermavenContext;
 
-export default UsermavenProvider
+  // Render the provided client as value within the Context
+  return <Context.Provider value={client}>{children}</Context.Provider>;
+};
+
+export default UsermavenProvider;

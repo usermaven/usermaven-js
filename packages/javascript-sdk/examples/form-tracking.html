@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usermaven SDK Test</title>
+    <style>
+        form {
+            max-width: 500px;
+            margin: 20px auto;
+        }
+        label, input, select, textarea {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+        .links {
+            margin: 20px 0;
+            display: flex;
+        }
+        .links a {
+            margin-right: 10px;
+        }
+
+    </style>
+</head>
+<body>
+<h1>Usermaven SDK Test</h1>
+
+<div class="links">
+    <a href="/examples/index.html">Home</a>
+    <a href="/examples/form-tracking.html">Form Tracking</a>
+    <a href="http://stage.test.local:5173/examples/cross-domain.html">Cross Domain Tracking</a>
+    <a href="http://stage.test.local:5173/examples/autocapture.html">Autocapture</a>
+</div>
+
+<button id="trackEvent">Track Event</button>
+<button id="identifyUser">Identify User</button>
+<button class="your-class um-no-capture">
+    This button will not be captured
+</button>
+
+<form id="testForm" >
+    <h2>Test Form</h2>
+    <label for="name">Name:</label>
+    <input type="text" id="name" name="name" required>
+
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+
+    <label for="age">Age:</label>
+    <input type="number" id="age" name="age" min="18" max="120">
+
+    <label for="country">Country:</label>
+    <select id="country" name="country">
+        <option value="">Select a country</option>
+        <option value="us">United States</option>
+        <option value="ca">Canada</option>
+        <option value="uk">United Kingdom</option>
+        <option value="au">Australia</option>
+    </select>
+
+    <label for="newsletter">
+        <input type="checkbox" id="newsletter" name="newsletter">
+        Subscribe to newsletter
+    </label>
+
+    <label for="comments">Comments:</label>
+    <textarea id="comments" name="comments" rows="4"></textarea>
+
+    <label for="sensitive" class="um-no-capture">
+        <input type="text" id="sensitive" name="sensitive" class="um-no-capture">
+        Sensitive field (will not be captured)
+    </label>
+
+    <button type="submit">Submit</button>
+</form>
+
+<!-- Load the SDK -->
+<script src="/dist/lib.js"
+        data-key="test-api-key"
+        data-tracking-host="http://localhost:3000"
+        data-log-level="debug"
+        data-autocapture="false"
+        data-form-tracking="true"
+        ></script>
+
+<!-- Load the test scripts -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Test event tracking
+        document.getElementById('trackEvent').addEventListener('click', function() {
+            usermaven('track', 'button_click', { buttonId: 'trackEvent' });
+        });
+
+        // Test user identification
+        document.getElementById('identifyUser').addEventListener('click', function() {
+            usermaven('id', { id: 'user123', email: 'test@example.com' });
+        });
+
+        // Test form submission
+        // document.getElementById('testForm').addEventListener('submit', function(event) {
+        //     event.preventDefault();
+        //     console.log('Form submitted');
+        // });
+    });
+</script>
+</body>
+</html>

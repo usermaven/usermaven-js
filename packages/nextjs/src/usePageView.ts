@@ -1,31 +1,76 @@
-import { useEffect } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import { EventPayload, UsermavenClient } from "@usermaven/sdk-js";
-import { useRouter } from "next/router";
 
-/**
- * @param usermaven instance of initialized UsermavenClient
- * @param opts.callback callback that should be called sending data to usermaven. This will be a good place to identify user
- *                      or/and set a global parameters
- * @param opts.before additional parameters (aka payload)
- */
-function usePageView(usermaven: UsermavenClient, opts: { before?: (usermaven: UsermavenClient) => void, typeName?: string, payload?: EventPayload } = {}): UsermavenClient {
-    const router = useRouter();
+// Custom hook to track URL changes
+function useUrlChange() {
+    const [url, setUrl] = useState('');
 
     useEffect(() => {
-        const handleRouteChange = () => {
-            if (opts.before) {
-                opts.before(usermaven);
-            }
-            usermaven.track(opts?.typeName || 'pageview', opts.payload);
+        // This effect will only run on the client-side
+        setUrl(window.location.href);
+
+        const handleUrlChange = () => {
+            setUrl(window.location.href);
+        };
+
+        window.addEventListener('popstate', handleUrlChange);
+
+        // For handling pushState and replaceState
+        const originalPushState = window.history.pushState;
+        const originalReplaceState = window.history.replaceState;
+
+        window.history.pushState = function () {
+            originalPushState.apply(this, arguments as any);
+            handleUrlChange();
+        };
+
+        window.history.replaceState = function () {
+            originalReplaceState.apply(this, arguments as any);
+            handleUrlChange();
+        };
+
+        return () => {
+            window.removeEventListener('popstate', handleUrlChange);
+            window.history.pushState = originalPushState;
+            window.history.replaceState = originalReplaceState;
+        };
+    }, []);
+
+    return url;
+}
+
+// usePageView hook
+function usePageView(usermaven: UsermavenClient,
+                     opts: {
+                         before?: (usermaven: UsermavenClient) => void,
+                         typeName?: string,
+                         payload?: EventPayload
+                     } = {}): UsermavenClient {
+
+    const url = useUrlChange();
+
+    const trackPageView = useCallback(() => {
+        if (typeof window === 'undefined') {
+            return; // Skip tracking on server-side
         }
 
-        handleRouteChange();
+        if (opts.before) {
+            opts.before(usermaven);
+        }
+        usermaven.track(opts?.typeName || 'pageview', {
+            ...opts.payload,
+            url: window.location.href,
+            path: window.location.pathname,
+            referrer: document.referrer,
+            title: document.title
+        });
+    }, [usermaven, opts.before, opts.typeName, opts.payload]);
 
-        router.events.on('routeChangeComplete', handleRouteChange);
-        return () => {
-            router.events.off('routeChangeComplete', handleRouteChange);
-        };
-    }, [router.events, usermaven.track, opts.payload, opts.before]);
+    useEffect(() => {
+        if (url) {
+            trackPageView();
+        }
+    }, [url, trackPageView]);
 
     return usermaven;
 }

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "esnext",
+    "lib": ["dom", "esnext"],
+    "declaration": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "strict": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node", "jest"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
