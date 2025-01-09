@@ -48,9 +48,11 @@ usermaven.track('button_click', {
 })
 
 // Identify a user
-usermaven.identify('user123', {
+usermaven.identify({
+  id: 'user_123_456',
   email: 'user@example.com',
-  name: 'John Doe'
+  name: 'John Doe',
+  // ... more fields
 })
 </script>
 ```
@@ -65,7 +67,7 @@ import { usePageView } from '@usermaven/vue'
 const { track } = usePageView()
 
 // Manually track a page view if needed
-track('pageview')
+// track('pageview')
 </script>
 ```
 
