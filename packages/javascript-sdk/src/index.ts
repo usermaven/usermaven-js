@@ -54,6 +54,15 @@ function initFromScript(script: HTMLScriptElement) {
         maskAllElementAttributes: script.getAttribute('data-mask-all-element-attributes') === 'true',
     };
 
+    // Additional config for strict mode
+    if (config.privacyPolicy === 'strict') {
+        config.cookiePolicy = 'strict';
+        config.ipPolicy = 'strict';
+    }
+
+    if (config.cookiePolicy === 'comply' && config.useBeaconApi) {
+        config.cookiePolicy = "strict";
+    }
 
     const client = usermavenClient(config);
     const namespace = config.namespace || 'usermaven';
