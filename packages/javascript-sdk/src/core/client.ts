@@ -10,7 +10,7 @@ import {FetchTransport} from '../transport/fetch';
 import {XhrTransport} from '../transport/xhr';
 import {LocalStoragePersistence} from '../persistence/local-storage';
 import {MemoryPersistence} from '../persistence/memory';
-import {generateId, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
+import {generateId, getUmExclusionState, isObject, isString, isValidEmail, parseQueryString} from '../utils/helpers';
 import {RetryQueue} from '../utils/queue';
 import {isWindowAvailable} from "../utils/common";
 import {RageClick} from "../extensions/rage-click";
@@ -277,6 +277,14 @@ export class UsermavenClient {
     }
 
     private trackInternal(typeName: string, payload?: EventPayload, directSend: boolean = false): void {
+        // Check if user has opted out of tracking
+        const umExclusionState = getUmExclusionState()
+
+        if (umExclusionState) {
+            this.logger.debug(`Tracking disabled due to um_exclusion setting`);
+            return;
+        }
+
         if (!isString(typeName)) {
             throw new Error('Event name must be a string');
         }

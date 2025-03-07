@@ -78,3 +78,13 @@ export function parseLogLevel(value: string | null): LogLevel {
     return LogLevel.ERROR;
 
 }
+
+export const getUmExclusionState = () => {
+  let state: string | null = "false";
+
+  if (typeof window !== 'undefined' && window.localStorage) {
+    state = localStorage.getItem("um_exclusion");
+  }
+
+  return state === undefined || state === null || state === "false" ? false : true;
+};
