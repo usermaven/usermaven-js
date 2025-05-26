@@ -5,6 +5,7 @@ import { LogLevel } from './utils/logger';
 import type { UserProps, EventPayload, ClientProperties } from './core/types';
 import {parseLogLevel} from "./utils/helpers";
 import {convertKeysToCamelCase, isWindowAvailable} from "./utils/common";
+import { isAMDEnvironment, getAMDDefine } from './utils/amd-detector';
 
 function usermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
@@ -22,8 +23,7 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
     return new UsermavenClient(mergedConfig);
 }
 
-function initFromScript(script: HTMLScriptElement) {
-
+function initFromScript(script: HTMLScriptElement): UsermavenClient {
     const config: Partial<Config> = {
         key: script.getAttribute('data-key') || undefined,
         trackingHost: script.getAttribute('data-tracking-host') || 'https://events.usermaven.com',
@@ -67,12 +67,14 @@ function initFromScript(script: HTMLScriptElement) {
     const client = usermavenClient(config);
     const namespace = config.namespace || 'usermaven';
 
-    // if browser environment, send the first pageview
-    if (isWindowAvailable()) {
+    // Only send pageview if auto-pageview is enabled (default behavior for script tag)
+    if (isWindowAvailable() && config.autoPageview !== false) {
         client.pageview();
     }
 
     initializeNamespacedClient(namespace, client);
+    
+    return client;
 }
 
 function initializeNamespacedClient(namespace: string, client: UsermavenClient) {
@@ -147,21 +149,64 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
     }
 }
 
+// Track initialization state
+let isInitialized = false;
+let scriptTagClient: UsermavenClient | null = null;
+
+// AMD Support
 if (isWindowAvailable()) {
-    // Browser-specific initialization
-// Wrap the initialization in an IIFE
+    const amdDefine = getAMDDefine();
+    
+    if (amdDefine) {
+        // Define as AMD module - only exports, no initialization
+        amdDefine('usermaven', [], function() {
+            return {
+                usermavenClient,
+                UsermavenClient,
+                LogLevel,
+                // Expose the script tag client if it exists
+                getScriptTagClient: () => scriptTagClient
+            };
+        });
+    }
+    
+    // Always expose to global scope for script tag usage
+    if (typeof window !== 'undefined') {
+        (window as any).usermavenClient = usermavenClient;
+        (window as any).UsermavenClient = UsermavenClient;
+        (window as any).usermavenScriptTagClient = () => scriptTagClient;
+    }
+    
+    // Browser-specific initialization for script tag
+    // Only initialize if loaded via script tag AND not within an AMD context
     (function (document, window) {
-        // Capture the current scripts
+        // Capture the current script
         const currentScript = document.currentScript as HTMLScriptElement;
 
+        function shouldAutoInitialize() {
+            // Don't auto-initialize if:
+            // 1. Already initialized
+            // 2. Script doesn't have data attributes (likely loaded for AMD use)
+            // 3. Explicitly disabled via data attribute
+            
+            if (isInitialized) return false;
+            if (!currentScript) return false;
+            if (!currentScript.hasAttribute('data-key')) return false;
+            if (currentScript.getAttribute('data-no-auto-init') === 'true') return false;
+            
+            return currentScript.src.includes('lib.js');
+        }
+
         function initialize() {
-            if (currentScript && currentScript.src.includes('lib.js')) {
-                initFromScript(currentScript);
+            if (shouldAutoInitialize()) {
+                console.log('[Usermaven] Auto-initializing from script tag');
+                scriptTagClient = initFromScript(currentScript!);
+                isInitialized = true;
             }
         }
 
         // Check if we're in a browser environment
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && currentScript) {
             // If the scripts is loaded with defer or async, we need to wait for the DOM to be ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', initialize);
@@ -172,4 +217,18 @@ if (isWindowAvailable()) {
     })(document, window);
 }
 
+// For CommonJS/Node.js environments
+if (typeof module !== 'undefined' && module.exports && !isAMDEnvironment()) {
+    module.exports = {
+        usermavenClient,
+        UsermavenClient,
+        Config: undefined as any,
+        UserProps: undefined as any,
+        EventPayload: undefined as any,
+        LogLevel,
+        ClientProperties: undefined as any
+    };
+}
+
+// For ES modules
 export { usermavenClient, UsermavenClient, Config as UsermavenOptions, UserProps, EventPayload, LogLevel, ClientProperties };
