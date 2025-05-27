@@ -177,7 +177,7 @@ if (isWindowAvailable()) {
         (window as any).usermavenScriptTagClient = () => scriptTagClient;
     }
     
-    // Browser-specific initialization for script tag
+   
     // Only initialize if loaded via script tag AND not within an AMD context
     (function (document, window) {
         // Capture the current script
