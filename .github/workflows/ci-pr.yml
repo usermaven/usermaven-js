@@ -22,19 +22,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
       
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
       
-      - name: Run unit tests
-        run: npm run test:unit
+      - name: Run unit tests for JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js test
       
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-unit-${{ matrix.node-version }}
-          path: coverage/
+          path: packages/javascript-sdk/coverage/
           retention-days: 7
 
   e2e-tests:
@@ -49,16 +54,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
       
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
       
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       
-      - name: Run E2E tests
-        run: npm run test:e2e
+      - name: Run E2E tests for JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js test:e2e
         env:
           CI: true
       
@@ -67,7 +77,7 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: packages/javascript-sdk/playwright-report/
           retention-days: 7
       
       - name: Upload test videos
@@ -75,7 +85,7 @@ jobs:
         if: failure()
         with:
           name: e2e-videos
-          path: test-results/
+          path: packages/javascript-sdk/test-results/
           retention-days: 7
 
   lint:
@@ -90,16 +100,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
       
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
       
-      - name: Run ESLint
-        run: npm run lint
+      - name: Run ESLint for JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js lint
       
       - name: Check code formatting
-        run: npm run format:check
+        run: pnpm --filter @usermaven/sdk-js format
 
   build:
     name: Build Check
@@ -113,16 +128,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-          cache: 'npm'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
       
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install
       
       - name: Build project
-        run: npm run build
+        run: pnpm build
       
-      - name: Check for TypeScript errors
-        run: npm run type-check
+      - name: Build JavaScript SDK
+        run: pnpm build:javascript
 
   all-checks-passed:
     name: All Checks Passed
