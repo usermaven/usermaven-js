@@ -1,32 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-declare global {
-  interface Window {
-    usermaven?: Function;
-    analytics?: Function;
-    tracker?: Function;
-    usermavenQ?: any[];
-    analyticsQ?: any[];
-    trackerQ?: any[];
-    capturedEvents?: {
-      default: any[];
-      analytics: any[];
-      tracker: any[];
-    };
-    testHelpers?: {
-      checkNamespaces: () => {
-        default: boolean;
-        analytics: boolean;
-        tracker: boolean;
-      };
-      getEventCounts: () => {
-        default: number;
-        analytics: number;
-        tracker: number;
-      };
-    };
-  }
-}
+import './types';
 
 test.describe('Usermaven Namespace Tests', () => {
   
@@ -48,7 +21,7 @@ test.describe('Usermaven Namespace Tests', () => {
       
       // Check if all namespaces are properly loaded
       const namespaceStatus = await page.evaluate(() => {
-        return window.testHelpers?.checkNamespaces();
+        return window.testHelpers?.checkNamespaces ? window.testHelpers.checkNamespaces() : undefined;
       });
       
       expect(namespaceStatus?.default, 'Default namespace should be loaded').toBe(true);
@@ -114,12 +87,12 @@ test.describe('Usermaven Namespace Tests', () => {
       
       // Verify events were tracked in the UI
       const eventCounts = await page.evaluate(() => {
-        return window.testHelpers?.getEventCounts();
+        return window.testHelpers?.getEventCounts ? window.testHelpers.getEventCounts() : undefined;
       });
       
-      expect(eventCounts?.default).toBeGreaterThan(0);
-      expect(eventCounts?.analytics).toBeGreaterThan(0);
-      expect(eventCounts?.tracker).toBeGreaterThan(0);
+      expect(eventCounts?.default, 'Default namespace events should be tracked').toBeGreaterThan(0);
+      expect(eventCounts?.analytics, 'Analytics namespace events should be tracked').toBeGreaterThan(0);
+      expect(eventCounts?.tracker, 'Tracker namespace events should be tracked').toBeGreaterThan(0);
       
       // Verify custom events were sent to the server
       const customEvents = {

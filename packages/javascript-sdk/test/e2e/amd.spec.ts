@@ -1,19 +1,5 @@
 import { test, expect } from '@playwright/test';
-
-declare global {
-  interface Window {
-    usermaven?: Function;
-    usermavenClient?: any;
-    usermavenScriptTagClient?: Function;
-    define?: Function & { amd?: boolean };
-    testResults?: {
-      amdLoaded: boolean;
-      clientCreated: boolean;
-      trackingWorked: boolean;
-      errors: string[];
-    };
-  }
-}
+import './types';
 
 test.describe('Usermaven AMD Support Tests', () => {
   
