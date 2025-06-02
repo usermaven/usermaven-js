@@ -33,6 +33,7 @@ class AutoCapture {
     private options: Config;
     private scrollDepth: ScrollDepth | null = null;
     private customProperties: AutoCaptureCustomProperty[] = [];
+    private domHandlersAttached: boolean = false;
 
     // Constants for custom attributes
     static readonly FORCE_CAPTURE_ATTR = 'data-um-force-capture';
@@ -48,14 +49,29 @@ class AutoCapture {
         _safewrap_instance_methods(this);
     }
 
+    private isBrowserSupported(): boolean {
+        return typeof document !== 'undefined' && typeof document.addEventListener === 'function';
+    }
+
     public init(): void {
+        if (!this.isBrowserSupported()) {
+            this.logger.debug('Browser not supported for autocapture');
+            return;
+        }
+
+        if (this.domHandlersAttached) {
+            this.logger.debug('Autocapture already initialized.');
+            return;
+        }
+
         if (!(document && document.body)) {
-             this.logger.debug('Document not ready yet, trying again in 500 milliseconds...');
+            this.logger.debug('Document not ready yet, trying again in 500 milliseconds...');
             setTimeout(() => this.init(), 500);
             return;
         }
 
         this.addDomEventHandlers();
+        this.domHandlersAttached = true;
     }
 
 
