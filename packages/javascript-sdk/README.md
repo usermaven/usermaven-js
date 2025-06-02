@@ -159,6 +159,38 @@ To set up the project for development:
 3. Run tests: `npm test`
 4. Build the project: `npm run build`
 
+## Testing
+
+### Unit Tests
+
+To run unit tests:
+
+```bash
+pnpm --filter @usermaven/sdk-js test
+```
+
+### E2E Tests
+
+To run end-to-end tests with a specific browser (e.g., Chrome):
+
+```bash
+pnpm --filter @usermaven/sdk-js test:e2e --project=chromium
+```
+
+You can replace `chromium` with other browsers like `firefox` or `webkit` to test on different browsers.
+
+To run E2E tests with a UI for debugging:
+
+```bash
+pnpm --filter @usermaven/sdk-js test:e2e:ui
+```
+
+To view the Playwright report after running tests:
+
+```bash
+pnpm exec playwright show-report
+```
+
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines and code of conduct before submitting pull requests.
