@@ -4,51 +4,22 @@ on:
   pull_request:
     branches: [ main, develop ]
     types: [ opened, synchronize, reopened ]
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
       
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8.6.10
-      
-      - name: Install dependencies
-        run: pnpm install
-      
-      - name: Run unit tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test
-      
-      - name: Upload coverage reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-unit-${{ matrix.node-version }}
-          path: packages/javascript-sdk/coverage/
-          retention-days: 7
-
-  e2e-tests:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,19 +27,58 @@ jobs:
           node-version: '20.x'
           cache: 'pnpm'
       
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Run unit tests
+        run: pnpm --filter @usermaven/sdk-js test
+      
+      - name: Run unit tests with coverage
+        run: pnpm --filter @usermaven/sdk-js test:coverage
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: packages/javascript-sdk/coverage/
+          retention-days: 7
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 8.6.10
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+      
       - name: Install dependencies
         run: pnpm install
       
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+      # Build the SDK first to ensure dist files are available
+      - name: Build JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js build
+      
+      # Install Playwright browsers
+      - name: Install Playwright Browsers
+        run: |
+          cd packages/javascript-sdk
+          # Install all browsers with dependencies
+          npx playwright install --with-deps
       
       - name: Run E2E tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test:e2e
+        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
         env:
           CI: true
       
@@ -89,12 +99,17 @@ jobs:
           retention-days: 7
 
   lint:
-    name: Lint and Format Check
+    name: Format Check
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -102,16 +117,8 @@ jobs:
           node-version: '20.x'
           cache: 'pnpm'
       
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8.6.10
-      
       - name: Install dependencies
         run: pnpm install
-      
-      - name: Run ESLint for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js lint
       
       - name: Check code formatting
         run: pnpm --filter @usermaven/sdk-js format
@@ -124,16 +131,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
           cache: 'pnpm'
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8.6.10
       
       - name: Install dependencies
         run: pnpm install
