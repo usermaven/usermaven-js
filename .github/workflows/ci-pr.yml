@@ -31,7 +31,7 @@ jobs:
         run: pnpm install
       
       - name: Install Playwright
-        run: pnpm add -D @playwright/test
+        run: pnpm --filter @usermaven/sdk-js add -D @playwright/test
       
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
