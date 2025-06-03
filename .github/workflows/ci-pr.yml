@@ -34,11 +34,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgbm-dev
-          pnpm --filter @usermaven/sdk-js add -D @playwright/test
+          cd packages/javascript-sdk
           npx playwright install --with-deps chromium
       
       - name: Run E2E tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
+        run: cd packages/javascript-sdk && npm run build && npx playwright test --config=./playwright.ci.config.ts
         env:
           CI: true
       
