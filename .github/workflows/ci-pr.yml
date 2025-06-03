@@ -8,9 +8,9 @@ on:
 
 jobs:
 
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-22.04
     
     steps:
       - name: Checkout code
@@ -30,17 +30,36 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Run unit tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test
+      # Build the SDK first to ensure dist files are available
+      - name: Build JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js build
+      
+      # Install Playwright browsers
+      - name: Install Playwright Browsers
+        run: |
+          cd packages/javascript-sdk
+          # Install all browsers with dependencies
+          npx playwright install --with-deps
+      
+      - name: Run E2E tests for JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
         env:
           CI: true
       
-      - name: Upload test coverage
+      - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-report
-          path: packages/javascript-sdk/coverage/
+          name: playwright-report
+          path: packages/javascript-sdk/playwright-report/
+          retention-days: 7
+      
+      - name: Upload test videos
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-videos
+          path: packages/javascript-sdk/test-results/
           retention-days: 7
 
   lint:
@@ -98,14 +117,14 @@ jobs:
 
   all-checks-passed:
     name: All Checks Passed
-    needs: [unit-tests, lint, build]
+    needs: [e2e-tests, lint, build]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
       - name: Verify all checks passed
         run: |
-          if [[ "${{ needs.unit-tests.result }}" != "success" || 
+          if [[ "${{ needs.e2e-tests.result }}" != "success" || 
                 "${{ needs.lint.result }}" != "success" || 
                 "${{ needs.build.result }}" != "success" ]]; then
             echo "One or more checks failed"
