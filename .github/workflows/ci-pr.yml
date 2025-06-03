@@ -30,11 +30,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Install Playwright and browsers
-        run: |
-          pnpm --filter @usermaven/sdk-js add -D @playwright/test
-          cd packages/javascript-sdk
-          pnpm dlx playwright install --with-deps
+      - name: Setup Playwright
+        uses: microsoft/playwright-github-action@v1
+        
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
       
       - name: Run E2E tests for JavaScript SDK
         run: pnpm --filter @usermaven/sdk-js test:e2e:ci
