@@ -8,6 +8,42 @@ on:
 
 jobs:
 
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.6.10
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Run unit tests
+        run: pnpm --filter @usermaven/sdk-js test
+      
+      - name: Run unit tests with coverage
+        run: pnpm --filter @usermaven/sdk-js test:coverage
+      
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: packages/javascript-sdk/coverage/
+          retention-days: 7
+
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-22.04
@@ -117,14 +153,15 @@ jobs:
 
   all-checks-passed:
     name: All Checks Passed
-    needs: [e2e-tests, lint, build]
+    needs: [unit-tests, e2e-tests, lint, build]
     runs-on: ubuntu-latest
     if: always()
     
     steps:
       - name: Verify all checks passed
         run: |
-          if [[ "${{ needs.e2e-tests.result }}" != "success" || 
+          if [[ "${{ needs.unit-tests.result }}" != "success" || 
+                "${{ needs.e2e-tests.result }}" != "success" || 
                 "${{ needs.lint.result }}" != "success" || 
                 "${{ needs.build.result }}" != "success" ]]; then
             echo "One or more checks failed"
