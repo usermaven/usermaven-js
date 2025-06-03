@@ -34,11 +34,12 @@ jobs:
       - name: Build JavaScript SDK
         run: pnpm --filter @usermaven/sdk-js build
       
-      # Use Microsoft's Playwright GitHub Action which handles all dependencies
+      # Install Playwright browsers
       - name: Install Playwright Browsers
-        uses: microsoft/playwright-github-action@v1
-        with:
-          browsers: chromium
+        run: |
+          cd packages/javascript-sdk
+          # Use npx to run playwright install since the test script uses npm
+          npx playwright install --with-deps chromium
       
       - name: Run E2E tests for JavaScript SDK
         run: pnpm --filter @usermaven/sdk-js test:e2e:ci
