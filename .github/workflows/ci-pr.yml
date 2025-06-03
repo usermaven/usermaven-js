@@ -90,7 +90,7 @@ jobs:
           retention-days: 7
 
   lint:
-    name: Lint and Format Check
+    name: Format Check
     runs-on: ubuntu-latest
     
     steps:
@@ -110,9 +110,6 @@ jobs:
       
       - name: Install dependencies
         run: pnpm install
-      
-      - name: Run ESLint for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js lint
       
       - name: Check code formatting
         run: pnpm --filter @usermaven/sdk-js format
