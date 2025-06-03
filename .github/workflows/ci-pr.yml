@@ -10,7 +10,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 for better compatibility
     
     steps:
       - name: Checkout code
@@ -33,18 +33,39 @@ jobs:
       - name: Install system dependencies for Playwright
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgbm-dev
+          sudo apt-get install -y libgbm-dev \
+            libxkbcommon0 \
+            libxss1 \
+            libgtk-3-0 \
+            libgbm1 \
+            libasound2t64 \
+            libnspr4 \
+            libnss3 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libatspi2.0-0
+      
+      # Update Playwright to latest version first
+      - name: Update Playwright to latest version
+        run: |
+          cd packages/javascript-sdk
+          pnpm remove @playwright/test || true
+          pnpm add -D @playwright/test@latest
       
       # Build the SDK first to ensure dist files are available
       - name: Build JavaScript SDK
         run: pnpm --filter @usermaven/sdk-js build
       
-      # Install Playwright with proper scoping
-      - name: Install Playwright
+      # Install Playwright browsers
+      - name: Install Playwright Browsers
         run: |
           cd packages/javascript-sdk
-          pnpm add -D @playwright/test
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install chromium
+          pnpm exec playwright install-deps chromium
       
       - name: Run E2E tests for JavaScript SDK
         run: pnpm --filter @usermaven/sdk-js test:e2e:ci
