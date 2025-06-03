@@ -65,6 +65,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
+      - name: Install Playwright
+        run: npm install -g playwright
+      
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       
