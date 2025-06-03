@@ -30,25 +30,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      # Update Playwright to latest version to avoid deprecated version issues
-      - name: Update Playwright
-        run: |
-          cd packages/javascript-sdk
-          pnpm remove @playwright/test playwright || true
-          pnpm add -D @playwright/test@latest
+      # Build the SDK first to ensure dist files are available
+      - name: Build JavaScript SDK
+        run: pnpm --filter @usermaven/sdk-js build
       
-      # Install Playwright browsers with dependencies
+      # Use Microsoft's Playwright GitHub Action which handles all dependencies
       - name: Install Playwright Browsers
-        run: |
-          cd packages/javascript-sdk
-          pnpm exec playwright install --with-deps chromium
+        uses: microsoft/playwright-github-action@v1
+        with:
+          browsers: chromium
       
-      # Run the CI-specific e2e tests
       - name: Run E2E tests for JavaScript SDK
-        run: |
-          cd packages/javascript-sdk
-          pnpm run build
-          pnpm exec playwright test --config=./playwright.ci.config.ts
+        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
         env:
           CI: true
       
