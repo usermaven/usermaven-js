@@ -72,7 +72,7 @@ jobs:
         run: npx playwright install --with-deps
       
       - name: Run E2E tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test:e2e
+        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
         env:
           CI: true
       
