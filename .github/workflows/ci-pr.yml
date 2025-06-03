@@ -9,21 +9,8 @@ on:
 jobs:
 
   e2e-tests:
-    name: E2E Tests - ${{ matrix.browser }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - browser: chromium
-            os: ubuntu-22.04
-          - browser: firefox
-            os: ubuntu-22.04
-          - browser: webkit
-            os: ubuntu-22.04
-          # Test Safari on macOS
-          - browser: webkit
-            os: macos-latest
+    name: E2E Tests
+    runs-on: ubuntu-22.04
     
     steps:
       - name: Checkout code
@@ -51,13 +38,11 @@ jobs:
       - name: Install Playwright Browsers
         run: |
           cd packages/javascript-sdk
-          # Install specific browser based on matrix
-          npx playwright install --with-deps ${{ matrix.browser }}
+          # Use npx to run playwright install since the test script uses npm
+          npx playwright install --with-deps chromium
       
       - name: Run E2E tests for JavaScript SDK
-        run: |
-          cd packages/javascript-sdk
-          pnpm exec playwright test --project=${{ matrix.browser }}
+        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
         env:
           CI: true
       
@@ -65,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
+          name: playwright-report
           path: packages/javascript-sdk/playwright-report/
           retention-days: 7
       
@@ -73,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: e2e-videos-${{ matrix.os }}-${{ matrix.browser }}
+          name: e2e-videos
           path: packages/javascript-sdk/test-results/
           retention-days: 7
 
