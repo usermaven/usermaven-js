@@ -10,7 +10,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 for better compatibility
+    runs-on: ubuntu-22.04
     
     steps:
       - name: Checkout code
@@ -30,48 +30,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       
-      - name: Install system dependencies for Playwright
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgbm-dev \
-            libxkbcommon0 \
-            libxss1 \
-            libgtk-3-0 \
-            libgbm1 \
-            libasound2t64 \
-            libnspr4 \
-            libnss3 \
-            libatk-bridge2.0-0 \
-            libdrm2 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxfixes3 \
-            libxrandr2 \
-            libatspi2.0-0
-      
-      # Update Playwright to latest version first
-      - name: Update Playwright to latest version
+      # Update Playwright to latest version to avoid deprecated version issues
+      - name: Update Playwright
         run: |
           cd packages/javascript-sdk
-          pnpm remove @playwright/test || true
+          pnpm remove @playwright/test playwright || true
           pnpm add -D @playwright/test@latest
       
-      # Build the SDK first to ensure dist files are available
-      - name: Build JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js build
-      
-      # Install Playwright browsers
+      # Install Playwright browsers with dependencies
       - name: Install Playwright Browsers
         run: |
           cd packages/javascript-sdk
-          pnpm exec playwright install chromium
-          pnpm exec playwright install-deps chromium
+          pnpm exec playwright install --with-deps chromium
       
+      # Run the CI-specific e2e tests
       - name: Run E2E tests for JavaScript SDK
-        run: pnpm --filter @usermaven/sdk-js test:e2e:ci
+        run: |
+          cd packages/javascript-sdk
+          pnpm run build
+          pnpm exec playwright test --config=./playwright.ci.config.ts
         env:
           CI: true
-          PLAYWRIGHT_BROWSERS_PATH: 0  # Use default location
       
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
