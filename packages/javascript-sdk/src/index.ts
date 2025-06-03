@@ -7,6 +7,8 @@ import {parseLogLevel} from "./utils/helpers";
 import {convertKeysToCamelCase, isWindowAvailable} from "./utils/common";
 import { isAMDEnvironment, getAMDDefine } from './utils/amd-detector';
 
+// Global flag for multi-instance safety
+const USERMAVEN_AUTOCAPTURE_INITIALIZED_BASE = '__USERMAVEN_AUTOCAPTURE_INITIALIZED__';
 function usermavenClient(config: Partial<Config>): UsermavenClient {
     const cleanConfig = JSON.parse(JSON.stringify(config));
     const camelCaseConfig = convertKeysToCamelCase(cleanConfig);
@@ -18,6 +20,21 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
 
     if (!mergedConfig.trackingHost) {
         throw new Error('Tracking host is required!');
+    }
+
+    // Create a project-specific key for the global flag
+    const projectKey = mergedConfig.key || '';
+    const USERMAVEN_AUTOCAPTURE_INITIALIZED_KEY = `${USERMAVEN_AUTOCAPTURE_INITIALIZED_BASE}${projectKey}`;
+
+    // Check for existing autocapture initialization
+    if (isWindowAvailable() && mergedConfig.autocapture && (window as any)[USERMAVEN_AUTOCAPTURE_INITIALIZED_KEY]) {
+        console.warn('Usermaven: Autocapture already initialized in another instance, skipping duplicate initialization.');
+        mergedConfig.disableAutocaptureListenerRegistration = true;
+    }
+
+    // Set global flag if autocapture is enabled and not disabled
+    if (isWindowAvailable() && mergedConfig.autocapture && !mergedConfig.disableAutocaptureListenerRegistration) {
+        (window as any)[USERMAVEN_AUTOCAPTURE_INITIALIZED_KEY] = true;
     }
 
     return new UsermavenClient(mergedConfig);
