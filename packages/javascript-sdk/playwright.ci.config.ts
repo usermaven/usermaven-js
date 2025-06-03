@@ -20,7 +20,6 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   
-  // Only run Chromium for CI to save time
   projects: [
     {
       name: 'chromium',
