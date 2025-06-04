@@ -6,7 +6,7 @@ declare global {
     usermavenQ?: any[];
     consoleWarnings?: string[];
     initAttempts?: number;
-    usermavenClient?: any;
+    usermavenClient?: Function;
     client?: any;
     earlyInit?: Function;
     debugLogs?: string[];
