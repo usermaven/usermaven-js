@@ -71,6 +71,7 @@ type CamelCaseConfig = {
     useBeaconApi?: boolean;
     forceUseFetch?: boolean;
     autocapture?: boolean;
+    disableAutocaptureListenerRegistration?: boolean;
     rageClick?: boolean;
     formTracking?: boolean | 'all' | 'tagged' | 'none';
     autoPageview?: boolean;
@@ -106,6 +107,7 @@ type SnakeCaseConfig = {
     use_beacon_api?: boolean;
     force_use_fetch?: boolean;
     autocapture?: boolean;
+    disable_autocapture_listener_registration?: boolean;
     rage_click?: boolean;
     form_tracking?: boolean | 'all' | 'tagged' | 'none';
     auto_pageview?: boolean;

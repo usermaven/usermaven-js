@@ -60,7 +60,7 @@ export class UsermavenClient {
     private initializeBrowserFeatures(): void {
         this.cookieManager = new CookieManager(this.config.cookieDomain);
 
-        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.key)) {
+        if (this.config.autocapture && AutoCapture.enabledForProject(this.config.key) && !this.config.disableAutocaptureListenerRegistration) {
             this.autoCapture = new AutoCapture(this, this.config, this.logger);
             this.autoCapture.init();
         }
