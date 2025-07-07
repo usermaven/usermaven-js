@@ -85,7 +85,7 @@ function initFromScript(script: HTMLScriptElement): UsermavenClient {
     const namespace = config.namespace || 'usermaven';
 
     // Only send pageview if auto-pageview is enabled (default behavior for script tag)
-    if (isWindowAvailable() && config.autoPageview !== false) {
+    if (isWindowAvailable()) {
         client.pageview();
     }
 
