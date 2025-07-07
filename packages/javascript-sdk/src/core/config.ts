@@ -13,7 +13,7 @@ export const defaultConfig: Partial<Config> = {
     autocapture: false,
     rageClick: false,
     formTracking: false,
-    autoPageview: false,
+    autoPageview: true,
     disableEventPersistence: false,
     gaHook: false,
     segmentHook: false,
