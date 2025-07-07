@@ -56,8 +56,12 @@ export default class FormTracking {
         const fields = form.querySelectorAll('input, select, textarea');
         fields.forEach(field => {
             field.addEventListener('change', (event) => {
-                const fieldProps = this._getFieldProps(event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, 0);
-                this.instance.track('$form_field_change', _cleanObject(fieldProps));
+                const fieldProps = this._getFieldProps(event.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement);
+                this.instance.track('$form_field_change', _cleanObject({
+                    form_id: form.id,
+                    form_name: form.name || '',
+                    field: fieldProps
+                }));
             });
         });
     }
@@ -77,37 +81,48 @@ export default class FormTracking {
             form_method: form.method,
             form_class: form.className,
             form_attributes: this._getElementAttributes(form),
+            fields: [] as any[]
         };
 
         const formFields = form.querySelectorAll('input, select, textarea') as NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
         const filteredFormFields = Array.from(formFields).filter(field => !field.classList.contains('um-no-capture'));
 
-        filteredFormFields.forEach((field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) => {
-            const fieldProps = this._getFieldProps(field, index);
-            Object.assign(formDetails, fieldProps);
+        filteredFormFields.forEach((field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) => {
+            const fieldProps = this._getFieldProps(field);
+            formDetails.fields.push(fieldProps);
         });
 
         return formDetails;
     }
 
-    private _getFieldProps(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement, index: number) {
-        const fieldDataAttributes = Object.keys(field.dataset).length ? JSON.stringify(field.dataset) : undefined;
+    private _getFieldProps(field: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement) {
+        const fieldDataAttributes = Object.keys(field.dataset).length ? this._convertDOMStringMapToObject(field.dataset) : undefined;
         const safeValue = this.getSafeText(field);
 
         return {
-            [`field_${index + 1}_tag`]: field.tagName.toLowerCase(),
-            [`field_${index + 1}_type`]: field instanceof HTMLInputElement ? field.type : undefined,
-            [`field_${index + 1}_data_attributes`]: fieldDataAttributes,
-            [`field_${index + 1}_id`]: field.id,
-            [`field_${index + 1}_value`]: safeValue,
-            [`field_${index + 1}_class`]: field.className,
-            [`field_${index + 1}_name`]: field.name,
-            [`field_${index + 1}_attributes`]: this._getElementAttributes(field),
+            tag: field.tagName.toLowerCase(),
+            type: field instanceof HTMLInputElement ? field.type : undefined,
+            data_attributes: fieldDataAttributes,
+            id: field.id,
+            value: safeValue,
+            class: field.className,
+            name: field.name,
+            attributes: this._getElementAttributes(field),
         };
     }
 
     private _getElementAttributes(element: HTMLElement): Record<string, string> {
-        return Object.keys(element.dataset).length ? JSON.parse(JSON.stringify(element.dataset)) : {};
+        return Object.keys(element.dataset).length ? this._convertDOMStringMapToObject(element.dataset) : {};
+    }
+    
+    private _convertDOMStringMapToObject(dataset: DOMStringMap): Record<string, string> {
+        const result: Record<string, string> = {};
+        for (const key in dataset) {
+            if (dataset.hasOwnProperty(key) && dataset[key] !== undefined) {
+                result[key] = dataset[key] as string;
+            }
+        }
+        return result;
     }
 
     private getSafeText(element: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | Node): string {
