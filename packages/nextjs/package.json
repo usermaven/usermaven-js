@@ -22,16 +22,16 @@
     "cookie": "^0.5.0"
   },
   "peerDependencies": {
-    "next": "^10.0.8 || ^11.0 || ^12.0 || ^13.0",
-    "react": "15.x || 16.x || 17.x || 18.x"
+    "next": "^10.0.8 || ^11.0 || ^12.0 || ^13.0 || ^14.0 || ^15.0",
+    "react": "15.x || 16.x || 17.x || 18.x || 19.x"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^21.0.2",
     "@rollup/plugin-node-resolve": "^13.1.4",
     "@rollup/plugin-typescript": "^8.3.1",
-    "@types/react": "^17.0.43",
-    "next": "^12.1.5",
-    "react": "^17.0.2",
+    "@types/react": "^18.2.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
     "rollup": "^2.70.1",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "tslib": "^2.3.1"
