@@ -48,6 +48,7 @@ function middlewareEnv(req: NextRequest, res: NextResponse, opts: { disableCooki
             const cookieOpts: CookieSerializeOptions = {
                 maxAge: 31_622_400 * 10,
                 httpOnly: false,
+                path: "/",
             };
             if (domain) {
                 cookieOpts.domain = domain;
