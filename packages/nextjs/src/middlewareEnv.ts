@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ClientProperties } from "@usermaven/sdk-js";
 import { serialize, CookieSerializeOptions } from 'cookie'
 
-// Helper type guards for Next.js 13.2+ cookie APIs
+// Helper type guards for Next.js 13.2+ cookie API
 function hasGetMethod(cookies: any): cookies is { get(name: string): { value: string } | undefined } {
     return cookies && typeof cookies.get === 'function';
 }
@@ -56,7 +56,7 @@ function middlewareEnv(req: NextRequest, res: NextResponse, opts: { disableCooki
 
             let newId = Math.random().toString(36).substring(2, 12);
             
-            // Handle cookie setting based on Next.js version
+            // Handle cookie setting based on Next.js versions
             // NextResponse.cookies API was introduced in Next.js 13.2
             if (res.cookies && hasSetMethod(res.cookies)) {
                 // Modern Next.js (13.2+, 14, 15)
