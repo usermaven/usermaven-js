@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { UsermavenGlobal } from '../../src/core/types';
 
 declare global {
   interface Window {
-    usermaven?: Function;
+    usermaven?: UsermavenGlobal;
     usermavenQ?: any[];
     consoleWarnings?: string[];
     initAttempts?: number;

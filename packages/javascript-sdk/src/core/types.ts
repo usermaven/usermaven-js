@@ -139,3 +139,32 @@ export type Config = Partial<CamelCaseConfig & SnakeCaseConfig> & {
     trackingHost?: string;
     tracking_host?: string;
 } & ({ trackingHost: string } | { tracking_host: string });
+
+/**
+ * UsermavenGlobal interface that supports both command-style and object-oriented API styles
+ */
+export interface UsermavenGlobal {
+    // Command-style API
+    (command: 'track', eventName: string, payload?: any): void;
+    (command: 'id', userData: UserProps, doNotSendEvent?: boolean): Promise<void>;
+    (command: 'pageview'): void;
+    (command: 'group', companyProps: CompanyProps, doNotSendEvent?: boolean): Promise<void>;
+    (command: 'reset', resetAnonId?: boolean): Promise<void>;
+    (command: 'set', properties: Record<string, any>, options?: { eventType?: string; persist?: boolean }): void;
+    (command: 'unset', propertyName: string, options?: { eventType?: string; persist?: boolean }): void;
+    (command: 'rawTrack', payload: any): void;
+    (command: 'setUserId', userId: string): void;
+    (command: 'onLoad', callback: () => void): void;
+    
+    // Object-oriented API
+    track(eventName: string, payload?: any): void;
+    id(userData: UserProps, doNotSendEvent?: boolean): Promise<void>;
+    pageview(): void;
+    group(companyProps: CompanyProps, doNotSendEvent?: boolean): Promise<void>;
+    reset(resetAnonId?: boolean): Promise<void>;
+    set(properties: Record<string, any>, options?: { eventType?: string; persist?: boolean }): void;
+    unset(propertyName: string, options?: { eventType?: string; persist?: boolean }): void;
+    rawTrack(payload: any): void;
+    setUserId(userId: string): void;
+    getConfig(): Config | null;
+}

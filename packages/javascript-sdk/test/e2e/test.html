@@ -6,6 +6,44 @@
     <!-- Load the local development build of Usermaven -->
 
     <script type="text/javascript">     
+        // Setup event capture for testing
+        window.capturedEvents = [];
+        
+        // Override the transport to capture events
+        window.originalTransportSend = null;
+        window.captureEvents = function(enable) {
+            if (enable && !window.originalTransportSend) {
+                // Wait for Usermaven to initialize
+                const checkInterval = setInterval(function() {
+                    if (window.usermaven && window.usermaven.getConfig) {
+                        clearInterval(checkInterval);
+                        
+                        // Get the client instance
+                        const config = window.usermaven.getConfig();
+                        if (config && config._client && config._client.transport) {
+                            const transport = config._client.transport;
+                            window.originalTransportSend = transport.send;
+                            
+                            // Override the send method to capture events
+                            transport.send = function(payload) {
+                                window.capturedEvents.push(payload);
+                                return window.originalTransportSend.apply(this, arguments);
+                            };
+                            console.log('Event capture enabled');
+                        }
+                    }
+                }, 100);
+            } else if (!enable && window.originalTransportSend) {
+                // Restore original transport
+                const config = window.usermaven.getConfig();
+                if (config && config._client && config._client.transport) {
+                    config._client.transport.send = window.originalTransportSend;
+                    window.originalTransportSend = null;
+                    console.log('Event capture disabled');
+                }
+            }
+        };
+        
         (function () {
             window.usermaven = window.usermaven || (function () { (window.usermavenQ = window.usermavenQ || []).push(arguments); })
             var t = document.createElement('script'),
