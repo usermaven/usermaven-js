@@ -1,10 +1,11 @@
 // Common TypeScript declarations for all test files
+import { UsermavenGlobal } from '../../src/core/types';
 export {};
 
 declare global {
   interface Window {
     // Common properties
-    usermaven?: Function;
+    usermaven?: UsermavenGlobal;
     usermavenClient?: Function;
     usermavenScriptTagClient?: Function;
     usermavenQ?: any[];
