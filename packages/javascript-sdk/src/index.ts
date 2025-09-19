@@ -103,17 +103,39 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
         while (queue.length > 0) {
             const item = queue.shift();
             if (item) {
-                (window as any)[namespace].apply(null, item);
+                // Check if last item is a promise handler
+                const lastItem = item[item.length - 1];
+                const hasPromiseHandler = lastItem && typeof lastItem.resolve === 'function';
+                
+                if (hasPromiseHandler) {
+                    const promiseHandler = item.pop();
+                    try {
+                        const result = namespacedFunction.apply(null, item);
+                        if (result && typeof result.then === 'function') {
+                            result.then(promiseHandler.resolve).catch(promiseHandler.reject);
+                        } else {
+                            promiseHandler.resolve(result);
+                        }
+                    } catch (error) {
+                        promiseHandler.reject(error);
+                    }
+                } else {
+                    try {
+                        namespacedFunction.apply(null, item);
+                    } catch (error) {
+                        console.error(`Usermaven: Error processing queued command:`, error);
+                    }
+                }
             }
         }
     }
-
     function executeOnLoadCallbacks() {
         onLoadCallbacks.forEach(callback => callback());
         onLoadCallbacks.length = 0;
     }
 
-    (window as any)[namespace] = function(...args: any[]) {
+    // Create the main function that handles command-style calls
+    function namespacedFunction(...args: any[]) {
         const method = args[0];
 
         if (method === 'onLoad') {
@@ -137,7 +159,40 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
         } else {
             console.error(`Method ${method} not found on UsermavenClient`);
         }
+    }
+
+    const asyncMethods = ['id', 'group', 'reset']; // These typically return Promise<void>
+    const syncMethods = ['track', 'pageview', 'set', 'unset', 'rawTrack', 'setUserId']; // These typically return void
+    const methods = [...asyncMethods, ...syncMethods];
+    methods.forEach(method => {
+        namespacedFunction[method] = function(...args: any[]) {
+            if (!isReady) {
+                if (asyncMethods.includes(method)) {
+                    return new Promise((resolve, reject) => {
+                        queue.push([method, ...args, { resolve, reject }]);
+                    });
+                } else {
+                    queue.push([method, ...args]);
+                    return; // Returns undefined for sync methods
+                }
+            }
+            
+            if (typeof client[method] === 'function') {
+                return client[method].apply(client, args);
+            }
+        };
+    });
+    // Add getConfig as a special case since it's a getter
+    namespacedFunction.getConfig = function() {
+        if (!isReady) {
+            console.warn('Usermaven client not ready yet');
+            return null;
+        }
+        return client.getConfig();
     };
+
+    // Set the function on the window
+    (window as any)[namespace] = namespacedFunction;
 
     // Initialize queue processing
     const queueName = `${namespace}Q`;
@@ -145,11 +200,11 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
     (window as any)[queueName] = existingQueue;
 
     existingQueue.push = function(...args: any[]) {
-        (window as any)[namespace].apply(null, args);
+        namespacedFunction.apply(null, args);
         return Array.prototype.push.apply(this, args);
     };
 
-    // Set core as ready and process any queued items
+    // Set client as ready and process any queued items
     setTimeout(() => {
         isReady = true;
         processQueue();
