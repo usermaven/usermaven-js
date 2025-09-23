@@ -30,6 +30,18 @@ declare global {
       tracker?: any[];
     };
     
+    // Scroll depth test utilities
+    scrollDepthTest?: {
+      updateStatus: (message: string) => void;
+      testShortPage: () => void;
+      testLongPage: () => void;
+      testVeryShortPage: () => void;
+      simulateScroll: (percentage: number) => void;
+      sendManualEvent: () => void;
+      getCurrentScrollDepth: () => number;
+      currentScrollDepth: number | null;
+    };
+    
     testHelpers?: {
       // AMD/jQuery test helpers
       checkAMDLoaded?: () => boolean;
