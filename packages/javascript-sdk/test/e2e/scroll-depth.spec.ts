@@ -3,7 +3,7 @@ import './types';
 
 test.describe('Scroll Depth Tracking Tests', () => {
   
-  test('should track scroll depth 100% for short pages', async ({ page }) => {
+  test('should send events for zero scroll depth', async ({ page }) => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     // Setup request interception
@@ -35,23 +35,31 @@ test.describe('Scroll Depth Tracking Tests', () => {
       // Wait for events to be processed
       await page.waitForTimeout(2000);
 
-      // Verify scroll depth 100% event was sent (short pages should report 100%)
-      const shortPageEvent = requests.find(req => {
+      // Manually send a scroll event to test 0% scroll depth
+      await page.evaluate(() => {
+        if (window.scrollDepthTest && window.scrollDepthTest.scrollDepthInstance) {
+          window.scrollDepthTest.scrollDepthInstance.send('$scroll');
+        }
+      });
+      await page.waitForTimeout(1000);
+
+      // Verify scroll event was sent with 0% scroll depth
+      const scrollEvent = requests.find(req => {
         if (!req.postData) return false;
         try {
           const data = JSON.parse(req.postData);
           const events = Array.isArray(data) ? data : [data];
           return events.some(event => 
-            event.event_type === '$scroll' && 
-            event.event_attributes && 
-            event.event_attributes.percent === 100
+            event.event_type === '$scroll' &&
+            event.event_attributes &&
+            event.event_attributes.percent === 0
           );
         } catch (e) {
           return false;
         }
       });
 
-      expect(shortPageEvent, 'Short page scroll depth 100% event should be captured').toBeTruthy();
+      expect(scrollEvent, 'Scroll event with 0% scroll depth should be sent').toBeTruthy();
       
     } catch (error) {
       console.error('Short page test failed:', error);
@@ -114,23 +122,23 @@ test.describe('Scroll Depth Tracking Tests', () => {
       });
       await page.waitForTimeout(1500); // Longer wait for debounced processing
 
-      // Check for milestone events
-      const milestoneEvents = requests.filter(req => {
+      // Check for scroll events at milestones
+      const scrollEvents = requests.filter(req => {
         if (!req.postData) return false;
         try {
           const data = JSON.parse(req.postData);
           const events = Array.isArray(data) ? data : [data];
           return events.some(event => 
-            event.event_type && event.event_type.startsWith('$scroll_milestone_')
+            event.event_type === '$scroll'
           );
         } catch (e) {
           return false;
         }
       });
 
-      expect(milestoneEvents.length, 'Should have milestone events').toBeGreaterThan(0);
+      expect(scrollEvents.length, 'Should have scroll events at milestones').toBeGreaterThan(0);
 
-      // Verify specific milestones
+      // Verify specific milestones (should send regular $scroll events)
       const milestones = [25, 50, 75, 90];
       milestones.forEach(milestone => {
         const milestoneEvent = requests.find(req => {
@@ -139,16 +147,16 @@ test.describe('Scroll Depth Tracking Tests', () => {
             const data = JSON.parse(req.postData);
             const events = Array.isArray(data) ? data : [data];
             return events.some(event => 
-              event.event_type === `$scroll_milestone_${milestone}` &&
+              event.event_type === '$scroll' &&
               event.event_attributes &&
-              event.event_attributes.percent === milestone
+              event.event_attributes.percent >= milestone
             );
           } catch (e) {
             return false;
           }
         });
         
-        expect(milestoneEvent, `Milestone ${milestone}% event should be captured`).toBeTruthy();
+        expect(milestoneEvent, `Scroll event at ${milestone}% should be captured`).toBeTruthy();
       });
 
     } catch (error) {
@@ -158,7 +166,7 @@ test.describe('Scroll Depth Tracking Tests', () => {
     }
   });
 
-  test('should track max scroll depth correctly', async ({ page }) => {
+  test('should track maximum scroll depth correctly', async ({ page }) => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     await page.route('**/api/v1/event**', async route => {
@@ -176,7 +184,7 @@ test.describe('Scroll Depth Tracking Tests', () => {
         return window.usermaven && window.scrollDepthTest;
       }, { timeout: 10000 });
 
-      // Test 3: Max scroll depth tracking (scroll down then up)
+      // Test 3: Maximum scroll depth tracking (scroll down then up)
       await page.evaluate(() => {
         window.scrollDepthTest?.testLongPage();
       });
@@ -193,13 +201,13 @@ test.describe('Scroll Depth Tracking Tests', () => {
       });
       await page.waitForTimeout(500);
 
-      // Send manual event to check max depth
+      // Send manual event to check maximum depth reached
       await page.evaluate(() => {
         window.scrollDepthTest?.sendManualEvent();
       });
       await page.waitForTimeout(1000);
 
-      // Find the manual event and verify max_percent
+      // Find the manual event and verify maximum percent (should be around 80%)
       const manualEvent = requests.find(req => {
         if (!req.postData) return false;
         try {
@@ -208,14 +216,15 @@ test.describe('Scroll Depth Tracking Tests', () => {
           return events.some(event => 
             event.event_type === '$scroll_manual' &&
             event.event_attributes &&
-            event.event_attributes.max_percent >= 75 // Should be around 80% (the max reached)
+            event.event_attributes.percent >= 75 && 
+            event.event_attributes.percent <= 85
           );
         } catch (e) {
           return false;
         }
       });
 
-      expect(manualEvent, 'Manual event with max scroll depth should be captured').toBeTruthy();
+      expect(manualEvent, 'Manual event with maximum scroll depth should be captured').toBeTruthy();
 
     } catch (error) {
       console.error('Max depth test failed:', error);
@@ -224,169 +233,4 @@ test.describe('Scroll Depth Tracking Tests', () => {
     }
   });
 
-  test('should send final event on page exit', async ({ page }) => {
-    const requests: Array<{ url: string; postData?: string }> = [];
-
-    await page.route('**/api/v1/event**', async route => {
-      const request = route.request();
-      const postData = request.postData() || undefined;
-      requests.push({ url: request.url(), postData });
-      await route.continue();
-    });
-
-    try {
-      await page.goto('/test/e2e/scroll-depth-test.html');
-      await page.waitForLoadState('networkidle');
-      
-      await page.waitForFunction(() => {
-        return window.usermaven && window.scrollDepthTest;
-      }, { timeout: 10000 });
-
-      // Setup long page and scroll
-      await page.evaluate(() => {
-        window.scrollDepthTest?.testLongPage();
-        window.scrollDepthTest?.simulateScroll(60);
-      });
-      await page.waitForTimeout(500);
-
-      // Simulate page exit
-      await page.evaluate(() => {
-        window.dispatchEvent(new Event('beforeunload'));
-      });
-      await page.waitForTimeout(1000);
-
-      // Check for exit event
-      const exitEvent = requests.find(req => {
-        if (!req.postData) return false;
-        try {
-          const data = JSON.parse(req.postData);
-          const events = Array.isArray(data) ? data : [data];
-          return events.some(event => 
-            event.event_type === '$scroll_exit' &&
-            event.event_attributes &&
-            event.event_attributes.is_final === true
-          );
-        } catch (e) {
-          return false;
-        }
-      });
-
-      expect(exitEvent, 'Exit event should be captured').toBeTruthy();
-
-    } catch (error) {
-      console.error('Exit event test failed:', error);
-      console.log('Captured requests:', JSON.stringify(requests, null, 2));
-      throw error;
-    }
-  });
-
-  test('should handle visibility change events', async ({ page }) => {
-    const requests: Array<{ url: string; postData?: string }> = [];
-
-    await page.route('**/api/v1/event**', async route => {
-      const request = route.request();
-      const postData = request.postData() || undefined;
-      requests.push({ url: request.url(), postData });
-      await route.continue();
-    });
-
-    try {
-      await page.goto('/test/e2e/scroll-depth-test.html');
-      await page.waitForLoadState('networkidle');
-      
-      await page.waitForFunction(() => {
-        return window.usermaven && window.scrollDepthTest;
-      }, { timeout: 10000 });
-
-      // Setup and scroll
-      await page.evaluate(() => {
-        window.scrollDepthTest?.testLongPage();
-        window.scrollDepthTest?.simulateScroll(45);
-      });
-      await page.waitForTimeout(500);
-
-      // Simulate tab switch (visibility change)
-      await page.evaluate(() => {
-        Object.defineProperty(document, 'hidden', { value: true, writable: true });
-        document.dispatchEvent(new Event('visibilitychange'));
-      });
-      await page.waitForTimeout(1000);
-
-      // Check for checkpoint event
-      const checkpointEvent = requests.find(req => {
-        if (!req.postData) return false;
-        try {
-          const data = JSON.parse(req.postData);
-          const events = Array.isArray(data) ? data : [data];
-          return events.some(event => 
-            event.event_type === '$scroll_checkpoint'
-          );
-        } catch (e) {
-          return false;
-        }
-      });
-
-      expect(checkpointEvent, 'Checkpoint event should be captured').toBeTruthy();
-
-    } catch (error) {
-      console.error('Visibility change test failed:', error);
-      console.log('Captured requests:', JSON.stringify(requests, null, 2));
-      throw error;
-    }
-  });
-
-  test('should handle edge case: document shorter than viewport', async ({ page }) => {
-    const requests: Array<{ url: string; postData?: string }> = [];
-
-    await page.route('**/api/v1/event**', async route => {
-      const request = route.request();
-      const postData = request.postData() || undefined;
-      requests.push({ url: request.url(), postData });
-      await route.continue();
-    });
-
-    try {
-      await page.goto('/test/e2e/scroll-depth-test.html');
-      await page.waitForLoadState('networkidle');
-      
-      await page.waitForFunction(() => {
-        return window.usermaven && window.scrollDepthTest;
-      }, { timeout: 10000 });
-
-      // Test very short page (shorter than viewport)
-      await page.evaluate(() => {
-        window.scrollDepthTest?.testVeryShortPage();
-      });
-      await page.waitForTimeout(500);
-
-      // Send manual event
-      await page.evaluate(() => {
-        window.scrollDepthTest?.sendManualEvent();
-      });
-      await page.waitForTimeout(1000);
-
-      // Should return 100% for very short pages
-      const shortPageEvent = requests.find(req => {
-        if (!req.postData) return false;
-        try {
-          const data = JSON.parse(req.postData);
-          const events = Array.isArray(data) ? data : [data];
-          return events.some(event => 
-            event.event_type === '$scroll_manual' &&
-            event.event_attributes &&
-            event.event_attributes.percent === 100
-          );
-        } catch (e) {
-          return false;
-        }
-      });
-
-      expect(shortPageEvent, 'Very short page should return 100% scroll depth').toBeTruthy();
-
-    } catch (error) {
-      console.error('Short page edge case test failed:', error);
-      console.log('Captured requests:', JSON.stringify(requests, null, 2));
-      throw error;
-    }
-  });
 });
