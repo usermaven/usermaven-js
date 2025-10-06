@@ -32,6 +32,7 @@ declare global {
     
     // Scroll depth test utilities
     scrollDepthTest?: {
+      scrollDepthInstance: any;
       updateStatus: (message: string) => void;
       testShortPage: () => void;
       testLongPage: () => void;

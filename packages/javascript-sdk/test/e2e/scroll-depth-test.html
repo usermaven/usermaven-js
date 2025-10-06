@@ -160,6 +160,7 @@
         
         // Test utilities
         window.scrollDepthTest = {
+            scrollDepthInstance: null,
             currentScrollDepth: null,
             
             updateStatus: function(message) {
@@ -181,14 +182,12 @@
                 // Scroll to top
                 window.scrollTo(0, 0);
                 
-                // Wait a bit then trigger scroll depth measurement and send event
+                // Wait a bit then trigger scroll depth measurement
                 setTimeout(() => {
                     if (scrollDepthInstance) {
-                        // Manually track current position (this updates maxScrollDepth)
+                        // Manually track current position
                         scrollDepthInstance.track();
-                        // Send the scroll event
-                        scrollDepthInstance.send('$scroll');
-                        this.updateStatus('Short page test completed - should send scroll depth 0');
+                        this.updateStatus('Short page test completed - no event should be sent (0% scroll)');
                     } else {
                         this.updateStatus('Error: Scroll depth instance not available');
                     }
@@ -234,10 +233,15 @@
                     content.removeChild(extraContent);
                 }
                 
-                // Scroll to top
+                // Scroll to top, then scroll a tiny bit to trigger tracking
                 window.scrollTo(0, 0);
-                
-                this.updateStatus('Very short page test completed - should return 100% scroll depth');
+                setTimeout(() => {
+                    window.scrollTo(0, 1); // Minimal scroll to trigger event
+                    if (scrollDepthInstance) {
+                        scrollDepthInstance.track();
+                    }
+                    this.updateStatus('Very short page test completed - should send 100% scroll depth');
+                }, 100);
             },
             
             simulateScroll: function(percentage) {
@@ -261,6 +265,8 @@
                 this.updateStatus('Sending manual scroll event...');
                 
                 if (scrollDepthInstance) {
+                    // First track current position, then send
+                    scrollDepthInstance.track();
                     scrollDepthInstance.send('$scroll_manual');
                     this.updateStatus('Manual scroll event sent');
                 } else {
@@ -275,15 +281,9 @@
                     document.documentElement.scrollHeight
                 );
                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                
-                if (documentHeight <= windowHeight) {
-                    return 100;
-                }
-                
                 const trackLength = documentHeight - windowHeight;
-                const percent = Math.min(100, Math.max(0, Math.round((scrollTop / trackLength) * 100)));
                 
-                return percent;
+                return Math.min(100, Math.floor(scrollTop / trackLength * 100));
             }
         };
         
@@ -303,6 +303,7 @@
             scrollDepthTest.updateStatus('Usermaven loaded - ready for testing');
             
             // Expose for tests
+            window.scrollDepthTest.scrollDepthInstance = scrollDepthInstance;
             window.testResults = {
                 scrollDepthLoaded: true,
                 scrollDepthInstance: scrollDepthInstance,
