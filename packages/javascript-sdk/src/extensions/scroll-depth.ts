@@ -49,6 +49,8 @@ export class ScrollDepth {
         this.track();
     }
 
+
+
     private getScrollDepth(): number {
         const windowHeight = this.getWindowHeight();
         const docHeight = this.getDocumentHeight();
@@ -84,5 +86,10 @@ export class ScrollDepth {
             this.send();
             this.milestones = this.milestones.filter(m => m !== milestone);
         });
+    }
+
+    public destroy(): void {
+        // Clean up all event listeners
+        window.removeEventListener('scroll', this.debouncedHandleScroll);
     }
 }
