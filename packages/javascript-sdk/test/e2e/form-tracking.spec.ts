@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { UsermavenGlobal } from '../../src/core/types';
 
 declare global {
   interface Window {
-    usermaven?: Function;
+    usermaven?: UsermavenGlobal;
     usermavenQ?: any[];
   }
 }
@@ -51,7 +52,9 @@ test.describe('Usermaven Form Tracking JSON Structure Tests', () => {
       await page.evaluate(() => {
         if (window.usermaven) {
           console.log('Manually initializing form tracking');
-          window.usermaven('init', { formTracking: true });
+          window.usermaven('onLoad', () => {
+            console.log('Form tracking initialized');
+          });
         }
       });
       
@@ -140,7 +143,9 @@ test.describe('Usermaven Form Tracking JSON Structure Tests', () => {
       await page.evaluate(() => {
         if (window.usermaven) {
           console.log('Manually initializing form tracking');
-          window.usermaven('init', { formTracking: true });
+          window.usermaven('onLoad', () => {
+            console.log('Form tracking initialized');
+          });
         }
       });
       
