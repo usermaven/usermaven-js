@@ -153,6 +153,7 @@ export interface UsermavenGlobal {
     (command: 'set', properties: Record<string, any>, options?: { eventType?: string; persist?: boolean }): void;
     (command: 'unset', propertyName: string, options?: { eventType?: string; persist?: boolean }): void;
     (command: 'rawTrack', payload: any): void;
+    (command: 'lead', payload: EventPayload, directSend?: boolean): void;
     (command: 'setUserId', userId: string): void;
     (command: 'onLoad', callback: () => void): void;
     
@@ -165,6 +166,7 @@ export interface UsermavenGlobal {
     set(properties: Record<string, any>, options?: { eventType?: string; persist?: boolean }): void;
     unset(propertyName: string, options?: { eventType?: string; persist?: boolean }): void;
     rawTrack(payload: any): void;
+    lead(payload: EventPayload, directSend?: boolean): void;
     setUserId(userId: string): void;
     getConfig(): Config | null;
 }
