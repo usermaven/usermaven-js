@@ -6,6 +6,7 @@ export type UsermavenClient = {
     trackPageView: () => void,
     id: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>,
     track: (typeName: string, payload?: EventPayload) => void,
+    lead: (payload: EventPayload, directSend?: boolean) => void,
     rawTrack: (payload: any) => void,
     set: (properties: Record<string, any>, opts?: { eventType?: string, persist?: boolean }) => void,
     unset: (propertyName: string, opts?: { eventType?: string, persist?: boolean }) => void,
@@ -16,6 +17,7 @@ const createNoopClient = (): UsermavenClient => ({
     trackPageView: () => {},
     id: async () => {},
     track: () => {},
+    lead: () => {},
     rawTrack: () => {},
     set: () => {},
     unset: () => {},
@@ -46,6 +48,12 @@ function useUsermaven(): UsermavenClient {
         [client],
     );
 
+    const lead = useCallback(
+        (payload: EventPayload, directSend?: boolean): void =>
+            client.lead(payload, directSend),
+        [client],
+    );
+
     const rawTrack = useCallback(
         (payload: any): void => client.rawTrack(payload),
         [client],
@@ -71,6 +79,7 @@ function useUsermaven(): UsermavenClient {
         ...client,
         id,
         track,
+        lead,
         trackPageView,
         rawTrack,
         set,

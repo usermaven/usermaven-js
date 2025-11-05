@@ -93,6 +93,50 @@ describe('UsermavenClient', () => {
         });
     });
 
+    describe('lead method', () => {
+        it('should track lead event when payload includes valid email', () => {
+            const errorSpy = vi.spyOn(client['logger'], 'error');
+            const payload = { email: 'lead@example.com', name: 'Lead User' };
+
+            client.lead(payload);
+
+            expect(client.track).toHaveBeenCalledWith('lead', payload, false);
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('should not track lead event when email is missing', () => {
+            const errorSpy = vi.spyOn(client['logger'], 'error');
+
+            client.lead({ name: 'Lead User' } as any);
+
+            expect(client.track).not.toHaveBeenCalled();
+            expect(errorSpy).toHaveBeenCalledWith('Lead event requires a valid email attribute');
+        });
+
+        it('should not track lead event when email is invalid', () => {
+            const errorSpy = vi.spyOn(client['logger'], 'error');
+
+            client.lead({ email: 'invalid-email', name: 'Lead User' });
+
+            expect(client.track).not.toHaveBeenCalled();
+            expect(errorSpy).toHaveBeenCalledWith('Lead event requires a valid email attribute');
+        });
+
+        it('should track lead event with direct send flag', () => {
+            const errorSpy = vi.spyOn(client['logger'], 'error');
+            const payload = { email: 'lead@example.com' };
+
+            client.lead(payload, true);
+
+            expect(client.track).toHaveBeenCalledWith('lead', payload, true);
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('should throw when payload is not an object', () => {
+            expect(() => client.lead('invalid' as any)).toThrow('Lead payload must be a non-null object and not an array');
+        });
+    });
+
     describe('group method', () => {
         it('should set company properties and send group event', async () => {
             const companyProps = { id: 'company123', name: 'Test Company', created_at: '2023-01-01' };

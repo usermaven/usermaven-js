@@ -162,7 +162,7 @@ function initializeNamespacedClient(namespace: string, client: UsermavenClient) 
     }
 
     const asyncMethods = ['id', 'group', 'reset']; // These typically return Promise<void>
-    const syncMethods = ['track', 'pageview', 'set', 'unset', 'rawTrack', 'setUserId']; // These typically return void
+    const syncMethods = ['track', 'lead', 'pageview', 'set', 'unset', 'rawTrack', 'setUserId']; // These typically return void
     const methods = [...asyncMethods, ...syncMethods];
     methods.forEach(method => {
         namespacedFunction[method] = function(...args: any[]) {

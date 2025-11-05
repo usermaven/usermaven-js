@@ -276,6 +276,30 @@ export class UsermavenClient {
         this.trackInternal(typeName, payload, directSend);
     }
 
+    public lead(payload: EventPayload, directSend: boolean = false): void {
+        if (!isObject(payload)) {
+            throw new Error('Lead payload must be a non-null object and not an array');
+        }
+
+        const email = payload.email;
+
+        if (!isString(email)) {
+            this.logger.error('Lead event requires a valid email attribute');
+            return;
+        }
+
+        const trimmedEmail = email.trim();
+
+        if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+            this.logger.error('Lead event requires a valid email attribute');
+            return;
+        }
+
+        payload.email = trimmedEmail;
+
+        this.track('lead', payload, directSend);
+    }
+
     private trackInternal(typeName: string, payload?: EventPayload, directSend: boolean = false): void {
         // Check if user has opted out of tracking
         const umExclusionState = getUmExclusionState()
