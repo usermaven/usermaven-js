@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import styles from "./page.module.css";
-import { useUsermaven } from "@usermaven/nextjs";
+import Image from 'next/image';
+import styles from './page.module.css';
+import { useUsermaven } from '@usermaven/nextjs';
 
 export default function Home() {
   const { track } = useUsermaven();
@@ -29,7 +29,7 @@ export default function Home() {
         <button
           onClick={() => {
             track('custom_event', {
-              custom_property: 'custom value'
+              custom_property: 'custom value',
             });
           }}
         >
@@ -37,11 +37,7 @@ export default function Home() {
         </button>
 
         <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="#"
-            rel="noopener noreferrer"
-          >
+          <a className={styles.primary} href="#" rel="noopener noreferrer">
             <Image
               className={styles.logo}
               src="https://nextjs.org/icons/vercel.svg"

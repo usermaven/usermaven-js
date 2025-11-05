@@ -1,7 +1,7 @@
 declare global {
-    var module: {
-        exports: any;
-    };
+  var module: {
+    exports: any;
+  };
 }
 
 export {};

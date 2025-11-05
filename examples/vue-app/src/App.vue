@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-import { usePageView } from '@usermaven/vue'
+import { RouterLink, RouterView } from 'vue-router';
+import HelloWorld from './components/HelloWorld.vue';
+import { usePageView } from '@usermaven/vue';
 
 // Automatically tracks page views when route changes
-const usermaven = usePageView()
-
+const usermaven = usePageView();
 </script>
 
 <template>

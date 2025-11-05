@@ -17,13 +17,13 @@
 </style>
 
 <script setup>
-import { useUsermaven } from '@usermaven/vue'
+import { useUsermaven } from '@usermaven/vue';
 
-const usermaven = useUsermaven()
+const usermaven = useUsermaven();
 
 const sendCustomEvent = () => {
   usermaven.track('custom_event', {
-    custom_property: 'custom value'
-  })
-}
+    custom_property: 'custom value',
+  });
+};
 </script>

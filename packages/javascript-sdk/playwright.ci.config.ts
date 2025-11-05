@@ -19,7 +19,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  
+
   projects: [
     {
       name: 'chromium',
@@ -32,6 +32,6 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
-    }
-  ]
+    },
+  ],
 });

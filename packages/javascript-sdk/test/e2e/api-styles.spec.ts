@@ -9,62 +9,82 @@ declare global {
 }
 
 test.describe('Usermaven API Styles', () => {
-  test('should support both command-style and object-oriented API', async ({ page }) => {
+  test('should support both command-style and object-oriented API', async ({
+    page,
+  }) => {
     // Navigate to the test page
     await page.goto('/test/e2e/test.html');
-    
+
     // Wait for Usermaven to initialize
-    await page.waitForFunction(() => {
-      return window?.usermaven && typeof window.usermaven === 'function';
-    }, { timeout: 10000 });
-    
+    await page.waitForFunction(
+      () => {
+        return window?.usermaven && typeof window.usermaven === 'function';
+      },
+      { timeout: 10000 },
+    );
+
     // Verify command-style API is available
     const hasCommandStyleAPI = await page.evaluate(() => {
       console.log('Checking command-style API');
       return window.usermaven && typeof window.usermaven === 'function';
     });
-    
+
     expect(hasCommandStyleAPI).toBe(true);
     console.log('✅ Command-style API is available');
-    
+
     // Verify object-oriented API methods are available
     const objectMethods = await page.evaluate(() => {
       console.log('Checking object-oriented API');
       if (!window.usermaven) return [];
-      
+
       // Get all methods attached to the usermaven function
-      return Object.keys(window.usermaven).filter(key => typeof (window.usermaven as any)[key] === 'function');
+      return Object.keys(window.usermaven).filter(
+        (key) => typeof (window.usermaven as any)[key] === 'function',
+      );
     });
-    
+
     console.log('Object-oriented API methods:', objectMethods);
-    
+
     // Verify essential methods are available
-    const requiredMethods = ['track', 'pageview', 'id', 'group', 'reset', 'set', 'unset'];
+    const requiredMethods = [
+      'track',
+      'pageview',
+      'id',
+      'group',
+      'reset',
+      'set',
+      'unset',
+    ];
     for (const method of requiredMethods) {
       expect(objectMethods).toContain(method);
       console.log(`✅ Object-oriented API has '${method}' method`);
     }
-    
+
     // Verify getConfig method is available (special case for object-oriented API)
     const hasGetConfig = await page.evaluate(() => {
-      return window.usermaven && typeof (window.usermaven as any).getConfig === 'function';
+      return (
+        window.usermaven &&
+        typeof (window.usermaven as any).getConfig === 'function'
+      );
     });
-    
+
     expect(hasGetConfig).toBe(true);
     console.log('✅ Object-oriented API has getConfig method');
-    
+
     // Verify both API styles are callable without errors
     const apiCallsWork = await page.evaluate(() => {
       try {
         // Test command-style API
         if (window.usermaven) {
-          (window.usermaven as any)('track', 'test_command_api', { test: true });
+          (window.usermaven as any)('track', 'test_command_api', {
+            test: true,
+          });
           console.log('Command-style API call succeeded');
-          
+
           // Test object-oriented API
           (window.usermaven as any).track('test_object_api', { test: true });
           console.log('Object-oriented API call succeeded');
-          
+
           return true;
         }
         return false;
@@ -73,12 +93,14 @@ test.describe('Usermaven API Styles', () => {
         return false;
       }
     });
-    
+
     expect(apiCallsWork).toBe(true);
     console.log('✅ Both API styles are callable without errors');
   });
 
-  test('should handle queued events for both API styles before ready', async ({ page }) => {
+  test('should handle queued events for both API styles before ready', async ({
+    page,
+  }) => {
     // Create a test page that delays initialization
     await page.setContent(`
       <html>
@@ -217,26 +239,33 @@ test.describe('Usermaven API Styles', () => {
         </body>
       </html>
     `);
-    
+
     // Wait for initialization to complete
-    await page.waitForFunction(() => {
-      return window.capturedEvents && window.capturedEvents.length >= 2;
-    }, { timeout: 2000 });
-    
+    await page.waitForFunction(
+      () => {
+        return window.capturedEvents && window.capturedEvents.length >= 2;
+      },
+      { timeout: 2000 },
+    );
+
     // Verify queued events were processed
     const events = await page.evaluate(() => window.capturedEvents || []);
     expect(events.length).toBeGreaterThanOrEqual(2);
-    
+
     // Verify command-style queued event
     const commandEvent = await page.evaluate(() => {
-      return (window.capturedEvents || []).find(e => e.event_type === 'queued_command_event');
+      return (window.capturedEvents || []).find(
+        (e) => e.event_type === 'queued_command_event',
+      );
     });
     expect(commandEvent).toBeTruthy();
     expect(commandEvent.event_attributes.queued).toBe(true);
-    
+
     // Verify object-oriented queued event
     const objectEvent = await page.evaluate(() => {
-      return (window.capturedEvents || []).find(e => e.event_type === 'queued_object_event');
+      return (window.capturedEvents || []).find(
+        (e) => e.event_type === 'queued_object_event',
+      );
     });
     expect(objectEvent).toBeTruthy();
     expect(objectEvent.event_attributes.queued).toBe(true);

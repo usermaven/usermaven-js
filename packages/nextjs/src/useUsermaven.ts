@@ -1,90 +1,102 @@
-import { useCallback, useContext } from "react";
-import UsermavenContext from "./UsermavenContext";
-import { EventPayload, UserProps } from "@usermaven/sdk-js";
+import { useCallback, useContext } from 'react';
+import UsermavenContext from './UsermavenContext';
+import { EventPayload, UserProps } from '@usermaven/sdk-js';
 
 export type UsermavenClient = {
-    trackPageView: () => void,
-    id: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>,
-    track: (typeName: string, payload?: EventPayload) => void,
-    lead: (payload: EventPayload, directSend?: boolean) => void,
-    rawTrack: (payload: any) => void,
-    set: (properties: Record<string, any>, opts?: { eventType?: string, persist?: boolean }) => void,
-    unset: (propertyName: string, opts?: { eventType?: string, persist?: boolean }) => void,
-}
+  trackPageView: () => void;
+  id: (userData: UserProps, doNotSendEvent?: boolean) => Promise<void>;
+  track: (typeName: string, payload?: EventPayload) => void;
+  lead: (payload: EventPayload, directSend?: boolean) => void;
+  rawTrack: (payload: any) => void;
+  set: (
+    properties: Record<string, any>,
+    opts?: { eventType?: string; persist?: boolean },
+  ) => void;
+  unset: (
+    propertyName: string,
+    opts?: { eventType?: string; persist?: boolean },
+  ) => void;
+};
 
 // Create a no-op client for server-side rendering
 const createNoopClient = (): UsermavenClient => ({
-    trackPageView: () => {},
-    id: async () => {},
-    track: () => {},
-    lead: () => {},
-    rawTrack: () => {},
-    set: () => {},
-    unset: () => {},
+  trackPageView: () => {},
+  id: async () => {},
+  track: () => {},
+  lead: () => {},
+  rawTrack: () => {},
+  set: () => {},
+  unset: () => {},
 });
 
 function useUsermaven(): UsermavenClient {
-    const client = useContext(UsermavenContext);
-    
-    // Return no-op client if we're in a server environment or client is not initialized
-    if (!client) {
-        return createNoopClient();
-    }
+  const client = useContext(UsermavenContext);
 
-    const id = useCallback(
-        (userData: UserProps, doNotSendEvent?: boolean): Promise<void> => 
-            client.id(userData, doNotSendEvent),
-        [client],
-    );
+  // Return no-op client if we're in a server environment or client is not initialized
+  if (!client) {
+    return createNoopClient();
+  }
 
-    const trackPageView = useCallback(
-        (): void => client.track('pageview'),
-        [client],
-    );
+  const id = useCallback(
+    (userData: UserProps, doNotSendEvent?: boolean): Promise<void> =>
+      client.id(userData, doNotSendEvent),
+    [client],
+  );
 
-    const track = useCallback(
-        (typeName: string, payload?: EventPayload): void => 
-            client.track(typeName, payload),
-        [client],
-    );
+  const trackPageView = useCallback(
+    (): void => client.track('pageview'),
+    [client],
+  );
 
-    const lead = useCallback(
-        (payload: EventPayload, directSend?: boolean): void =>
-            client.lead(payload, directSend),
-        [client],
-    );
+  const track = useCallback(
+    (typeName: string, payload?: EventPayload): void =>
+      client.track(typeName, payload),
+    [client],
+  );
 
-    const rawTrack = useCallback(
-        (payload: any): void => client.rawTrack(payload),
-        [client],
-    );
+  const lead = useCallback(
+    (payload: EventPayload, directSend?: boolean): void =>
+      client.lead(payload, directSend),
+    [client],
+  );
 
-    const set = useCallback(
-        (properties: Record<string, any>, opts?: {
-            eventType?: string,
-            persist?: boolean
-        }): void => client.set(properties, opts),
-        [client],
-    );
+  const rawTrack = useCallback(
+    (payload: any): void => client.rawTrack(payload),
+    [client],
+  );
 
-    const unset = useCallback(
-        (propertyName: string, opts?: {
-            eventType?: string,
-            persist?: boolean
-        }): void => client.unset(propertyName, opts),
-        [client],
-    );
+  const set = useCallback(
+    (
+      properties: Record<string, any>,
+      opts?: {
+        eventType?: string;
+        persist?: boolean;
+      },
+    ): void => client.set(properties, opts),
+    [client],
+  );
 
-    return {
-        ...client,
-        id,
-        track,
-        lead,
-        trackPageView,
-        rawTrack,
-        set,
-        unset
-    };
+  const unset = useCallback(
+    (
+      propertyName: string,
+      opts?: {
+        eventType?: string;
+        persist?: boolean;
+      },
+    ): void => client.unset(propertyName, opts),
+    [client],
+  );
+
+  return {
+    ...client,
+    id,
+    track,
+    lead,
+    trackPageView,
+    rawTrack,
+    set,
+    unset,
+  };
 }
 
 export default useUsermaven;

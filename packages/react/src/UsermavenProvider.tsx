@@ -9,7 +9,9 @@ export interface UsermavenProviderProps {
 }
 
 // The functional component that provides the Usermaven client context
-const UsermavenProvider: React.FC<PropsWithChildren<UsermavenProviderProps>> = ({ children, client }) => {
+const UsermavenProvider: React.FC<
+  PropsWithChildren<UsermavenProviderProps>
+> = ({ children, client }) => {
   const Context = UsermavenContext;
 
   // Render the provided client as value within the Context

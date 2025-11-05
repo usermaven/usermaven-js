@@ -20,7 +20,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  
+
   projects: [
     // Local projects
     {
@@ -55,14 +55,14 @@ export default defineConfig({
         browserName: 'chromium',
         channel: 'chrome',
         viewport: { width: 1920, height: 1080 },
-      }
+      },
     },
     {
       name: 'browserstack-mac-safari',
       use: {
         browserName: 'webkit',
         viewport: { width: 1920, height: 1080 },
-      }
+      },
     },
     {
       name: 'browserstack-mobile',
@@ -70,7 +70,7 @@ export default defineConfig({
         ...devices['Galaxy S23 Ultra'],
         browserName: 'chromium',
         channel: 'chrome',
-      }
-    }
+      },
+    },
   ],
 });

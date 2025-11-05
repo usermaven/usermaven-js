@@ -5,14 +5,17 @@
 </template>
 
 <script setup>
-const { $usermaven } = useNuxtApp()
+const { $usermaven } = useNuxtApp();
 
 onMounted(() => {
-  $usermaven.track('pageview')
-})
+  $usermaven.track('pageview');
+});
 
 // Watch for route changes and track pageviews
-watch(() => useRoute().fullPath, (newPath) => {
-  $usermaven.track('pageview')
-})
+watch(
+  () => useRoute().fullPath,
+  (newPath) => {
+    $usermaven.track('pageview');
+  },
+);
 </script>
