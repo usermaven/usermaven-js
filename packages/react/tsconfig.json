@@ -7,7 +7,5 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": false
   },
-  "include": [
-    "./src"
-  ]
+  "include": ["./src"]
 }

@@ -6,9 +6,9 @@ import { createClient, UsermavenProvider } from '@usermaven/react'; // Import Us
 
 // Initialize Usermaven client
 const usermavenClient = createClient({
-    trackingHost: 'https://events.usermaven.com',
-    key: 'UMXLIktQsI', // The key from Usermaven
-    autocapture: true, // Enable autocapture
+  trackingHost: 'https://events.usermaven.com',
+  key: 'UMXLIktQsI', // The key from Usermaven
+  autocapture: true, // Enable autocapture
 });
 
 // Root element
@@ -16,13 +16,13 @@ const rootElement = document.getElementById('root');
 
 // Ensure rootElement exists before rendering
 if (rootElement) {
-    createRoot(rootElement).render(
-        <StrictMode>
-            {/* Wrap App with Usermaven provider */}
-            {/*@ts-ignore*/}
-            <UsermavenProvider client={usermavenClient}>
-                <App />
-            </UsermavenProvider>
-        </StrictMode>
-    );
+  createRoot(rootElement).render(
+    <StrictMode>
+      {/* Wrap App with Usermaven provider */}
+      {/*@ts-ignore*/}
+      <UsermavenProvider client={usermavenClient}>
+        <App />
+      </UsermavenProvider>
+    </StrictMode>,
+  );
 }

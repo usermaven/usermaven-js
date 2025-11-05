@@ -16,32 +16,34 @@ declare global {
     runTest?: Function;
     initSucceeded?: boolean;
     browserSupported?: boolean;
-    eventListeners?: {[key: string]: number};
-    eventsFired?: {[key: string]: number};
+    eventListeners?: { [key: string]: number };
+    eventsFired?: { [key: string]: number };
     configHistory?: any[];
-    listenersByNamespace?: {[key: string]: number};
-    eventsByNamespace?: {[key: string]: number};
+    listenersByNamespace?: { [key: string]: number };
+    eventsByNamespace?: { [key: string]: number };
     usermaven_ns1?: Function;
     usermaven_ns2?: Function;
-    listenersRegistered?: {[key: string]: number};
-    eventsTracked?: {[key: string]: number};
+    listenersRegistered?: { [key: string]: number };
+    eventsTracked?: { [key: string]: number };
     consoleLogs?: string[];
-    processedCommands?: {[key: string]: any[]};
+    processedCommands?: { [key: string]: any[] };
     usermaven_ns1Q?: any[];
     usermaven_ns2Q?: any[];
-    onLoadCallbacksExecuted?: {[key: string]: boolean};
-    namespaceErrors?: {[key: string]: string[]};
-    commandCounts?: {[key: string]: number};
+    onLoadCallbacksExecuted?: { [key: string]: boolean };
+    namespaceErrors?: { [key: string]: string[] };
+    commandCounts?: { [key: string]: number };
     commandLog?: string[];
     callbacksExecuted?: number;
-    errorCount?: {[key: string]: number};
+    errorCount?: { [key: string]: number };
     errorLog?: string[];
-    configSnapshots?: {[key: string]: any}[];
+    configSnapshots?: { [key: string]: any }[];
   }
 }
 
 test.describe('Usermaven Multiple Initialization Tests', () => {
-  test('should prevent duplicate event listeners when initialized multiple times', async ({ page }) => {
+  test('should prevent duplicate event listeners when initialized multiple times', async ({
+    page,
+  }) => {
     // Navigate to a simple test page that simulates our SDK behavior
     await page.setContent(`
       <!DOCTYPE html>
@@ -133,37 +135,43 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for the page to initialize
     await page.waitForTimeout(1000);
-    
+
     // Get initial click listener count
-    const initialCount = await page.evaluate(() => window.eventListenerCount || 0);
+    const initialCount = await page.evaluate(
+      () => window.eventListenerCount || 0,
+    );
     console.log('Initial listener count:', initialCount);
-    
+
     // Click the button to initialize a second instance
     await page.click('#test-button');
-    
+
     // Wait for second initialization
     await page.waitForSelector('body[data-second-init="complete"]');
     await page.waitForTimeout(1000);
-    
+
     // Get the new listener count
     const newCount = await page.evaluate(() => window.eventListenerCount || 0);
     console.log('New listener count:', newCount);
-    
+
     // Check for warning about duplicate initialization
     const warnings = await page.evaluate(() => window.consoleWarnings || []);
     console.log('Warnings:', warnings);
-    
+
     // We should have a warning about duplicate initialization
-    expect(warnings.some(warning => warning.includes('already initialized'))).toBeTruthy();
-    
+    expect(
+      warnings.some((warning) => warning.includes('already initialized')),
+    ).toBeTruthy();
+
     // The listener count should not have doubled (only one new listener should be added from the button click handler)
     expect(newCount).toBe(initialCount + 1);
   });
 
-  test('should handle DOM ready check and retry initialization', async ({ page }) => {
+  test('should handle DOM ready check and retry initialization', async ({
+    page,
+  }) => {
     // Create a test page that directly tests the retry logic
     await page.setContent(`
       <!DOCTYPE html>
@@ -240,45 +248,50 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
     await page.waitForTimeout(500);
-    
+
     // Get debug logs
     const debugLogs = await page.evaluate(() => window.debugLogs || []);
     console.log('Debug logs:', debugLogs);
-    
+
     // Get initialization attempts
     const initAttempts = await page.evaluate(() => window.initAttempts || 0);
     console.log('Init attempts:', initAttempts);
-    
+
     // Get initialization success flag
     const initSucceeded = await page.evaluate(() => window.initSucceeded);
     console.log('Init succeeded:', initSucceeded);
-    
+
     // Check for retry message
-    const retryLogs = debugLogs.filter(log => 
-      typeof log === 'string' && log.includes('Document not ready'));
+    const retryLogs = debugLogs.filter(
+      (log) => typeof log === 'string' && log.includes('Document not ready'),
+    );
     console.log('Retry logs:', retryLogs);
     expect(retryLogs.length).toBeGreaterThan(0);
-    
+
     // Check for successful initialization
-    const successLogs = debugLogs.filter(log => 
-      typeof log === 'string' && log.includes('initialized successfully'));
+    const successLogs = debugLogs.filter(
+      (log) =>
+        typeof log === 'string' && log.includes('initialized successfully'),
+    );
     console.log('Success logs:', successLogs);
     expect(successLogs.length).toBeGreaterThan(0);
-    
+
     // Verify multiple initialization attempts
     expect(initAttempts).toBeGreaterThan(1);
-    
+
     // Verify initialization eventually succeeded
     expect(initSucceeded).toBeTruthy();
   });
 
-
-
-  test('should not register listeners when autocapture is false', async ({ page }) => {
+  test('should not register listeners when autocapture is false', async ({
+    page,
+  }) => {
     await page.setContent(`
       <script>
         window.eventListenerCount = 0;
@@ -306,7 +319,9 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
     expect(count).toBe(0);
   });
 
-  test('should isolate autocapture flags across different keys', async ({ page }) => {
+  test('should isolate autocapture flags across different keys', async ({
+    page,
+  }) => {
     await page.setContent(`
       <script>
         window.consoleWarnings = [];
@@ -335,11 +350,13 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
     `);
 
     const warnings = await page.evaluate(() => window.consoleWarnings);
-    expect(warnings?.some(w => w.includes('key_1'))).toBeFalsy(); // Should not warn on first
-    expect(warnings?.some(w => w.includes('key_2'))).toBeFalsy(); // Should not interfere
+    expect(warnings?.some((w) => w.includes('key_1'))).toBeFalsy(); // Should not warn on first
+    expect(warnings?.some((w) => w.includes('key_2'))).toBeFalsy(); // Should not interfere
   });
 
-  test('should honor disableAutocaptureListenerRegistration config flag', async ({ page }) => {
+  test('should honor disableAutocaptureListenerRegistration config flag', async ({
+    page,
+  }) => {
     await page.setContent(`
       <script>
         window.eventListenerCount = 0;
@@ -369,7 +386,9 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
     expect(count).toBe(0);
   });
 
-  test('should support multiple instances with different namespaces', async ({ page }) => {
+  test('should support multiple instances with different namespaces', async ({
+    page,
+  }) => {
     await page.setContent(`
       <script>
         // Track events and listeners by namespace
@@ -455,25 +474,31 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
         duplicateClient.init();
       </script>
     `);
-    
+
     // Check listener counts by namespace
-    const listenersByNamespace = await page.evaluate(() => window.listenersByNamespace);
+    const listenersByNamespace = await page.evaluate(
+      () => window.listenersByNamespace,
+    );
     console.log('Listeners by namespace:', listenersByNamespace);
-    
+
     // Check event counts by namespace
-    const eventsByNamespace = await page.evaluate(() => window.eventsByNamespace);
+    const eventsByNamespace = await page.evaluate(
+      () => window.eventsByNamespace,
+    );
     console.log('Events by namespace:', eventsByNamespace);
-    
+
     // Verify each namespace has exactly one listener
     expect(listenersByNamespace!.default).toBe(1);
     expect(listenersByNamespace!.custom).toBe(1);
-    
+
     // Verify each namespace has exactly one event
     expect(eventsByNamespace!.default).toBe(1);
     expect(eventsByNamespace!.custom).toBe(1);
   });
 
-  test('should process command queues correctly in namespaced installations', async ({ page }) => {
+  test('should process command queues correctly in namespaced installations', async ({
+    page,
+  }) => {
     // Create a test page that tests command queue processing for namespaced installations
     await page.setContent(`
       <!DOCTYPE html>
@@ -574,32 +599,52 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
-    
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
+
     // Get command counts and log
     const commandCounts = await page.evaluate(() => window.commandCounts);
     const commandLog = await page.evaluate(() => window.commandLog);
     console.log('Command counts:', commandCounts);
     console.log('Command log:', commandLog);
-    
+
     // Verify commands were processed for both namespaces
     expect(commandCounts!.ns1).toBeGreaterThanOrEqual(3); // init, early_event, late_event
     expect(commandCounts!.ns2).toBeGreaterThanOrEqual(4); // init, 2 early events, late_event
-    
+
     // Verify specific commands in the log
-    expect(commandLog!.some(cmd => cmd.includes('ns1:init'))).toBeTruthy();
-    expect(commandLog!.some(cmd => cmd.includes('ns1:track:early_event_1'))).toBeTruthy();
-    expect(commandLog!.some(cmd => cmd.includes('ns1:track:late_event_usermaven_ns1'))).toBeTruthy();
-    
-    expect(commandLog!.some(cmd => cmd.includes('ns2:init'))).toBeTruthy();
-    expect(commandLog!.some(cmd => cmd.includes('ns2:track:early_event_2'))).toBeTruthy();
-    expect(commandLog!.some(cmd => cmd.includes('ns2:track:another_early_event_2'))).toBeTruthy();
-    expect(commandLog!.some(cmd => cmd.includes('ns2:track:late_event_usermaven_ns2'))).toBeTruthy();
+    expect(commandLog!.some((cmd) => cmd.includes('ns1:init'))).toBeTruthy();
+    expect(
+      commandLog!.some((cmd) => cmd.includes('ns1:track:early_event_1')),
+    ).toBeTruthy();
+    expect(
+      commandLog!.some((cmd) =>
+        cmd.includes('ns1:track:late_event_usermaven_ns1'),
+      ),
+    ).toBeTruthy();
+
+    expect(commandLog!.some((cmd) => cmd.includes('ns2:init'))).toBeTruthy();
+    expect(
+      commandLog!.some((cmd) => cmd.includes('ns2:track:early_event_2')),
+    ).toBeTruthy();
+    expect(
+      commandLog!.some((cmd) =>
+        cmd.includes('ns2:track:another_early_event_2'),
+      ),
+    ).toBeTruthy();
+    expect(
+      commandLog!.some((cmd) =>
+        cmd.includes('ns2:track:late_event_usermaven_ns2'),
+      ),
+    ).toBeTruthy();
   });
-  
-  test('should handle onLoad callbacks correctly in namespaced installations', async ({ page }) => {
+
+  test('should handle onLoad callbacks correctly in namespaced installations', async ({
+    page,
+  }) => {
     // Create a test page that tests onLoad callbacks for namespaced installations
     await page.setContent(`
       <!DOCTYPE html>
@@ -695,20 +740,36 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
-    
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
+
     // Get callback execution count
-    const callbacksExecuted = await page.evaluate(() => window.callbacksExecuted);
+    const callbacksExecuted = await page.evaluate(
+      () => window.callbacksExecuted,
+    );
     console.log('Callbacks executed:', callbacksExecuted);
-    
+
     // Check for data attributes that indicate callbacks were executed
-    const ns1EarlyCallback = await page.getAttribute('body', 'data-ns1-early-callback');
-    const ns2EarlyCallback = await page.getAttribute('body', 'data-ns2-early-callback');
-    const ns1LateCallback = await page.getAttribute('body', 'data-usermaven_ns1-late-callback');
-    const ns2LateCallback = await page.getAttribute('body', 'data-usermaven_ns2-late-callback');
-    
+    const ns1EarlyCallback = await page.getAttribute(
+      'body',
+      'data-ns1-early-callback',
+    );
+    const ns2EarlyCallback = await page.getAttribute(
+      'body',
+      'data-ns2-early-callback',
+    );
+    const ns1LateCallback = await page.getAttribute(
+      'body',
+      'data-usermaven_ns1-late-callback',
+    );
+    const ns2LateCallback = await page.getAttribute(
+      'body',
+      'data-usermaven_ns2-late-callback',
+    );
+
     // Verify callbacks were executed
     expect(callbacksExecuted).toBeGreaterThanOrEqual(4); // 2 early + 2 late
     expect(ns1EarlyCallback).toBe('executed');
@@ -717,7 +778,9 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
     expect(ns2LateCallback).toBe('executed');
   });
 
-  test('should handle error conditions gracefully in namespaced installations', async ({ page }) => {
+  test('should handle error conditions gracefully in namespaced installations', async ({
+    page,
+  }) => {
     // Create a test page that tests error handling for namespaced installations
     await page.setContent(`
       <!DOCTYPE html>
@@ -804,33 +867,43 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
-    
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
+
     // Get error counts and log
     const errorCount = await page.evaluate(() => window.errorCount);
     const errorLog = await page.evaluate(() => window.errorLog);
     console.log('Error counts:', errorCount);
     console.log('Error log:', errorLog);
-    
+
     // Check for data attributes that indicate errors occurred
     const ns1Error = await page.getAttribute('body', 'data-ns1-error');
     const ns2Error = await page.getAttribute('body', 'data-ns2-error');
-    
+
     // Verify errors were captured for both namespaces
     expect(errorCount!.ns1).toBeGreaterThanOrEqual(2); // Invalid command, missing event name
     expect(errorCount!.ns2).toBeGreaterThanOrEqual(1); // Missing user ID
     expect(ns1Error).toBe('true');
     expect(ns2Error).toBe('true');
-    
+
     // Verify specific error messages
-    expect(errorLog!.some(error => error.includes('Invalid command'))).toBeTruthy();
-    expect(errorLog!.some(error => error.includes('Missing event name'))).toBeTruthy();
-    expect(errorLog!.some(error => error.includes('Missing user ID'))).toBeTruthy();
+    expect(
+      errorLog!.some((error) => error.includes('Invalid command')),
+    ).toBeTruthy();
+    expect(
+      errorLog!.some((error) => error.includes('Missing event name')),
+    ).toBeTruthy();
+    expect(
+      errorLog!.some((error) => error.includes('Missing user ID')),
+    ).toBeTruthy();
   });
 
-  test('should maintain separate configurations in namespaced installations', async ({ page }) => {
+  test('should maintain separate configurations in namespaced installations', async ({
+    page,
+  }) => {
     // Create a test page that tests configuration isolation for namespaced installations
     await page.setContent(`
       <!DOCTYPE html>
@@ -905,26 +978,34 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
-    
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
+
     // Get configuration snapshots from data attributes
-    const ns1ConfigStr = await page.getAttribute('body', 'data-usermaven_ns1-config');
-    const ns2ConfigStr = await page.getAttribute('body', 'data-usermaven_ns2-config');
-    
+    const ns1ConfigStr = await page.getAttribute(
+      'body',
+      'data-usermaven_ns1-config',
+    );
+    const ns2ConfigStr = await page.getAttribute(
+      'body',
+      'data-usermaven_ns2-config',
+    );
+
     const ns1Config = JSON.parse(ns1ConfigStr || '{}');
     const ns2Config = JSON.parse(ns2ConfigStr || '{}');
-    
+
     console.log('NS1 Config:', ns1Config);
     console.log('NS2 Config:', ns2Config);
-    
+
     // Verify configurations remained isolated
     expect(ns1Config.key).toBe('project1');
     expect(ns1Config.host).toBe('api1.example.com');
     expect(ns1Config.debug).toBe(true);
     expect(ns1Config.newFeature).toBe('enabled');
-    
+
     expect(ns2Config.key).toBe('project2');
     expect(ns2Config.host).toBe('api2.example.com');
     expect(ns2Config.debug).toBe(false);
@@ -932,7 +1013,9 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
     expect(ns2Config.newFeature).toBeUndefined();
   });
 
-  test('should support direct pixel installation alongside namespaced installations', async ({ page }) => {
+  test('should support direct pixel installation alongside namespaced installations', async ({
+    page,
+  }) => {
     // Create a test page that simulates direct pixel installation and namespaced SDK instances
     await page.setContent(`
       <!DOCTYPE html>
@@ -1040,35 +1123,49 @@ test.describe('Usermaven Multiple Initialization Tests', () => {
       </body>
       </html>
     `);
-    
+
     // Wait for test to complete
-    await page.waitForSelector('body[data-test-complete="true"]', { timeout: 5000 });
-    
+    await page.waitForSelector('body[data-test-complete="true"]', {
+      timeout: 5000,
+    });
+
     // Get listeners registered count
-    const listenersRegistered = await page.evaluate(() => window.listenersRegistered);
+    const listenersRegistered = await page.evaluate(
+      () => window.listenersRegistered,
+    );
     console.log('Listeners registered:', listenersRegistered);
-    
+
     // Get events tracked count
     const eventsTracked = await page.evaluate(() => window.eventsTracked);
     console.log('Events tracked:', eventsTracked);
-    
+
     // Get console logs
     const consoleLogs = await page.evaluate(() => window.consoleLogs);
     console.log('Console logs:', consoleLogs);
-    
+
     // Verify each installation registered its listeners
     expect(listenersRegistered!.direct).toBe(1);
     expect(listenersRegistered!.namespace1).toBe(1);
     expect(listenersRegistered!.namespace2).toBe(1);
-    
+
     // Verify each installation tracked its events
     expect(eventsTracked!.direct).toBe(1);
     expect(eventsTracked!.namespace1).toBe(1);
     expect(eventsTracked!.namespace2).toBe(1);
-    
+
     // Verify installation logs
-    expect(consoleLogs!.some(log => log.includes('Installing direct pixel'))).toBeTruthy();
-    expect(consoleLogs!.some(log => log.includes('Installing first namespaced pixel'))).toBeTruthy();
-    expect(consoleLogs!.some(log => log.includes('Installing second namespaced pixel'))).toBeTruthy();
+    expect(
+      consoleLogs!.some((log) => log.includes('Installing direct pixel')),
+    ).toBeTruthy();
+    expect(
+      consoleLogs!.some((log) =>
+        log.includes('Installing first namespaced pixel'),
+      ),
+    ).toBeTruthy();
+    expect(
+      consoleLogs!.some((log) =>
+        log.includes('Installing second namespaced pixel'),
+      ),
+    ).toBeTruthy();
   });
 });

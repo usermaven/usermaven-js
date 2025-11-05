@@ -9,14 +9,14 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  
+
   webServer: {
     command: 'npm run serve:test',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
   },
-  
+
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
@@ -24,7 +24,7 @@ export default defineConfig({
     actionTimeout: 15000,
     navigationTimeout: 30000,
   },
-  
+
   projects: [
     // BrowserStack projects
     {
@@ -33,14 +33,14 @@ export default defineConfig({
         browserName: 'chromium',
         channel: 'chrome',
         viewport: { width: 1920, height: 1080 },
-      }
+      },
     },
     {
       name: 'browserstack-mac-safari',
       use: {
         browserName: 'webkit',
         viewport: { width: 1920, height: 1080 },
-      }
+      },
     },
     {
       name: 'browserstack-mobile',
@@ -59,7 +59,7 @@ export default defineConfig({
           reducedMotion: 'reduce',
           forcedColors: 'none',
         },
-      }
+      },
     },
     {
       name: 'browserstack-ios',
@@ -77,7 +77,7 @@ export default defineConfig({
           reducedMotion: 'reduce',
           forcedColors: 'none',
         },
-      }
+      },
     },
     {
       name: 'browserstack-android',
@@ -95,7 +95,7 @@ export default defineConfig({
           reducedMotion: 'reduce',
           forcedColors: 'none',
         },
-      }
-    }
+      },
+    },
   ],
 });
