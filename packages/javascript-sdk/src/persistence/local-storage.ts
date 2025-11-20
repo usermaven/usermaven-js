@@ -57,7 +57,7 @@ export class LocalStoragePersistence {
     }
   }
 
-  private save(): boolean {
+  save(): boolean {
     if (!isWindowAvailable()) {
       this.logger.warn('localStorage is not available in this environment');
       return false;
