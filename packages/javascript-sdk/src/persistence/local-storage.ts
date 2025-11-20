@@ -5,11 +5,13 @@ export class LocalStoragePersistence {
   private storage: Record<string, any> = {};
   private prefix: string;
   private logger: Logger;
+  private storageDisabled: boolean = false;
+  private quotaErrorLogged: boolean = false;
 
   constructor(apiKey: string, logger?: Logger) {
     this.prefix = `usermaven_${apiKey}_`;
-    this.load();
     this.logger = logger || getLogger();
+    this.load();
   }
 
   set(key: string, value: any): void {
@@ -31,16 +33,8 @@ export class LocalStoragePersistence {
     this.save();
   }
 
-  save(): void {
-    if (!isWindowAvailable()) {
-      this.logger.warn('localStorage is not available in this environment');
-      return;
-    }
-    try {
-      localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
-    } catch (error) {
-      this.logger.error('Error saving to localStorage:', error);
-    }
+  isStorageEnabled(): boolean {
+    return !this.storageDisabled;
   }
 
   private load(): void {
@@ -53,8 +47,55 @@ export class LocalStoragePersistence {
       if (data) {
         this.storage = JSON.parse(data);
       }
-    } catch (error) {
-      this.logger.error('Error loading from localStorage:', error);
+    } catch (error: any) {
+      if (this.isQuotaError(error)) {
+        this.storageDisabled = true;
+        this.logQuotaOnce(error);
+      } else {
+        this.logger.error('Error loading from localStorage:', error);
+      }
     }
+  }
+
+  private save(): boolean {
+    if (!isWindowAvailable()) {
+      this.logger.warn('localStorage is not available in this environment');
+      return false;
+    }
+    if (this.storageDisabled) {
+      return false;
+    }
+
+    try {
+      localStorage.setItem(this.prefix + 'data', JSON.stringify(this.storage));
+      return true;
+    } catch (error: any) {
+      if (this.isQuotaError(error)) {
+        this.storageDisabled = true;
+        this.logQuotaOnce(error);
+      } else {
+        this.logger.error('Error saving to localStorage:', error);
+      }
+      return false;
+    }
+  }
+
+  private isQuotaError(error: any): boolean {
+    const name = error?.name;
+    return (
+      name === 'QuotaExceededError' ||
+      name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      error?.code === 22 ||
+      error?.code === 1014
+    );
+  }
+
+  private logQuotaOnce(error: any): void {
+    if (this.quotaErrorLogged) return;
+    this.quotaErrorLogged = true;
+    this.logger.error(
+      'localStorage quota exceeded; persisting disabled. Continuing with in-memory storage only.',
+      error,
+    );
   }
 }
