@@ -121,4 +121,50 @@ describe('RetryQueue', () => {
 
     expect(mockTransport.send).toHaveBeenCalledWith([payload]);
   });
+
+  it('trims queue when exceeding maxQueueItems', () => {
+    vi.mocked(commonUtils.isWindowAvailable).mockReturnValue(false);
+    const smallQueue = new RetryQueue(
+      mockTransport,
+      3,
+      1000,
+      10,
+      1000,
+      undefined as any,
+      'default',
+      2,
+      10_000,
+    );
+
+    smallQueue.add({ id: 1 });
+    smallQueue.add({ id: 2 });
+    smallQueue.add({ id: 3 });
+
+    const internalQueue = (smallQueue as any).queue;
+    expect(internalQueue.length).toBe(2);
+    expect(internalQueue[0].payload).toEqual({ id: 2 });
+    expect(internalQueue[1].payload).toEqual({ id: 3 });
+  });
+
+  it('drops oldest payloads when total size exceeds maxQueueBytes', () => {
+    vi.mocked(commonUtils.isWindowAvailable).mockReturnValue(false);
+    const byteLimitedQueue = new RetryQueue(
+      mockTransport,
+      3,
+      1000,
+      10,
+      1000,
+      undefined as any,
+      'default',
+      10,
+      150,
+    );
+
+    byteLimitedQueue.add({ data: '1'.repeat(120) });
+    byteLimitedQueue.add({ data: '2'.repeat(120) });
+
+    const internalQueue = (byteLimitedQueue as any).queue;
+    expect(internalQueue.length).toBe(1);
+    expect(internalQueue[0].payload).toEqual({ data: '2'.repeat(120) });
+  });
 });
