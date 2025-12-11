@@ -1,0 +1,17 @@
+<main class="page">
+  <section class="card">
+    <p class="eyebrow">Usermaven SDK · Angular</p>
+    <h1>Send test events</h1>
+    <p class="lede">
+      Update the API key and tracking host in <code>usermaven.service.ts</code>. Start the dev
+      server and use your browser network panel to confirm payloads reach Usermaven.
+    </p>
+
+    <div class="actions">
+      <button type="button" (click)="identify()">Identify User (with first_name & last_name)</button>
+      <button type="button" class="secondary" (click)="trackClick()">Track Button Click</button>
+      <button type="button" class="secondary" (click)="trackSignup()">Track Signup Event</button>
+    </div>
+   
+  </section>
+</main>
