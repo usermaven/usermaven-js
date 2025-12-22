@@ -436,6 +436,7 @@ export class UsermavenClient {
     eventName: string,
     eventProps?: EventPayload,
   ): any {
+      const { event_id: incomingEventId, ...restEventProps } = eventProps || {};
     const userProps = this.persistence.get('userProps') || {};
     const companyProps =
       this.persistence.get('companyProps') || userProps?.company || {};
@@ -443,10 +444,10 @@ export class UsermavenClient {
     const globalProps = this.persistence.get('global_props') || {};
     const eventTypeProps = this.persistence.get(`props_${eventName}`) || {};
 
-    let processedProps = eventProps || {};
+    let processedProps = restEventProps;
 
     const payload: any = {
-      event_id: '',
+      event_id: incomingEventId || generateId(),
       user: {
         anonymous_id: this.anonymousId,
         id: userId,

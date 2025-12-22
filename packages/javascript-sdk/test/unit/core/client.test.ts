@@ -4,6 +4,7 @@ import { Config } from '../../../src/core/types';
 
 describe('UsermavenClient', () => {
   let client: UsermavenClient;
+  let addSpy: ReturnType<typeof vi.spyOn>;
   const mockConfig: Config = {
     key: 'test-api-key',
     trackingHost: 'https://test.usermaven.com',
@@ -12,22 +13,8 @@ describe('UsermavenClient', () => {
 
   beforeEach(() => {
     client = new UsermavenClient(mockConfig);
-    vi.spyOn(client, 'track').mockImplementation((typeName, payload) => {
-      if (typeof typeName !== 'string') {
-        throw new Error('Event name must be a string');
-      }
-      if (
-        payload !== undefined &&
-        (typeof payload !== 'object' ||
-          payload === null ||
-          Array.isArray(payload))
-      ) {
-        throw new Error(
-          'Event payload must be a non-null object and not an array',
-        );
-      }
-    });
-    vi.spyOn(client['retryQueue'], 'add').mockImplementation(() => {});
+    vi.spyOn(client, 'track');
+    addSpy = vi.spyOn(client['retryQueue'], 'add').mockImplementation(() => {});
     vi.spyOn(client['transport'], 'send').mockImplementation(() =>
       Promise.resolve(),
     );
@@ -208,6 +195,32 @@ describe('UsermavenClient', () => {
         }),
         true,
       );
+    });
+  });
+
+  describe('event_id handling', () => {
+    it('should generate a unique event_id per tracked event', () => {
+      client.track('signed_up', { source: 'test' });
+      client.track('signed_up', { source: 'test' });
+
+      const firstId = (addSpy.mock.calls[0][0] as any).event_id;
+      const secondId = (addSpy.mock.calls[1][0] as any).event_id;
+
+      expect(firstId).toBeDefined();
+      expect(firstId).not.toBe('');
+      expect(secondId).toBeDefined();
+      expect(secondId).not.toBe('');
+      expect(firstId).not.toEqual(secondId);
+    });
+
+    it('should respect a provided event_id and avoid echoing it inside event_attributes', () => {
+      client.track('signed_up', { event_id: 'custom-id', plan: 'pro' });
+
+      const payload = addSpy.mock.calls[0][0] as any;
+
+      expect(payload.event_id).toBe('custom-id');
+      expect(payload.event_attributes).toMatchObject({ plan: 'pro' });
+      expect(payload.event_attributes).not.toHaveProperty('event_id');
     });
   });
 
