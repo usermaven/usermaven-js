@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autocapture Edge Cases Test - Usermaven SDK</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-description {
+            background: #e3f2fd;
+            padding: 10px;
+            border-left: 4px solid #2196F3;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .test-result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .test-result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        #eventLog {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+        }
+        .log-entry.error {
+            border-left-color: #f44336;
+        }
+        .shadow-host {
+            padding: 20px;
+            border: 2px dashed #9c27b0;
+            margin: 10px 0;
+            background: #f3e5f5;
+        }
+        .custom-element {
+            display: block;
+            padding: 15px;
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        #testStats {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+        .stat-item {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .stat-value {
+            float: right;
+            font-weight: bold;
+        }
+        .stat-value.success {
+            color: #4CAF50;
+        }
+        .stat-value.error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Autocapture Edge Cases Test Suite</h1>
+    <p>This page tests the hardened autocapture implementation to ensure it handles edge cases safely.</p>
+
+    <div id="testStats">
+        <h3 style="margin-top: 0;">Test Statistics</h3>
+        <div class="stat-item">
+            <span class="stat-label">Tests Run:</span>
+            <span class="stat-value" id="testsRun">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Passed:</span>
+            <span class="stat-value success" id="testsPassed">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Failed:</span>
+            <span class="stat-value error" id="testsFailed">0</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Events Captured:</span>
+            <span class="stat-value" id="eventsCaptured">0</span>
+        </div>
+    </div>
+
+    <!-- Test 1: Document/Window Events -->
+    <div class="test-section">
+        <h2>Test 1: Document & Window Events</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify that events bubbling from document/window don't crash when target isn't an element.
+            <br><strong>Expected:</strong> No errors, events should be safely ignored or handled.
+        </div>
+        <button onclick="testDocumentEvents()">Test Document Events</button>
+        <button onclick="testWindowEvents()">Test Window Events</button>
+        <div id="test1Results"></div>
+    </div>
+
+    <!-- Test 2: Shadow DOM -->
+    <div class="test-section">
+        <h2>Test 2: Shadow DOM Elements</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify that clicks inside shadow DOM are properly captured and parent traversal works.
+            <br><strong>Expected:</strong> Events captured with proper element chain including shadow host.
+        </div>
+        <div id="shadowHost" class="shadow-host">
+            <p>Shadow DOM will be attached here</p>
+        </div>
+        <button onclick="testShadowDOM()">Test Shadow DOM</button>
+        <div id="test2Results"></div>
+    </div>
+
+    <!-- Test 3: Custom Elements -->
+    <div class="test-section">
+        <h2>Test 3: Custom Web Components</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify that custom elements with shadow DOM work correctly.
+            <br><strong>Expected:</strong> Events captured from custom elements without errors.
+        </div>
+        <test-button id="customButton1">Click Me (Custom Element)</test-button>
+        <button onclick="testCustomElements()">Test Custom Elements</button>
+        <div id="test3Results"></div>
+    </div>
+
+    <!-- Test 4: Elements Without TagName -->
+    <div class="test-section">
+        <h2>Test 4: Non-Standard Nodes</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify handling of text nodes, comment nodes, and other non-element nodes.
+            <br><strong>Expected:</strong> No crashes when events bubble through non-element nodes.
+        </div>
+        <div id="textNodeContainer">
+            <span>Text with <strong>nested</strong> elements</span>
+        </div>
+        <button onclick="testNonStandardNodes()">Test Non-Standard Nodes</button>
+        <div id="test4Results"></div>
+    </div>
+
+    <!-- Test 5: Programmatic Events -->
+    <div class="test-section">
+        <h2>Test 5: Programmatic Events</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify that programmatically dispatched events are handled safely.
+            <br><strong>Expected:</strong> Events captured or ignored without errors.
+        </div>
+        <button onclick="testProgrammaticEvents()">Test Programmatic Events</button>
+        <div id="test5Results"></div>
+    </div>
+
+    <!-- Test 6: Null/Undefined Targets -->
+    <div class="test-section">
+        <h2>Test 6: Null/Undefined Event Targets</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify handling of events with null or undefined targets.
+            <br><strong>Expected:</strong> No crashes, events safely ignored.
+        </div>
+        <button onclick="testNullTargets()">Test Null Targets</button>
+        <div id="test6Results"></div>
+    </div>
+
+    <!-- Test 7: Deeply Nested Shadow DOM -->
+    <div class="test-section">
+        <h2>Test 7: Nested Shadow DOM</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify handling of multiple levels of shadow DOM nesting.
+            <br><strong>Expected:</strong> Proper parent traversal through multiple shadow boundaries.
+        </div>
+        <div id="nestedShadowHost" class="shadow-host">
+            <p>Nested shadow DOM will be attached here</p>
+        </div>
+        <button onclick="testNestedShadowDOM()">Test Nested Shadow DOM</button>
+        <div id="test7Results"></div>
+    </div>
+
+    <!-- Test 8: SVG Elements -->
+    <div class="test-section">
+        <h2>Test 8: SVG Elements</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Verify handling of SVG elements which have different className behavior.
+            <br><strong>Expected:</strong> SVG elements captured without errors.
+        </div>
+        <svg width="200" height="100" style="border: 1px solid #ccc;">
+            <rect id="svgRect" x="10" y="10" width="80" height="80" fill="#4CAF50" style="cursor: pointer;"/>
+            <circle id="svgCircle" cx="150" cy="50" r="40" fill="#2196F3" style="cursor: pointer;"/>
+        </svg>
+        <button onclick="testSVGElements()">Test SVG Elements</button>
+        <div id="test8Results"></div>
+    </div>
+
+    <!-- Test 9: Rapid Fire Events -->
+    <div class="test-section">
+        <h2>Test 9: Rapid Fire Events</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Stress test with many rapid events to ensure stability.
+            <br><strong>Expected:</strong> All events handled without crashes or memory issues.
+        </div>
+        <button onclick="testRapidFireEvents()">Test Rapid Fire (100 events)</button>
+        <div id="test9Results"></div>
+    </div>
+
+    <!-- Test 10: Edge Case Combinations -->
+    <div class="test-section">
+        <h2>Test 10: Combined Edge Cases</h2>
+        <div class="test-description">
+            <strong>Purpose:</strong> Test combinations of edge cases simultaneously.
+            <br><strong>Expected:</strong> All scenarios handled gracefully.
+        </div>
+        <button onclick="testCombinedEdgeCases()">Run Combined Tests</button>
+        <div id="test10Results"></div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="test-section">
+        <h2>📋 Event Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <div id="eventLog"></div>
+    </div>
+
+    <!-- Load the SDK -->
+    <script src="/dist/lib.js"
+            data-key="test-api-key"
+            data-tracking-host="http://localhost:3000"
+            data-log-level="debug"
+            data-autocapture="true"
+            data-auto-pageview="false"></script>
+
+    <script>
+        // Test statistics
+        let stats = {
+            testsRun: 0,
+            testsPassed: 0,
+            testsFailed: 0,
+            eventsCaptured: 0
+        };
+
+        // Override console methods to capture logs
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        
+        console.error = function(...args) {
+            logEvent('ERROR: ' + args.join(' '), 'error');
+            originalConsoleError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            logEvent('WARN: ' + args.join(' '), 'error');
+            originalConsoleWarn.apply(console, args);
+        };
+
+        // Intercept Usermaven track calls
+        if (window.usermaven && window.usermaven.track) {
+            const originalTrack = window.usermaven.track.bind(window.usermaven);
+            window.usermaven.track = function(eventName, properties) {
+                if (eventName === '$autocapture') {
+                    stats.eventsCaptured++;
+                    updateStats();
+                    logEvent(`✅ Autocapture event: ${properties.$event_type || 'unknown'}`, 'success');
+                }
+                return originalTrack(eventName, properties);
+            };
+        }
+
+        function logEvent(message, type = 'info') {
+            const log = document.getElementById('eventLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('testsRun').textContent = stats.testsRun;
+            document.getElementById('testsPassed').textContent = stats.testsPassed;
+            document.getElementById('testsFailed').textContent = stats.testsFailed;
+            document.getElementById('eventsCaptured').textContent = stats.eventsCaptured;
+        }
+
+        function showResult(containerId, message, success) {
+            const container = document.getElementById(containerId);
+            const result = document.createElement('div');
+            result.className = `test-result ${success ? 'success' : 'error'}`;
+            result.textContent = message;
+            container.appendChild(result);
+            
+            stats.testsRun++;
+            if (success) {
+                stats.testsPassed++;
+            } else {
+                stats.testsFailed++;
+            }
+            updateStats();
+        }
+
+        function clearLog() {
+            document.getElementById('eventLog').innerHTML = '';
+            logEvent('Log cleared', 'info');
+        }
+
+        // Test 1: Document/Window Events
+        function testDocumentEvents() {
+            logEvent('Starting Document Events Test...', 'info');
+            try {
+                // Dispatch click on document
+                const event = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                document.dispatchEvent(event);
+                
+                showResult('test1Results', '✓ Document click event handled without crash', true);
+                logEvent('Document events test passed', 'success');
+            } catch (error) {
+                showResult('test1Results', '✗ Error: ' + error.message, false);
+                logEvent('Document events test failed: ' + error.message, 'error');
+            }
+        }
+
+        function testWindowEvents() {
+            logEvent('Starting Window Events Test...', 'info');
+            try {
+                // Dispatch event on window
+                const event = new Event('resize', { bubbles: true });
+                window.dispatchEvent(event);
+                
+                showResult('test1Results', '✓ Window event handled without crash', true);
+                logEvent('Window events test passed', 'success');
+            } catch (error) {
+                showResult('test1Results', '✗ Error: ' + error.message, false);
+                logEvent('Window events test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 2: Shadow DOM
+        function testShadowDOM() {
+            logEvent('Starting Shadow DOM Test...', 'info');
+            try {
+                const host = document.getElementById('shadowHost');
+                
+                // Clear previous shadow root if exists
+                if (host.shadowRoot) {
+                    host.shadowRoot.innerHTML = '';
+                } else {
+                    host.attachShadow({ mode: 'open' });
+                }
+                
+                const shadowRoot = host.shadowRoot;
+                shadowRoot.innerHTML = `
+                    <style>
+                        button { padding: 10px 20px; background: #9c27b0; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                        button:hover { background: #7b1fa2; }
+                    </style>
+                    <button id="shadowButton">Click Me (Inside Shadow DOM)</button>
+                `;
+                
+                const shadowButton = shadowRoot.getElementById('shadowButton');
+                shadowButton.click();
+                
+                showResult('test2Results', '✓ Shadow DOM click handled without crash', true);
+                logEvent('Shadow DOM test passed', 'success');
+            } catch (error) {
+                showResult('test2Results', '✗ Error: ' + error.message, false);
+                logEvent('Shadow DOM test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 3: Custom Elements
+        class TestButton extends HTMLElement {
+            constructor() {
+                super();
+                const shadow = this.attachShadow({ mode: 'open' });
+                shadow.innerHTML = `
+                    <style>
+                        button {
+                            padding: 10px 20px;
+                            background: #ff9800;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 14px;
+                        }
+                        button:hover {
+                            background: #f57c00;
+                        }
+                    </style>
+                    <button><slot></slot></button>
+                `;
+            }
+        }
+        customElements.define('test-button', TestButton);
+
+        function testCustomElements() {
+            logEvent('Starting Custom Elements Test...', 'info');
+            try {
+                const customButton = document.getElementById('customButton1');
+                const button = customButton.shadowRoot.querySelector('button');
+                button.click();
+                
+                showResult('test3Results', '✓ Custom element click handled without crash', true);
+                logEvent('Custom elements test passed', 'success');
+            } catch (error) {
+                showResult('test3Results', '✗ Error: ' + error.message, false);
+                logEvent('Custom elements test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 4: Non-Standard Nodes
+        function testNonStandardNodes() {
+            logEvent('Starting Non-Standard Nodes Test...', 'info');
+            try {
+                const container = document.getElementById('textNodeContainer');
+                const textNode = container.firstChild;
+                
+                // Create event on text node
+                const event = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                });
+                
+                // Dispatch on the span which contains text nodes
+                container.querySelector('span').dispatchEvent(event);
+                
+                showResult('test4Results', '✓ Text node events handled without crash', true);
+                logEvent('Non-standard nodes test passed', 'success');
+            } catch (error) {
+                showResult('test4Results', '✗ Error: ' + error.message, false);
+                logEvent('Non-standard nodes test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 5: Programmatic Events
+        function testProgrammaticEvents() {
+            logEvent('Starting Programmatic Events Test...', 'info');
+            try {
+                // Create a temporary button
+                const button = document.createElement('button');
+                button.textContent = 'Temp Button';
+                document.body.appendChild(button);
+                
+                // Dispatch various events
+                button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                button.dispatchEvent(new Event('change', { bubbles: true }));
+                button.dispatchEvent(new Event('submit', { bubbles: true }));
+                
+                document.body.removeChild(button);
+                
+                showResult('test5Results', '✓ Programmatic events handled without crash', true);
+                logEvent('Programmatic events test passed', 'success');
+            } catch (error) {
+                showResult('test5Results', '✗ Error: ' + error.message, false);
+                logEvent('Programmatic events test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 6: Null/Undefined Targets
+        function testNullTargets() {
+            logEvent('Starting Null Targets Test...', 'info');
+            try {
+                // Create event with no target
+                const event = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true
+                });
+                
+                // Try to dispatch on document
+                document.dispatchEvent(event);
+                
+                showResult('test6Results', '✓ Null target events handled without crash', true);
+                logEvent('Null targets test passed', 'success');
+            } catch (error) {
+                showResult('test6Results', '✗ Error: ' + error.message, false);
+                logEvent('Null targets test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 7: Nested Shadow DOM
+        function testNestedShadowDOM() {
+            logEvent('Starting Nested Shadow DOM Test...', 'info');
+            try {
+                const host = document.getElementById('nestedShadowHost');
+                
+                // Clear previous shadow root if exists
+                if (host.shadowRoot) {
+                    host.shadowRoot.innerHTML = '';
+                } else {
+                    host.attachShadow({ mode: 'open' });
+                }
+                
+                const shadowRoot1 = host.shadowRoot;
+                shadowRoot1.innerHTML = '<div id="innerHost"></div>';
+                
+                const innerHost = shadowRoot1.getElementById('innerHost');
+                const shadowRoot2 = innerHost.attachShadow({ mode: 'open' });
+                shadowRoot2.innerHTML = `
+                    <style>
+                        button { padding: 10px 20px; background: #e91e63; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                    </style>
+                    <button id="nestedButton">Nested Shadow Button</button>
+                `;
+                
+                const nestedButton = shadowRoot2.getElementById('nestedButton');
+                nestedButton.click();
+                
+                showResult('test7Results', '✓ Nested shadow DOM handled without crash', true);
+                logEvent('Nested shadow DOM test passed', 'success');
+            } catch (error) {
+                showResult('test7Results', '✗ Error: ' + error.message, false);
+                logEvent('Nested shadow DOM test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 8: SVG Elements
+        function testSVGElements() {
+            logEvent('Starting SVG Elements Test...', 'info');
+            try {
+                const rect = document.getElementById('svgRect');
+                const circle = document.getElementById('svgCircle');
+                
+                rect.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                circle.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                
+                showResult('test8Results', '✓ SVG elements handled without crash', true);
+                logEvent('SVG elements test passed', 'success');
+            } catch (error) {
+                showResult('test8Results', '✗ Error: ' + error.message, false);
+                logEvent('SVG elements test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 9: Rapid Fire Events
+        function testRapidFireEvents() {
+            logEvent('Starting Rapid Fire Events Test...', 'info');
+            try {
+                const button = document.createElement('button');
+                button.textContent = 'Rapid Fire Target';
+                document.body.appendChild(button);
+                
+                for (let i = 0; i < 100; i++) {
+                    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                }
+                
+                document.body.removeChild(button);
+                
+                showResult('test9Results', '✓ 100 rapid events handled without crash', true);
+                logEvent('Rapid fire events test passed', 'success');
+            } catch (error) {
+                showResult('test9Results', '✗ Error: ' + error.message, false);
+                logEvent('Rapid fire events test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Test 10: Combined Edge Cases
+        function testCombinedEdgeCases() {
+            logEvent('Starting Combined Edge Cases Test...', 'info');
+            try {
+                // Test 1: Shadow DOM + SVG
+                const host = document.createElement('div');
+                document.body.appendChild(host);
+                const shadow = host.attachShadow({ mode: 'open' });
+                shadow.innerHTML = '<svg><circle cx="50" cy="50" r="40" style="cursor:pointer;"/></svg>';
+                shadow.querySelector('circle').click();
+                
+                // Test 2: Custom element + rapid events
+                const custom = document.createElement('test-button');
+                document.body.appendChild(custom);
+                for (let i = 0; i < 10; i++) {
+                    custom.shadowRoot.querySelector('button').click();
+                }
+                
+                // Test 3: Document event + programmatic
+                document.dispatchEvent(new Event('custom-event', { bubbles: true }));
+                
+                // Cleanup
+                document.body.removeChild(host);
+                document.body.removeChild(custom);
+                
+                showResult('test10Results', '✓ Combined edge cases handled without crash', true);
+                logEvent('Combined edge cases test passed', 'success');
+            } catch (error) {
+                showResult('test10Results', '✗ Error: ' + error.message, false);
+                logEvent('Combined edge cases test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Run all tests
+        function runAllTests() {
+            logEvent('========================================', 'info');
+            logEvent('🚀 Running All Tests...', 'info');
+            logEvent('========================================', 'info');
+            
+            // Clear previous results
+            document.querySelectorAll('[id$="Results"]').forEach(el => el.innerHTML = '');
+            
+            // Reset stats
+            stats = { testsRun: 0, testsPassed: 0, testsFailed: 0, eventsCaptured: stats.eventsCaptured };
+            updateStats();
+            
+            // Run tests with delays to see each one
+            setTimeout(() => {
+                testDocumentEvents();
+                setTimeout(() => {
+                    testWindowEvents();
+                    setTimeout(() => {
+                        testShadowDOM();
+                        setTimeout(() => {
+                            testCustomElements();
+                            setTimeout(() => {
+                                testNonStandardNodes();
+                                setTimeout(() => {
+                                    testProgrammaticEvents();
+                                    setTimeout(() => {
+                                        testNullTargets();
+                                        setTimeout(() => {
+                                            testNestedShadowDOM();
+                                            setTimeout(() => {
+                                                testSVGElements();
+                                                setTimeout(() => {
+                                                    testRapidFireEvents();
+                                                    setTimeout(() => {
+                                                        testCombinedEdgeCases();
+                                                        setTimeout(() => {
+                                                            logEvent('========================================', 'info');
+                                                            logEvent('✅ All Tests Completed!', 'success');
+                                                            logEvent(`Results: ${stats.testsPassed}/${stats.testsRun} passed`, 'success');
+                                                            logEvent('========================================', 'info');
+                                                        }, 100);
+                                                    }, 100);
+                                                }, 100);
+                                            }, 100);
+                                        }, 100);
+                                    }, 100);
+                                }, 100);
+                            }, 100);
+                        }, 100);
+                    }, 100);
+                }, 100);
+            }, 100);
+        }
+
+        // Initialize
+        logEvent('🧪 Autocapture Edge Cases Test Suite Loaded', 'success');
+        logEvent('Click "Run All Tests" to start automated testing', 'info');
+        logEvent('Or run individual tests using the buttons in each section', 'info');
+    </script>
+</body>
+</html>

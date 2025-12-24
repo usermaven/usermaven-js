@@ -134,23 +134,38 @@ class AutoCapture {
       return true;
     }
 
+    if (!target || !isElementNode(target)) {
+      return;
+    }
+
     if (target && shouldCaptureDomEvent(target, e)) {
-      const targetElementList = [target];
-      let curEl = target;
-      while (curEl.parentNode && !isTag(curEl, 'body')) {
-        if (isDocumentFragment(curEl.parentNode)) {
-          targetElementList.push((curEl.parentNode as any).host);
-          curEl = (curEl.parentNode as any).host;
+      const targetElementList: Element[] = [target];
+      let curEl: Element | null = target;
+      while (curEl?.parentNode && !isTag(curEl, 'body')) {
+        if (isDocumentFragment(curEl?.parentNode)) {
+          const host = (curEl?.parentNode as any).host as Element | null;
+          if (host && isElementNode(host)) {
+            targetElementList.push(host);
+          }
+          curEl = host;
           continue;
         }
-        targetElementList.push(curEl.parentNode as Element);
-        curEl = curEl.parentNode as Element;
+
+        const parentNode = curEl?.parentNode as Element | null;
+        if (!parentNode || !isElementNode(parentNode)) break;
+
+        targetElementList.push(parentNode);
+        curEl = parentNode;
       }
 
       const elementsJson: Properties[] = [];
       let href,
         explicitNoCapture = false;
       _each(targetElementList, (el) => {
+        if (!el.tagName) {
+          return;
+        }
+
         const shouldCaptureEl = shouldCaptureElement(el);
 
         // if the element or a parent element is an anchor tag
