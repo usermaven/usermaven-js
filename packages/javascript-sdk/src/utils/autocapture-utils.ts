@@ -148,14 +148,18 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
     // Handle shadow DOM
     if (curEl.parentNode && isDocumentFragment(curEl.parentNode)) {
       curEl = (curEl.parentNode as any).host;
-      if (curEl && usefulElements.indexOf(curEl.tagName.toLowerCase()) > -1) {
+      if (
+        curEl &&
+        isElementNode(curEl) &&
+        usefulElements.indexOf(curEl.tagName.toLowerCase()) > -1
+      ) {
         parentIsUsefulElement = true;
       }
       continue;
     }
 
-    const parentNode = curEl.parentNode as Element;
-    if (!parentNode) break;
+    const parentNode = curEl.parentNode as Element | null;
+    if (!parentNode || !isElementNode(parentNode)) break;
 
     if (usefulElements.indexOf(parentNode.tagName.toLowerCase()) > -1) {
       parentIsUsefulElement = true;
@@ -177,7 +181,8 @@ export function shouldCaptureDomEvent(el: Element, event: Event): boolean {
     return true;
   }
 
-  const tag = el.tagName.toLowerCase();
+  const tag = el.tagName?.toLowerCase?.();
+  if (!tag) return false;
   switch (tag) {
     case 'html':
       return false;
