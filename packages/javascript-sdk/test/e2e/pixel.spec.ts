@@ -9,11 +9,10 @@ declare global {
 }
 
 test.describe('Usermaven Pixel Tests', () => {
-
   test('should load pixel script correctly', async ({ page }) => {
     try {
       // Add initial wait for stability
-    await page.waitForTimeout(1000);
+      await page.waitForTimeout(1000);
 
       // Navigate to the test page
       const pageResponse = await page.goto('/test/e2e/test.html');
@@ -25,7 +24,7 @@ test.describe('Usermaven Pixel Tests', () => {
       // Check for script load with correct attributes
       const script = await page.waitForSelector(
         'script#um-tracker[data-key="UMaugVPOWz"]',
-        { state: 'attached', timeout: 10000 }
+        { state: 'attached', timeout: 10000 },
       );
       expect(script).toBeTruthy();
 
@@ -42,7 +41,7 @@ test.describe('Usermaven Pixel Tests', () => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     // Setup request interception before navigation
-    await page.route('**/api/v1/event**', async route => {
+    await page.route('**/api/v1/event**', async (route) => {
       const request = route.request();
       const postData = request.postData() || undefined;
       requests.push({ url: request.url(), postData });
@@ -55,29 +54,33 @@ test.describe('Usermaven Pixel Tests', () => {
       expect(pageResponse?.ok()).toBeTruthy();
 
       // Wait for script to be loaded and initialized
-      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
-      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
-      
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', {
+        state: 'attached',
+      });
+      await page.waitForFunction(
+        () => window.usermaven && typeof window.usermaven === 'function',
+      );
+
       // Wait for network idle
       await page.waitForLoadState('networkidle');
 
       // Wait for the pageview event
-      const pageviewEvent = requests.find(req => {
+      const pageviewEvent = requests.find((req) => {
         if (!req.postData) return false;
         try {
           const data = JSON.parse(req.postData);
           const events = Array.isArray(data) ? data : [data];
-          return events.some(event => event.event_type === 'pageview');
+          return events.some((event) => event.event_type === 'pageview');
         } catch (e) {
           return false;
         }
       });
 
       expect(pageviewEvent, 'Pageview event should be captured').toBeTruthy();
-      
+
       // Verify the request was intercepted
       expect(requests.length).toBeGreaterThan(0);
-      
+
       // Verify the request URL contains the correct token
       const eventRequest = requests[0];
       expect(eventRequest.url).toContain('/api/v1/event?token=UMaugVPOWz');
@@ -85,8 +88,8 @@ test.describe('Usermaven Pixel Tests', () => {
       // Verify the request payload
       if (eventRequest.postData) {
         const data = JSON.parse(eventRequest.postData);
-        const payload = Array.isArray(data) 
-          ? data.find(event => event.event_type === 'pageview')
+        const payload = Array.isArray(data)
+          ? data.find((event) => event.event_type === 'pageview')
           : data;
         expect(payload).toMatchObject({
           event_type: 'pageview',
@@ -105,7 +108,7 @@ test.describe('Usermaven Pixel Tests', () => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     // Setup request interception before navigation
-    await page.route('**/api/v1/event**', async route => {
+    await page.route('**/api/v1/event**', async (route) => {
       const request = route.request();
       const postData = request.postData() || undefined;
       requests.push({ url: request.url(), postData });
@@ -118,9 +121,13 @@ test.describe('Usermaven Pixel Tests', () => {
       expect(pageResponse?.ok()).toBeTruthy();
 
       // Wait for script to be loaded and initialized
-      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
-      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
-      
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', {
+        state: 'attached',
+      });
+      await page.waitForFunction(
+        () => window.usermaven && typeof window.usermaven === 'function',
+      );
+
       // Wait for network idle
       await page.waitForLoadState('networkidle');
 
@@ -132,22 +139,25 @@ test.describe('Usermaven Pixel Tests', () => {
       await page.waitForTimeout(3000);
 
       // Verify the event was captured
-      const buttonClickEvent = requests.find(req => {
+      const buttonClickEvent = requests.find((req) => {
         if (!req.postData) return false;
         try {
           const data = JSON.parse(req.postData);
           const events = Array.isArray(data) ? data : [data];
-          return events.some(event => event.event_type === 'button_click');
+          return events.some((event) => event.event_type === 'button_click');
         } catch (e) {
           return false;
         }
       });
 
-      expect(buttonClickEvent, 'Button click event should be captured').toBeTruthy();
+      expect(
+        buttonClickEvent,
+        'Button click event should be captured',
+      ).toBeTruthy();
       if (buttonClickEvent?.postData) {
         const data = JSON.parse(buttonClickEvent.postData);
-        const payload = Array.isArray(data) 
-          ? data.find(event => event.event_type === 'button_click')
+        const payload = Array.isArray(data)
+          ? data.find((event) => event.event_type === 'button_click')
           : data;
         expect(payload).toMatchObject({
           event_type: 'button_click',
@@ -166,7 +176,7 @@ test.describe('Usermaven Pixel Tests', () => {
     const requests: Array<{ url: string; postData?: string }> = [];
 
     // Setup request interception before navigation
-    await page.route('**/api/v1/event**', async route => {
+    await page.route('**/api/v1/event**', async (route) => {
       const request = route.request();
       const postData = request.postData() || undefined;
       requests.push({ url: request.url(), postData });
@@ -179,9 +189,13 @@ test.describe('Usermaven Pixel Tests', () => {
       expect(pageResponse?.ok()).toBeTruthy();
 
       // Wait for script to be loaded and initialized
-      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', { state: 'attached' });
-      await page.waitForFunction(() => window.usermaven && typeof window.usermaven === 'function');
-      
+      await page.waitForSelector('script#um-tracker[data-key="UMaugVPOWz"]', {
+        state: 'attached',
+      });
+      await page.waitForFunction(
+        () => window.usermaven && typeof window.usermaven === 'function',
+      );
+
       // Wait for network idle
       await page.waitForLoadState('networkidle');
 
@@ -193,22 +207,25 @@ test.describe('Usermaven Pixel Tests', () => {
       await page.waitForTimeout(3000);
 
       // Find the autocapture click event in requests
-      const autoClickEvent = requests.find(req => {
+      const autoClickEvent = requests.find((req) => {
         if (!req.postData) return false;
         try {
           const data = JSON.parse(req.postData);
           const events = Array.isArray(data) ? data : [data];
-          return events.some(event => event.event_type === '$autocapture');
+          return events.some((event) => event.event_type === '$autocapture');
         } catch (e) {
           return false;
         }
       });
 
-      expect(autoClickEvent, 'Autocapture event should be captured').toBeTruthy();
+      expect(
+        autoClickEvent,
+        'Autocapture event should be captured',
+      ).toBeTruthy();
       if (autoClickEvent?.postData) {
         const data = JSON.parse(autoClickEvent.postData);
-        const payload = Array.isArray(data) 
-          ? data.find(event => event.event_type === '$autocapture')
+        const payload = Array.isArray(data)
+          ? data.find((event) => event.event_type === '$autocapture')
           : data;
         expect(payload).toMatchObject({
           event_type: '$autocapture',
@@ -217,7 +234,7 @@ test.describe('Usermaven Pixel Tests', () => {
           autocapture_attributes: {
             tag_name: 'button',
             event_type: 'click',
-          }
+          },
         });
       }
     } catch (error) {

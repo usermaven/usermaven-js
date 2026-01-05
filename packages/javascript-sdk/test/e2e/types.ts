@@ -9,27 +9,27 @@ declare global {
     usermavenClient?: Function;
     usermavenScriptTagClient?: Function;
     usermavenQ?: any[];
-    
+
     // jQuery/AMD related properties
     jQuery?: any;
     $?: any;
     define?: Function & { amd?: any };
     require?: Function;
     requirejs?: Function;
-    
+
     // Namespace specific properties
     analytics?: Function;
     tracker?: Function;
     analyticsQ?: any[];
     trackerQ?: any[];
-    
+
     // Test helpers and results
     capturedEvents?: any[] & {
       default?: any[];
       analytics?: any[];
       tracker?: any[];
     };
-    
+
     // Scroll depth test utilities
     scrollDepthTest?: {
       scrollDepthInstance: any;
@@ -42,7 +42,7 @@ declare global {
       getCurrentScrollDepth: () => number;
       currentScrollDepth: number | null;
     };
-    
+
     testHelpers?: {
       // AMD/jQuery test helpers
       checkAMDLoaded?: () => boolean;
@@ -54,7 +54,7 @@ declare global {
         analytics?: number;
         tracker?: number;
       };
-      
+
       // Namespace test helpers
       checkNamespaces?: () => {
         default: boolean;
@@ -62,7 +62,7 @@ declare global {
         tracker: boolean;
       };
     };
-    
+
     // AMD test results
     testResults?: {
       amdLoaded: boolean;

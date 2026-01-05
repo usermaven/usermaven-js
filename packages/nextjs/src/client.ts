@@ -1,10 +1,14 @@
-import { UsermavenClient, usermavenClient, UsermavenOptions } from "@usermaven/sdk-js"
+import {
+  UsermavenClient,
+  usermavenClient,
+  UsermavenOptions,
+} from '@usermaven/sdk-js';
 
 function createClient(params: UsermavenOptions): UsermavenClient | null {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    return usermavenClient(params);
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return usermavenClient(params);
 }
 
-export default createClient
+export default createClient;

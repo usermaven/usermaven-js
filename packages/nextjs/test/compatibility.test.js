@@ -13,33 +13,39 @@ describe('Next.js SDK Compatibility Tests', () => {
     location: {
       href: 'https://example.com/test',
       pathname: '/test',
-      search: '?query=test'
+      search: '?query=test',
     },
     document: {
       referrer: 'https://referrer.com',
-      title: 'Test Page'
+      title: 'Test Page',
     },
     navigator: {
-      userAgent: 'test-agent'
+      userAgent: 'test-agent',
     },
     screen: {
       width: 1920,
-      height: 1080
-    }
+      height: 1080,
+    },
   };
 
   // Test client creation
   describe('createClient', () => {
     it('should return null when window is undefined', () => {
       // Server-side rendering scenario
-      const client = createClient({ key: 'test-key', trackingHost: 'https://example.com' });
+      const client = createClient({
+        key: 'test-key',
+        trackingHost: 'https://example.com',
+      });
       assert.strictEqual(client, null);
     });
 
     it('should create a client when window is defined', () => {
       // Client-side rendering scenario
       global.window = mockWindow;
-      const client = createClient({ key: 'test-key', trackingHost: 'https://example.com' });
+      const client = createClient({
+        key: 'test-key',
+        trackingHost: 'https://example.com',
+      });
       assert.notStrictEqual(client, null);
       delete global.window;
     });

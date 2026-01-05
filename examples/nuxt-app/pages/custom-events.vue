@@ -52,20 +52,20 @@
 </template>
 
 <script setup>
-const { $usermaven } = useNuxtApp()
+const { $usermaven } = useNuxtApp();
 
 const formData = ref({
   name: '',
-  email: ''
-})
+  email: '',
+});
 
 // Track button click event
 const trackButtonClick = () => {
   $usermaven.track('button_clicked', {
     buttonName: 'demo_button',
-    timestamp: new Date().toISOString()
-  })
-}
+    timestamp: new Date().toISOString(),
+  });
+};
 
 // Track form submission event
 const trackFormSubmit = () => {
@@ -73,14 +73,14 @@ const trackFormSubmit = () => {
     formName: 'demo_form',
     formData: {
       name: formData.value.name,
-      emailProvided: !!formData.value.email
-    }
-  })
-  
+      emailProvided: !!formData.value.email,
+    },
+  });
+
   // Reset form
   formData.value = {
     name: '',
-    email: ''
-  }
-}
+    email: '',
+  };
+};
 </script>
