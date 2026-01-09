@@ -4,6 +4,7 @@
  * @returns {string} the element's class
  */
 import { _each, _includes, _isUndefined, _trim } from './common';
+import { Properties } from '../core/types';
 
 export function getClassName(el: Element): string {
   switch (typeof el.className) {
@@ -324,6 +325,53 @@ export function isAngularStyleAttr(attributeName: string): boolean {
       attributeName.substring(0, 7) === '_nghost'
     );
   }
+  return false;
+}
+
+export function hasAutocaptureIdentifier(
+  elementProps: Properties | null | undefined,
+): boolean {
+  if (!elementProps) {
+    return false;
+  }
+
+  const text = elementProps['$el_text'];
+  if (typeof text === 'string' && _trim(text).length > 0) {
+    return true;
+  }
+
+  const classes = elementProps['classes'];
+  if (Array.isArray(classes) && classes.some((c) => _trim(c).length > 0)) {
+    return true;
+  }
+
+  const attrKeys = [
+    'attr__id',
+    'attr__name',
+    'attr__class',
+    'attr__aria-label',
+    'attr__aria-labelledby',
+    'attr__label',
+    'attr__href',
+  ];
+
+  for (const key of attrKeys) {
+    const value = elementProps[key];
+    if (typeof value === 'string' && _trim(value).length > 0) {
+      return true;
+    }
+  }
+
+  for (const [key, value] of Object.entries(elementProps)) {
+    if (
+      key.startsWith('attr__data-') &&
+      typeof value === 'string' &&
+      _trim(value).length > 0
+    ) {
+      return true;
+    }
+  }
+
   return false;
 }
 
