@@ -70,5 +70,25 @@ declare global {
       trackingWorked: boolean;
       errors: string[];
     };
+
+    // Magento RequireJS test results
+    magentoTestResults?: {
+      requireJsWorking: boolean;
+      requireConfigWorking: boolean;
+      magentoModulesLoaded: boolean;
+      usermavenLoaded: boolean;
+      usermavenTracking: boolean;
+      noRequireErrors: boolean;
+      noDefineErrors: boolean;
+      magentoFunctionalityWorking: boolean;
+      errors: string[];
+      consoleErrors: string[];
+    };
+
+    // Legacy properties for backward compatibility
+    amdLoaded: boolean;
+    clientCreated: boolean;
+    trackingWorked: boolean;
+    errors: string[];
   }
 }
