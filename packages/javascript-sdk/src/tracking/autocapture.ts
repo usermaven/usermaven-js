@@ -11,6 +11,7 @@ import {
 import {
   getClassName,
   getSafeText,
+  hasAutocaptureIdentifier,
   isElementNode,
   isSensitiveElement,
   isTag,
@@ -199,6 +200,11 @@ class AutoCapture {
       }
 
       if (explicitNoCapture) {
+        return false;
+      }
+
+      if (!hasAutocaptureIdentifier(elementsJson[0])) {
+        this.logger.debug('Dropping autocapture event without identifiers.');
         return false;
       }
 
