@@ -68,7 +68,12 @@ function initFromScript(script: HTMLScriptElement): UsermavenClient {
         : script.getAttribute('data-form-tracking') === 'true'
           ? 'all'
           : (script.getAttribute('data-form-tracking') as 'tagged' | 'none'),
-    autoPageview: script.getAttribute('data-auto-pageview') === 'true',
+    autoPageview:
+      script.getAttribute('data-auto-pageview') === 'false'
+        ? false
+        : script.getAttribute('data-auto-pageview') === 'true'
+          ? true
+          : undefined, // Let default config handle it
     useBeaconApi: script.getAttribute('data-use-beacon-api') === 'true',
     forceUseFetch: script.getAttribute('data-force-use-fetch') === 'true',
     gaHook: script.getAttribute('data-ga-hook') === 'true',
