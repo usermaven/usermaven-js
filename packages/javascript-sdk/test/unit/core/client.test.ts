@@ -199,9 +199,9 @@ describe('UsermavenClient', () => {
   });
 
   describe('event_id handling', () => {
-    it('should generate a unique event_id per tracked event', () => {
+    it('should generate a unique event_id for each distinct event', () => {
       client.track('signed_up', { source: 'test' });
-      client.track('signed_up', { source: 'test' });
+      client.track('signed_up', { source: 'different' });
 
       const firstId = (addSpy.mock.calls[0][0] as any).event_id;
       const secondId = (addSpy.mock.calls[1][0] as any).event_id;
@@ -221,6 +221,42 @@ describe('UsermavenClient', () => {
       expect(payload.event_id).toBe('custom-id');
       expect(payload.event_attributes).toMatchObject({ plan: 'pro' });
       expect(payload.event_attributes).not.toHaveProperty('event_id');
+    });
+  });
+
+  describe('event deduplication', () => {
+    it('should suppress duplicate events fired within the dedup window', () => {
+      client.track('signed_up', { source: 'test' });
+      client.track('signed_up', { source: 'test' });
+      client.track('signed_up', { source: 'test' });
+
+      // Only the first call should be sent; duplicates are suppressed
+      expect(addSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow events with different payloads', () => {
+      client.track('signed_up', { source: 'web' });
+      client.track('signed_up', { source: 'mobile' });
+
+      expect(addSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should allow events with different event names', () => {
+      client.track('signed_up', { source: 'test' });
+      client.track('plan_upgraded', { source: 'test' });
+
+      expect(addSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should allow the same event after the dedup window expires', async () => {
+      client.track('signed_up', { source: 'test' });
+
+      // Wait for the dedup window to expire
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      client.track('signed_up', { source: 'test' });
+
+      expect(addSpy).toHaveBeenCalledTimes(2);
     });
   });
 

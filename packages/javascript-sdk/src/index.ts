@@ -10,6 +10,12 @@ import { isAMDEnvironment, getAMDDefine } from './utils/amd-detector';
 // Global flag for multi-instance safety
 const USERMAVEN_AUTOCAPTURE_INITIALIZED_BASE =
   '__USERMAVEN_AUTOCAPTURE_INITIALIZED__';
+
+// Instance cache: prevents duplicate clients for the same API key.
+// This is critical to avoid duplicate event tracking when the SDK factory
+// is called multiple times (e.g., React re-renders, StrictMode, hot reload).
+const instanceCache: Map<string, UsermavenClient> = new Map();
+
 function usermavenClient(config: Partial<Config>): UsermavenClient {
   const cleanConfig = JSON.parse(JSON.stringify(config));
   const camelCaseConfig = convertKeysToCamelCase(cleanConfig);
@@ -28,6 +34,13 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
 
   // Create a project-specific key for the global flag
   const projectKey = mergedConfig.key || '';
+
+  // Return existing instance for the same API key to prevent duplicate
+  // event tracking, duplicate listeners, and duplicate retry queues.
+  if (instanceCache.has(projectKey)) {
+    return instanceCache.get(projectKey)!;
+  }
+
   const USERMAVEN_AUTOCAPTURE_INITIALIZED_KEY = `${USERMAVEN_AUTOCAPTURE_INITIALIZED_BASE}${projectKey}`;
 
   // Check for existing autocapture initialization
@@ -51,7 +64,9 @@ function usermavenClient(config: Partial<Config>): UsermavenClient {
     (window as any)[USERMAVEN_AUTOCAPTURE_INITIALIZED_KEY] = true;
   }
 
-  return new UsermavenClient(mergedConfig);
+  const client = new UsermavenClient(mergedConfig);
+  instanceCache.set(projectKey, client);
+  return client;
 }
 
 function initFromScript(script: HTMLScriptElement): UsermavenClient {

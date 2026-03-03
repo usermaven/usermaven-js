@@ -38,6 +38,12 @@ export class UsermavenClient {
   private namespace: string;
   private rageClick?: RageClick;
 
+  // Client-side event deduplication: prevents the same event from being
+  // sent multiple times within a short window (e.g., React StrictMode
+  // double-mounting, multiple track() calls from re-renders).
+  private recentEventFingerprints: Map<string, number> = new Map();
+  private static readonly DEDUP_WINDOW_MS = 500;
+
   constructor(config: Config) {
     this.config = this.mergeConfig(config, defaultConfig);
     this.logger = getLogger(this.config.logLevel);
@@ -385,6 +391,16 @@ export class UsermavenClient {
       );
     }
 
+    // Client-side deduplication: prevent the same event from being sent
+    // multiple times within a short window. This catches duplicates from
+    // React StrictMode, component re-mounts, or accidental double-calls.
+    if (this.isDuplicateEvent(typeName, payload)) {
+      this.logger.debug(
+        `Duplicate event suppressed: ${typeName} (within ${UsermavenClient.DEDUP_WINDOW_MS}ms window)`,
+      );
+      return;
+    }
+
     const eventPayload = this.createEventPayload(typeName, payload);
 
     try {
@@ -399,6 +415,62 @@ export class UsermavenClient {
       this.logger.error(`Failed to track event: ${typeName}`, error);
       throw new Error(`Failed to track event: ${typeName}`);
     }
+  }
+
+  /**
+   * Checks if this event was already tracked within the deduplication window.
+   * Uses a fingerprint based on event type and payload to identify duplicates.
+   */
+  private isDuplicateEvent(
+    typeName: string,
+    payload?: EventPayload,
+  ): boolean {
+    // Skip dedup for internal events that are expected to fire in sequence
+    // (e.g., $pageleave fires on every navigation and is already guarded)
+    const skipDedupEvents = ['$pageleave', '$scrolldepth', '$rageclick'];
+    if (skipDedupEvents.includes(typeName)) {
+      return false;
+    }
+
+    const fingerprint = this.createEventFingerprint(typeName, payload);
+    const now = Date.now();
+    const lastSeen = this.recentEventFingerprints.get(fingerprint);
+
+    if (lastSeen && now - lastSeen < UsermavenClient.DEDUP_WINDOW_MS) {
+      return true;
+    }
+
+    this.recentEventFingerprints.set(fingerprint, now);
+
+    // Clean up old entries to prevent memory leaks
+    if (this.recentEventFingerprints.size > 100) {
+      const cutoff = now - UsermavenClient.DEDUP_WINDOW_MS;
+      for (const [key, timestamp] of this.recentEventFingerprints) {
+        if (timestamp < cutoff) {
+          this.recentEventFingerprints.delete(key);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Creates a stable fingerprint for an event based on its type and payload.
+   * The event_id is excluded since it's generated fresh each time.
+   */
+  private createEventFingerprint(
+    typeName: string,
+    payload?: EventPayload,
+  ): string {
+    if (!payload) {
+      return typeName;
+    }
+    // Exclude event_id from fingerprint since it's always unique
+    const { event_id, ...rest } = payload;
+    const keys = Object.keys(rest).sort();
+    const stablePayload = keys.map((k) => `${k}:${rest[k]}`).join('|');
+    return `${typeName}_${stablePayload}`;
   }
 
   public rawTrack(payload: any): void {
