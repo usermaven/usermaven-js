@@ -39,6 +39,8 @@ export class UsermavenClient {
   private namespace: string;
   private rageClick?: RageClick;
   private scrollDepth?: ScrollDepth;
+  private scrollDepthVisibilityHandler?: () => void;
+  private scrollDepthPopstateHandler?: () => void;
 
   constructor(config: Config) {
     this.config = this.mergeConfig(config, defaultConfig);
@@ -71,6 +73,7 @@ export class UsermavenClient {
     this.cookieManager = new CookieManager(this.config.cookieDomain);
 
     // Initialize scroll depth tracking independently of autocapture
+    this.destroyScrollDepth();
     this.scrollDepth = new ScrollDepth(this);
     this.initializeScrollDepthListeners();
 
@@ -133,12 +136,29 @@ export class UsermavenClient {
       }
     };
 
-    document.addEventListener('visibilitychange', () => {
+    this.scrollDepthVisibilityHandler = () => {
       if (document.visibilityState === 'hidden') {
         handleSendScroll();
       }
-    });
-    window.addEventListener('popstate', handleSendScroll);
+    };
+    this.scrollDepthPopstateHandler = handleSendScroll;
+
+    document.addEventListener('visibilitychange', this.scrollDepthVisibilityHandler);
+    window.addEventListener('popstate', this.scrollDepthPopstateHandler);
+  }
+
+  private destroyScrollDepth(): void {
+    if (this.scrollDepth) {
+      this.scrollDepth.destroy();
+    }
+    if (this.scrollDepthVisibilityHandler) {
+      document.removeEventListener('visibilitychange', this.scrollDepthVisibilityHandler);
+      this.scrollDepthVisibilityHandler = undefined;
+    }
+    if (this.scrollDepthPopstateHandler) {
+      window.removeEventListener('popstate', this.scrollDepthPopstateHandler);
+      this.scrollDepthPopstateHandler = undefined;
+    }
   }
 
   /**
