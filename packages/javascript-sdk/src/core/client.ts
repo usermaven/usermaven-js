@@ -21,6 +21,7 @@ import {
 import { RetryQueue } from '../utils/queue';
 import { isWindowAvailable } from '../utils/common';
 import { RageClick } from '../extensions/rage-click';
+import { ScrollDepth } from '../extensions/scroll-depth';
 import { HttpsTransport } from '../transport/https';
 import FormTracking from '../tracking/form-tracking';
 
@@ -37,6 +38,7 @@ export class UsermavenClient {
   private anonymousId: string;
   private namespace: string;
   private rageClick?: RageClick;
+  private scrollDepth?: ScrollDepth;
 
   constructor(config: Config) {
     this.config = this.mergeConfig(config, defaultConfig);
@@ -67,6 +69,10 @@ export class UsermavenClient {
 
   private initializeBrowserFeatures(): void {
     this.cookieManager = new CookieManager(this.config.cookieDomain);
+
+    // Initialize scroll depth tracking independently of autocapture
+    this.scrollDepth = new ScrollDepth(this);
+    this.initializeScrollDepthListeners();
 
     if (
       this.config.autocapture &&
@@ -103,6 +109,36 @@ export class UsermavenClient {
 
     // Setup page leave tracking
     this.setupPageLeaveTracking();
+  }
+
+  private initializeScrollDepthListeners(): void {
+    if (!this.scrollDepth) return;
+
+    const scrollDepth = this.scrollDepth;
+
+    const isPageRefresh = (): boolean => {
+      if ('PerformanceNavigationTiming' in window) {
+        const perfEntries = performance.getEntriesByType('navigation');
+        if (perfEntries.length > 0) {
+          const navEntry = perfEntries[0] as PerformanceNavigationTiming;
+          return navEntry.type === 'reload';
+        }
+      }
+      return performance.navigation && performance.navigation.type === 1;
+    };
+
+    const handleSendScroll = () => {
+      if (!isPageRefresh()) {
+        scrollDepth.send();
+      }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        handleSendScroll();
+      }
+    });
+    window.addEventListener('popstate', handleSendScroll);
   }
 
   /**

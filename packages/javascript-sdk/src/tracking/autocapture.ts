@@ -3,8 +3,6 @@ import {
   _each,
   _extend,
   _includes,
-  _isFunction,
-  _isUndefined,
   _register_event,
   _safewrap_instance_methods,
 } from '../utils/common';
@@ -24,7 +22,6 @@ import {
   isDocumentFragment,
 } from '../utils/autocapture-utils';
 import { getLogger } from '../utils/logger';
-import { ScrollDepth } from '../extensions/scroll-depth';
 import { UsermavenClient } from '@/core/client';
 import { Config } from '../core/types';
 import {
@@ -36,7 +33,6 @@ import {
 class AutoCapture {
   private client: UsermavenClient;
   private options: Config;
-  private scrollDepth: ScrollDepth | null = null;
   private customProperties: AutoCaptureCustomProperty[] = [];
   private domHandlersAttached: boolean = false;
 
@@ -51,7 +47,6 @@ class AutoCapture {
   ) {
     this.client = client;
     this.options = options;
-    this.scrollDepth = new ScrollDepth(client);
     _bind_instance_methods(this);
     _safewrap_instance_methods(this);
   }
@@ -95,21 +90,6 @@ class AutoCapture {
     _register_event(document, 'submit', handler, false, true);
     _register_event(document, 'change', handler, false, true);
     _register_event(document, 'click', handler, false, true);
-    _register_event(document, 'visibilitychange', handler, false, true);
-    _register_event(document, 'scroll', handler, false, true);
-    _register_event(window, 'popstate', handler, false, true);
-  }
-
-  private isPageRefresh(): boolean {
-    if ('PerformanceNavigationTiming' in window) {
-      const perfEntries = performance.getEntriesByType('navigation');
-      if (perfEntries.length > 0) {
-        const navEntry = perfEntries[0] as PerformanceNavigationTiming;
-        return navEntry.type === 'reload';
-      }
-    }
-    // Fallback to the old API if PerformanceNavigationTiming is not supported
-    return performance.navigation && performance.navigation.type === 1;
   }
 
   private captureEvent(e: Event): boolean | void {
@@ -117,22 +97,6 @@ class AutoCapture {
     let target = this.getEventTarget(e);
     if (isTextNode(target)) {
       target = (target.parentNode || null) as Element | null;
-    }
-
-    if (e.type === 'scroll') {
-      this.scrollDepth?.track();
-      return true;
-    }
-
-    if (
-      (e.type === 'visibilitychange' &&
-        document.visibilityState === 'hidden') ||
-      e.type === 'popstate'
-    ) {
-      if (!this.isPageRefresh()) {
-        this.scrollDepth?.send();
-      }
-      return true;
     }
 
     if (!target || !isElementNode(target)) {
