@@ -148,9 +148,9 @@
                 const checkInterval = setInterval(() => {
                     // Get the script tag client instance
                     const client = window.usermavenScriptTagClient ? window.usermavenScriptTagClient() : null;
-                    if (client && client.autoCapture && client.autoCapture.scrollDepth) {
+                    if (client && client.scrollDepth) {
                         usermavenClient = client;
-                        scrollDepthInstance = client.autoCapture.scrollDepth;
+                        scrollDepthInstance = client.scrollDepth;
                         clearInterval(checkInterval);
                         resolve(true);
                     }
