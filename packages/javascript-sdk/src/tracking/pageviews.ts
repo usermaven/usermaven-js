@@ -1,5 +1,8 @@
 import { UsermavenClient } from '../core/client';
-
+/**
+ * Tracks SPA URL changes after the first page load.
+ * Initial pageview is sent by script-tag init or explicit client.pageview() calls.
+ */
 export class PageviewTracking {
   private client: UsermavenClient;
   private lastPageUrl: string;
@@ -11,6 +14,15 @@ export class PageviewTracking {
     this.initializePageviewTracking();
   }
 
+  /**
+   * No-op by design: lastPageUrl is set to window.location.href before this runs,
+   * and trackPageview() only sends after a URL change. Initial pageview is owned
+   * by script-tag init or explicit client.pageview() calls.
+   *
+   * If we change this to emit the initial pageview, UsermavenClient must initialize
+   * anonymousId before constructing PageviewTracking, because pageview payloads
+   * read anonymousId during event creation.
+   */
   private trackInitialPageview(): void {
     this.trackPageview();
   }
@@ -47,6 +59,7 @@ export class PageviewTracking {
     const currentUrl = window.location.href;
     if (currentUrl !== this.lastPageUrl) {
       this.lastPageUrl = currentUrl;
+      // SPA navigations don't share the initial load's unload risk, so flushImmediately is not needed.
       this.client.track('pageview', {
         url: currentUrl,
         referrer: document.referrer,

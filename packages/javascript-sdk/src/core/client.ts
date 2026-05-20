@@ -18,7 +18,7 @@ import {
   isValidEmail,
   parseQueryString,
 } from '../utils/helpers';
-import { RetryQueue } from '../utils/queue';
+import { RetryQueue, QueueAddOptions } from '../utils/queue';
 import { isWindowAvailable } from '../utils/common';
 import { RageClick } from '../extensions/rage-click';
 import { ScrollDepth } from '../extensions/scroll-depth';
@@ -417,6 +417,7 @@ export class UsermavenClient {
     typeName: string,
     payload?: EventPayload,
     directSend: boolean = false,
+    options: QueueAddOptions = {},
   ): void {
     // Check if user has opted out of tracking
     const umExclusionState = getUmExclusionState();
@@ -449,7 +450,7 @@ export class UsermavenClient {
         this.logger.debug(`Event sent: ${typeName}`, [eventPayload]);
         return;
       }
-      this.retryQueue.add(eventPayload);
+      this.retryQueue.add(eventPayload, options);
       this.logger.debug(`Event tracked: ${typeName}`, [eventPayload]);
     } catch (error) {
       this.logger.error(`Failed to track event: ${typeName}`, error);
@@ -621,6 +622,7 @@ export class UsermavenClient {
     return utmParams;
   }
 
+  // Manual pageview intentionally ignores autoPageview; callers use this when they own pageview timing.
   public pageview(): void {
     if (isWindowAvailable()) {
       this.track(
@@ -633,6 +635,7 @@ export class UsermavenClient {
         true,
       );
     } else {
+      // Pageview tracking requires browser APIs (window.location, document); not available server-side.
       this.logger.warn(
         'Pageview tracking is not available in server-side environments',
       );
@@ -775,4 +778,34 @@ export class UsermavenClient {
       `Event type: ${eventType || 'global'}`,
     );
   }
+}
+
+// Must mirror the private trackInternal() signature exactly. TypeScript cannot enforce this
+// because the cast through unknown strips type safety. Update both if trackInternal changes.
+type InternalTrackableClient = {
+  trackInternal(
+    typeName: string,
+    payload?: EventPayload,
+    directSend?: boolean,
+    options?: QueueAddOptions,
+  ): void;
+};
+
+// Not exported from index.ts — for SDK-internal initialization only (script-tag/GTM).
+// Routes through the queue for retry and offline support; flushImmediately attempts to send the event immediately
+export function captureInitialPageview(client: UsermavenClient): void {
+  if (!isWindowAvailable()) {
+    return;
+  }
+
+  (client as unknown as InternalTrackableClient).trackInternal(
+    'pageview',
+    {
+      url: window.location.href,
+      referrer: document.referrer,
+      title: document.title,
+    },
+    false,
+    { flushImmediately: true },
+  );
 }
