@@ -53,6 +53,39 @@ describe('RetryQueue', () => {
     );
   });
 
+  it('should call transport.send immediately when flushImmediately is true', async () => {
+    const payload = { data: 'test' };
+
+    retryQueue.add(payload, { flushImmediately: true });
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(mockPersistence.set).toHaveBeenCalledWith(
+      'queue',
+      expect.any(String),
+    );
+    expect(mockTransport.send).toHaveBeenCalledWith([payload]);
+  });
+
+  it('should requeue and retry when flushImmediately send fails', async () => {
+    const payload = { data: 'test' };
+
+    mockTransport.send.mockRejectedValueOnce(new Error('Network error'));
+    mockTransport.send.mockResolvedValueOnce(undefined);
+
+    retryQueue.add(payload, { flushImmediately: true });
+
+    // Allow processBatch() to complete: transport.send rejects, item is requeued
+    await vi.runOnlyPendingTimersAsync();
+    expect(mockTransport.send).toHaveBeenCalledTimes(1);
+
+    // Advance past retryInterval (set inside handleBatchFailure), then fire the next batch
+    await vi.advanceTimersByTimeAsync(retryQueue['retryInterval']);
+    await vi.runOnlyPendingTimersAsync();
+
+    expect(mockTransport.send).toHaveBeenCalledTimes(2);
+    expect(mockTransport.send).toHaveBeenLastCalledWith([payload]);
+  });
+
   it('should process batch when online', async () => {
     const payload1 = { data: 'test1' };
     const payload2 = { data: 'test2' };
