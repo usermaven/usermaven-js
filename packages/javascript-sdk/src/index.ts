@@ -1,4 +1,4 @@
-import { UsermavenClient } from './core/client';
+import { UsermavenClient, captureInitialPageview } from './core/client';
 import { defaultConfig } from './core/config';
 import type { Config } from './core/types';
 import { LogLevel } from './utils/logger';
@@ -135,9 +135,9 @@ function initFromScript(script: HTMLScriptElement): UsermavenClient {
   const client = usermavenClient(config);
   const namespace = config.namespace || 'usermaven';
 
-  // Only send pageview if auto-pageview is enabled (default behavior for script tag)
-  if (isWindowAvailable()) {
-    client.pageview();
+  // Send pageview unless explicitly disabled via data-auto-pageview='false'
+  if (isWindowAvailable() && config.autoPageview !== false) {
+    captureInitialPageview(client);
   }
 
   initializeNamespacedClient(namespace, client);

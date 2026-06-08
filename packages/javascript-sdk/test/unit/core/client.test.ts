@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { UsermavenClient } from '../../../src/core/client';
+import { UsermavenClient, captureInitialPageview } from '../../../src/core/client';
 import { Config } from '../../../src/core/types';
 
 describe('UsermavenClient', () => {
@@ -9,6 +9,7 @@ describe('UsermavenClient', () => {
     key: 'test-api-key',
     trackingHost: 'https://test.usermaven.com',
     tracking_host: 'https://test.usermaven.com',
+    autoPageview: false,
   };
 
   beforeEach(() => {
@@ -32,9 +33,9 @@ describe('UsermavenClient', () => {
       expect(client['retryQueue'].add).not.toHaveBeenCalled();
     });
 
-    it('should throw an error for invalid email', () => {
+    it('should throw an error for invalid email', async () => {
       const userData = { id: 'user123', email: 'invalid-email' };
-      expect(() => client.id(userData)).rejects.toThrow(
+      await expect(() => client.id(userData)).rejects.toThrow(
         'Invalid email provided',
       );
     });
@@ -174,9 +175,9 @@ describe('UsermavenClient', () => {
       expect(client.track).not.toHaveBeenCalled();
     });
 
-    it('should throw an error for invalid company properties', () => {
+    it('should throw an error for invalid company properties', async () => {
       const invalidProps = { id: 'company123' };
-      expect(() => client.group(invalidProps as any)).rejects.toThrow(
+      await expect(client.group(invalidProps as any)).rejects.toThrow(
         'Company properties must include id, name, and created_at',
       );
     });
@@ -194,6 +195,29 @@ describe('UsermavenClient', () => {
           title: expect.any(String),
         }),
         true,
+      );
+    });
+  });
+
+  describe('captureInitialPageview', () => {
+    it('should enqueue initial pageview with flushImmediately without using public pageview direct send', () => {
+      captureInitialPageview(client);
+
+      expect(client.track).not.toHaveBeenCalled();
+
+      expect(addSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event_type: 'pageview',
+          event_attributes: expect.objectContaining({
+            url: expect.any(String),
+            referrer: expect.any(String),
+            title: expect.any(String),
+          }),
+          user: expect.objectContaining({
+            anonymous_id: expect.any(String),
+          }),
+        }),
+        { flushImmediately: true },
       );
     });
   });

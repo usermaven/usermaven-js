@@ -410,6 +410,11 @@ test.describe('Magento Integration Summary', () => {
         { timeout: 15000 }
       );
 
+      await page.waitForFunction(
+        () => window.magentoTestResults?.usermavenTracking === true,
+        { timeout: 5000 }
+      );
+
       const results = await page.evaluate(() => window.magentoTestResults);
 
       if (!results) throw new Error('Test results not available');

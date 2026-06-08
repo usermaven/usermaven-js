@@ -248,13 +248,12 @@ test.describe('Usermaven Namespace Tests', () => {
         })
         .filter(Boolean);
 
-      // Check if all namespaces sent pageviews (current SDK behavior sends pageviews for all namespaces)
+      // Only namespaces with auto-pageview enabled should send an initial pageview.
       expect(pageviewNamespaces).toContain('usermaven');
       expect(pageviewNamespaces).toContain('analytics');
-      expect(pageviewNamespaces).toContain('tracker');
+      expect(pageviewNamespaces).not.toContain('tracker');
 
-      // All 3 namespaces should send pageviews with current SDK implementation
-      expect(pageviewEvents.length).toBe(3);
+      expect(pageviewEvents.length).toBe(2);
 
       // Now manually trigger a pageview with the tracker namespace
       await page.evaluate(() => {
@@ -266,7 +265,7 @@ test.describe('Usermaven Namespace Tests', () => {
       // Wait for the event to be processed
       await page.waitForTimeout(2000);
 
-      // Verify that now we have 4 pageview events (3 automatic + 1 manual)
+      // Verify that now we have 3 pageview events (2 automatic + 1 manual)
       const updatedPageviewEvents = requests.filter((req) => {
         if (!req.postData) return false;
         try {
@@ -278,7 +277,7 @@ test.describe('Usermaven Namespace Tests', () => {
         }
       });
 
-      expect(updatedPageviewEvents.length).toBe(4);
+      expect(updatedPageviewEvents.length).toBe(3);
 
       // Verify there's a pageview from the tracker namespace
       const trackerPageview = updatedPageviewEvents.find((req) => {

@@ -36,7 +36,7 @@ export class RetryQueue {
     }
   }
 
-  add(payload: any): void {
+  add(payload: any, options: QueueAddOptions = {}): void {
     const item = {
       payload,
       retries: 0,
@@ -48,6 +48,11 @@ export class RetryQueue {
     this.enforceQueueLimits();
     if (isWindowAvailable()) {
       this.saveQueueToStorage();
+      if (options.flushImmediately) {
+        // If processBatch() is already running this will not send immediately
+        // the item will be picked up by the next scheduleBatch(). Acceptable degradation.
+        void this.processBatch();
+      }
     } else {
       this.processBatch(); // Immediately process on server-side
     }
@@ -215,6 +220,10 @@ export class RetryQueue {
       this.persistence.set('queue', JSON.stringify(serializableQueue));
     }
   }
+}
+
+export interface QueueAddOptions {
+  flushImmediately?: boolean;
 }
 
 interface QueueItem {
